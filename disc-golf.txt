@@ -410,26 +410,6 @@ rule("DISC: Apply sideways motion in air")
 	}
 }
 
-rule("INIT")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Has Spawned(Event Player) == True;
-	}
-
-	actions
-	{
-		Event Player.INT_Curve_Angle = 12.500;
-	}
-}
-
 rule("PLAYER: Record turn rate")
 {
 	event
@@ -819,7 +799,28 @@ rule("SUBR: Clear player disc effects (call with player as Event Player)")
 	}
 }
 
-rule("PLAYER: Init")
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.INT_Curve_Angle = 12.500;
+		Set Status(Event Player, Null, Phased Out, 9999);
+	}
+}
+
+rule("PLAYER: Joins")
 {
 	event
 	{
