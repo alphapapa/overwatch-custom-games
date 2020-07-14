@@ -1,0 +1,1599 @@
+settings
+{
+	main
+	{
+		Description: "FORMULA 152 RACING.  FOLLOW THE GREEN FLAGS!  Soldier 76 gains speed by sprinting; Lucio, by wallriding.  (By \"nobody\".  Based on \"Sprint Racing\" by DarwinStreams.)"
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Score To Win: 7
+
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Junkrat
+			{
+				Concussion Mine Cooldown Time: 38%
+				No Ammunition Requirement: On
+				Primary Fire: Off
+				Steel Trap: Off
+			}
+
+			Lúcio
+			{
+				Amp It Up: Off
+				Crossfade: Off
+				Damage Dealt: 500%
+				Primary Fire: Off
+			}
+
+			Pharah
+			{
+				Ammunition Clip Size Scalar: 25%
+				Damage Dealt: 500%
+				Hover Jets Recharge Rate: 200%
+				Hover Jets Unlimited Fuel: On
+				Hover Jets Vertical Speed Scalar: 50%
+				Jump Jet Acceleration Scalar: 40%
+				Jump Jet Cooldown Time: 150%
+				Movement Gravity: 50%
+			}
+
+			Reinhardt
+			{
+				Charge Cooldown Time: 10%
+				Damage Dealt: 500%
+			}
+
+			Soldier: 76
+			{
+				Biotic Field: Off
+				Damage Dealt: 500%
+				Damage Received: 10%
+				Helix Rockets Cooldown Time: 50%
+				Helix Rockets Knockback Scalar: 400%
+				Primary Fire: Off
+			}
+
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 15%
+				Movement Gravity: 50%
+				Primary Fire: Off
+			}
+
+			Wrecking Ball
+			{
+				Damage Received: 10%
+				Receive Headshots Only: On
+			}
+
+			enabled heroes
+			{
+				Wrecking Ball
+			}
+		}
+	}
+}
+
+rule("Init: Map-number=Gv(z)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Z = Round To Integer(X Component Of(Nearest Walkable Position(Vector(100, 100, 100))), Up);
+		Skip If(Objective Position(0) == Null, 1);
+		Global.Z += Round To Integer(X Component Of(Objective Position(0)), Up) + 300;
+	}
+}
+
+rule("Init: starting position, PV(q)=powerup-eligible, pv(s)=slowdown-eligible")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Global.A);
+		Disallow Button(Event Player, Ultimate);
+		Event Player.Q = True;
+		Event Player.S = True;
+	}
+}
+
+rule("player: checkpoints, powerup, etc.")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(Event Player);
+		Disable Built-In Game Mode Scoring;
+		disabled Set Status(Event Player, Null, Phased Out, 9999);
+		Event Player.V = 100;
+		Event Player.O = Global.F;
+		Create Effect(Event Player, Light Shaft, Orange, Event Player.O + Vector(0, -1.500, 0), 2.500, Visible To Position and Radius);
+		Create Icon(Event Player, Event Player.O, Flag, Visible To and Position, Green, True);
+		Set Objective Description(Event Player, String("{0} m/s", Speed Of(Event Player)), Visible To and String);
+		Skip If(Global.P == 0, 2);
+		Create Icon(All Players(All Teams), Global.P, Bolt, None, Purple, False);
+		Create Effect(All Players(All Teams), Ring, Purple, Global.P, 2, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Ring, White, Global.I, 2.500, Visible To Position and Radius);
+		Skip If(Global.S == 0, 2);
+		Create Icon(All Players(All Teams), Global.S, Flag, None, Red, False);
+		Create Effect(All Players(All Teams), Ring, Red, Global.S, 3, Visible To Position and Radius);
+	}
+}
+
+rule("Player: START race")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Objective Description(All Players(All Teams), String("{0}!", String("Go")), Visible To and String);
+		Clear Status(Event Player, Rooted);
+	}
+}
+
+rule("Player (Soldier 76): Sprinting increases speed (at +10% base speed per second)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Soldier: 76);
+		Is Using Ability 1(Event Player) == True;
+		Horizontal Speed Of(Event Player) > 5;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, V, 10000, 10, Destination and Rate);
+	}
+}
+
+rule("Player: Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Wait(3, Ignore Condition);
+		Respawn(Event Player);
+		Stop Chasing Player Variable(Event Player, V);
+		Event Player.V = 100;
+		disabled Set Move Speed(Event Player, 100);
+		Wait(0.500, Ignore Condition);
+		Teleport(Event Player, Global.A);
+	}
+}
+
+rule("Player: Checkpoint 1 (Global variable F) lap-start-time=pv(t[1])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player), Event Player.O) <= 3;
+		Event Player.O == Global.F;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 0);
+		Event Player.O = Global.G;
+		Play Effect(Event Player, Ring Explosion Sound, White, Event Player, 200);
+		Play Effect(Event Player, Good Explosion, Blue, Event Player, 2);
+		Event Player.T[1] = Total Time Elapsed;
+	}
+}
+
+rule("Player: Checkpoint 2 (Global variable g)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player), Event Player.O) <= 3;
+		Event Player.O == Global.G;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 0);
+		Event Player.O = Global.H;
+		Play Effect(Event Player, Ring Explosion Sound, White, Event Player, 200);
+		Play Effect(Event Player, Good Explosion, Blue, Event Player, 2);
+		Event Player.T[2] = Total Time Elapsed;
+	}
+}
+
+rule("Player: Checkpoint 3 (Global variable H)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player), Event Player.O) <= 3;
+		Event Player.O == Global.H;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 0);
+		Event Player.O = Global.I;
+		Play Effect(Event Player, Ring Explosion Sound, White, Event Player, 200);
+		Play Effect(Event Player, Good Explosion, Blue, Event Player, 2);
+		Event Player.T[3] = Total Time Elapsed;
+	}
+}
+
+rule("Player: Checkpoint 4 (global variable I) last-lap-time=pv(t[0])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player), Event Player.O) <= 3;
+		Event Player.O == Global.I;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+		Event Player.O = Global.F;
+		Play Effect(Event Player, Buff Explosion Sound, White, Event Player, 200);
+		Play Effect(Event Player, Good Explosion, Blue, Event Player, 2);
+		Event Player.T[4] = Total Time Elapsed;
+		Event Player.T[0] = Event Player.T[4] - Event Player.T[1];
+		Big Message(Event Player, String("{0} - {1}", String("{0} sec", Event Player.T[0]), String("{0} m/s", Horizontal Speed Of(
+			Event Player))));
+		Small Message(All Players(All Teams), String("{0} - {1} - {2}", Event Player, String("{0} sec", Event Player.T[0]), String(
+			"{0} m/s", Horizontal Speed Of(Event Player))));
+		Skip If(Global.T != 0 && Event Player.T[0] >= Global.T[1], 2);
+		Global.T[0] = Event Player;
+		Global.T[1] = Event Player.T[0];
+		Skip If(Global.T != 0 && Horizontal Speed Of(Event Player) <= Global.T[3], 2);
+		Global.T[2] = Event Player;
+		Global.T[3] = Horizontal Speed Of(Event Player);
+	}
+}
+
+rule("Speed: < 20 m/s")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Horizontal Speed Of(Event Player) < 20;
+		Is Moving(Event Player) == True;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.E);
+		Clear Status(Event Player, Burning);
+	}
+}
+
+rule("Speed: 20-29 m/s")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Horizontal Speed Of(Event Player) >= 20;
+		Horizontal Speed Of(Event Player) < 30;
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.E);
+		Create Effect(All Players(All Teams), Sparkles, Red, Event Player, 0.500, Visible To Position and Radius);
+		Event Player.E = Last Created Entity;
+		Clear Status(Event Player, Burning);
+	}
+}
+
+rule("Speed: 30-39 m/s")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Horizontal Speed Of(Event Player) >= 30;
+		Horizontal Speed Of(Event Player) < 40;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.E);
+		Create Effect(All Players(All Teams), Cloud, Red, Event Player, 0.500, Visible To Position and Radius);
+		Event Player.E = Last Created Entity;
+		Clear Status(Event Player, Burning);
+	}
+}
+
+rule("Speed: 40-49 m/s")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Horizontal Speed Of(Event Player) >= 40;
+		Horizontal Speed Of(Event Player) < 50;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.E);
+		Set Status(Event Player, Null, Burning, 9999);
+	}
+}
+
+rule("Speed: 50-59 m/s")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Horizontal Speed Of(Event Player) >= 50;
+	}
+
+	actions
+	{
+		Destroy Effect(Last Created Entity);
+		Set Status(Event Player, Null, Burning, 9999);
+		Create Effect(All Players(All Teams), Bad Aura, Purple, Event Player, 1, Visible To Position and Radius);
+		Event Player.E = Last Created Entity;
+	}
+}
+
+rule("HUD: PLAYER variable V (Disabled)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(0 > 1) == False;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Null, Event Player.V, Null, Right, 0, White, White, White, Visible To and String,
+			Default Visibility);
+	}
+}
+
+rule("Map: Ilios RUINS")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 66;
+	}
+
+	actions
+	{
+		Global.A = Vector(-72.544, 66.333, -181.805);
+		Global.F = Vector(-4.601, 62.915, -174.538);
+		Global.G = Vector(71.390, 61.915, -142.976);
+		Global.H = Vector(116.970, 66.940, -178.668);
+		Global.I = Vector(-58.256, 61.915, -157.274);
+		Global.P = Vector(53.206, 61.178, -142.624);
+		Global.J = Vector(28.592, 61.477, -177.477);
+	}
+}
+
+rule("Map: Ilios WELL")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == -167;
+	}
+
+	actions
+	{
+		Global.A = Vector(-286.063, -1.751, 30.179);
+		Global.F = Vector(-267.855, 0.248, 50.609);
+		Global.G = Vector(-148.738, -1.858, -90.319);
+		Global.H = Vector(-206.501, 2.552, -41.728);
+		Global.I = Vector(-244.454, 6.634, 1.231);
+		Global.J = Vector(-179.371, -4.284, -66.039);
+	}
+}
+
+rule("Map: Nepal sanctum")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 101;
+	}
+
+	actions
+	{
+		Global.A = Vector(81.066, 133.298, 97.544);
+		Global.F = Vector(73.735, 130.455, 65.927);
+		Global.G = Vector(83.193, 130.002, 0.004);
+		Global.H = Vector(81.094, 132.175, -91.555);
+		Global.I = Vector(66.536, 133.548, 0.146);
+		Global.P = Vector(50.774, 131.281, 0.344);
+		Global.J = Vector(56.632, 128.543, -28.085);
+	}
+}
+
+rule("Map: Nepal SHRINE")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == -13;
+	}
+
+	actions
+	{
+		Global.A = Vector(-22.729, 23.551, -51.067);
+		Global.F = Vector(-56.918, 20.551, -49.383);
+		Global.G = Vector(-63.930, 14.551, 0.033);
+		Global.H = Vector(-43.276, 16.550, 77.992);
+		Global.I = Vector(-22.766, 21.048, -86.716);
+		Global.P = Vector(-48.377, 20.443, 49.267);
+	}
+}
+
+rule("Map: Nepal VILLAGE")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == -130;
+	}
+
+	actions
+	{
+		Global.A = Vector(-143.752, -92.849, -77.601);
+		Global.F = Vector(-194.197, -96.901, -57.851);
+		Global.G = Vector(-200.141, -92.412, 32.803);
+		Global.H = Vector(-159.995, -88.447, 41.706);
+		Global.I = Vector(-159.389, -97, -77.233);
+		Global.P = Vector(-219.958, -92.025, 0.167);
+	}
+}
+
+rule("Map: Lijang Control Center")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 13;
+	}
+
+	actions
+	{
+		Global.A = Vector(0.008, 271.551, 259.632);
+		Global.F = Vector(-36.818, 268.551, 296.629);
+		Global.G = Vector(-44.488, 270.051, 352.656);
+		Global.H = Vector(65.412, 268.994, 347.295);
+		Global.I = Vector(-0.047, 276.048, 279.775);
+		Global.J = Vector(3.080, 268.881, 279.987);
+		Global.P = Vector(-0.210, 271.551, 327.437);
+	}
+}
+
+rule("Map: Lijang GARDEN")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 102;
+	}
+
+	actions
+	{
+		Global.A = Vector(-82.982, 97.551, 146.107);
+		Global.F = Vector(-0.102, 95.553, 178.068);
+		Global.G = Vector(81.749, 97.549, 147.776);
+		Global.H = Vector(0.198, 97.550, 112.265);
+		Global.I = Vector(-53.108, 99.551, 162.154);
+	}
+}
+
+rule("Map: Lijang Night Market")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 69;
+	}
+
+	actions
+	{
+		Global.A = Vector(49.231, 3.548, -29.262);
+		Global.F = Vector(25.312, 7.577, -32.350);
+		Global.G = Vector(0.640, 1.553, -9.778);
+		Global.H = Vector(-74.108, 7.052, -7.637);
+		Global.I = Vector(0.707, 0.551, -74.166);
+		Global.J = Vector(-43.578, 4.455, -14.037);
+	}
+}
+
+rule("Map: blizzworld (old, short course) (disabled)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 10000;
+	}
+
+	actions
+	{
+		Global.A = Vector(100, 0, 100);
+		Global.F = Vector(3.054, -3.548, 16.216);
+		Global.G = Vector(3.222, 3.451, 74.522);
+		Global.H = Vector(3.046, 1.452, 12.643);
+		Global.I = Vector(3.145, -2.548, -14.286);
+	}
+}
+
+rule("Map: Black Forest")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 37;
+	}
+
+	actions
+	{
+		Global.A = Vector(30.934, 13.548, -25.407);
+		Global.F = Vector(9.421, 12.352, -23.618);
+		Global.G = Vector(-4.242, 19.012, 26.683);
+		Global.H = Vector(21.050, 10.549, 3.743);
+		Global.I = Vector(-5.384, 19.674, 5.147);
+	}
+}
+
+rule("Map: Castillo")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == -71;
+	}
+
+	actions
+	{
+		Global.A = Vector(-99.446, 34.117, 95.936);
+		Global.F = Vector(-74.458, 33.545, 53.015);
+		Global.G = Vector(-116.700, 35.054, 71.260);
+		Global.H = Vector(-114.279, 34.115, 27.336);
+		Global.I = Vector(-116.184, 40.126, 61.024);
+		Global.J = Vector(-126.525, 35.157, 63.400);
+	}
+}
+
+rule("Map: Chateau Guillard")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 168;
+	}
+
+	actions
+	{
+		Global.A = Vector(176.423, 1.548, 50.697);
+		Global.F = Vector(229.287, 14.548, 61.252);
+		Global.G = Vector(196.278, 10.548, 110.570);
+		Global.H = Vector(205.996, 1.549, 77.493);
+		Global.I = Vector(183.733, 9.552, 55.824);
+		Global.P = Vector(217.846, 5.455, 111.749);
+	}
+}
+
+rule("Map: Dorado")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 144;
+	}
+
+	actions
+	{
+		Global.A = Vector(64.906, 15.445, 13.343);
+		Global.F = Vector(87.163, 14.301, 38.397);
+		Global.G = Vector(129.210, 13.563, 51.221);
+		Global.H = Vector(127.208, 10.568, -22.372);
+		Global.I = Vector(106.500, 19.551, -3.577);
+		Global.P = Vector(108.416, 11.595, -30.638);
+		Global.J = Vector(85.021, 20.455, 17.189);
+	}
+}
+
+rule("Map: Ecopoint Antarctica")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 18;
+	}
+
+	actions
+	{
+		Global.A = Vector(13.481, 9.583, 59.073);
+		Global.F = Vector(1.315, 13.550, 11.958);
+		Global.G = Vector(-2.517, 8.550, -54.684);
+		Global.H = Vector(-10.421, 10.078, -0.128);
+		Global.I = Vector(-2.315, 8.551, 54.888);
+		Global.P = Vector(18.091, 4.467, -0.057);
+	}
+}
+
+rule("Map: Eichenwalde")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 124;
+	}
+
+	actions
+	{
+		Global.A = Vector(88.290, 14.413, -65.328);
+		Global.F = Vector(102.680, 14.272, -109.216);
+		Global.G = Vector(37.166, 6.802, -52.677);
+		Global.H = Vector(46, 21.382, -67.745);
+		Global.I = Vector(86.682, 14.196, -73.278);
+		Global.P = Vector(67.223, 6.023, -83.701);
+	}
+}
+
+rule("Map: Hanamura")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 78;
+	}
+
+	actions
+	{
+		Global.A = Vector(28.146, 1.551, -3.264);
+		Global.F = Vector(-4.208, 5.517, 21.625);
+		Global.G = Vector(31.664, 3.348, -60.397);
+		Global.H = Vector(-21.068, 2.551, -94.907);
+		Global.I = Vector(13.384, 8.292, -21.430);
+		Global.P = Vector(21.902, -2.545, -82.880);
+	}
+}
+
+rule("Map: Hollywood")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 25;
+	}
+
+	actions
+	{
+		Global.A = Vector(-7.158, 3.157, -7.794);
+		Global.F = Vector(7.051, 3.298, -31.029);
+		Global.G = Vector(49.450, 4.301, -56.437);
+		Global.H = Vector(-26.131, 7.299, -46.007);
+		Global.I = Vector(-9.048, 8.684, -40.798);
+		Global.P = Vector(24.891, 2.641, -75.941);
+	}
+}
+
+rule("Map: Horizon Lunar Colony")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 56;
+	}
+
+	actions
+	{
+		Global.A = Vector(37.629, 8.552, -54.195);
+		Global.F = Vector(54.533, 9.549, -100.802);
+		Global.G = Vector(-46.156, 6.053, -101.304);
+		Global.H = Vector(-5.621, 11.551, -118.123);
+		Global.I = Vector(81.436, 7.992, -40.463);
+		Global.P = Vector(11.993, 7.953, -82.377);
+		Global.J = Vector(-27.897, 3.660, -126.608);
+	}
+}
+
+rule("Player: Damage = slow (doesn't work, damage not possible)")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.V *= 0.500;
+	}
+}
+
+rule("Map: ilios lighthouse")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 300;
+	}
+
+	actions
+	{
+		Global.A = Vector(261.795, -22.372, -95.124);
+		Global.F = Vector(289.804, -23.922, -88.970);
+		Global.G = Vector(331.342, -17.089, -56.983);
+		Global.H = Vector(311.854, -19.841, 24.068);
+		Global.I = Vector(357.445, -24.089, -51.463);
+		Global.P = Vector(319.563, -23.210, -35.596);
+	}
+}
+
+rule("Map: King's Row")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 17;
+	}
+
+	actions
+	{
+		Global.A = Vector(-36.584, 1.409, -24.038);
+		Global.F = Vector(-95.482, -0.944, -46.273);
+		Global.G = Vector(-72.179, 6.052, -37.340);
+		Global.H = Vector(-61.783, 1.550, 2.889);
+		Global.I = Vector(-48.632, 10.672, -37.568);
+		Global.P = Vector(-30.029, 6.512, -47.474);
+		Global.J = Vector(-79.831, 0.902, -19.140);
+	}
+}
+
+rule("Map: Oasis City Center")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 186;
+	}
+
+	actions
+	{
+		Global.A = Vector(191.681, 2.399, 175.784);
+		Global.F = Vector(120.149, 2.551, 223.825);
+		Global.G = Vector(119.893, 2.548, 223.766);
+		Global.H = Vector(98.544, 2.401, 299.925);
+		Global.I = Vector(197.784, 2.293, 214.365);
+	}
+}
+
+rule("Player: Set score variable")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.S = Score Of(Event Player);
+	}
+}
+
+rule("Player: Victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) == 15;
+	}
+
+	actions
+	{
+		Communicate(Event Player, Emote Up);
+	}
+}
+
+rule("Player: Splat!")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Horizontal Speed Of(Event Player) < 4;
+		Ray Cast Hit Normal(Vector(0, 0, 0), Vector(0, 0, 0), All Players(All Teams), Event Player, True) == True;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Debuff Impact Sound, Purple, Event Player, 50);
+		Play Effect(All Players(All Teams), Bad Explosion, Yellow, Event Player, 1);
+		Skip If(Random Integer(0, 100) < 75, 1);
+		Communicate(Event Player, Voice Line Down);
+	}
+}
+
+rule("HUD: Top speed stat (hud text in global variable U)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.T != 0;
+	}
+
+	actions
+	{
+		Destroy HUD Text(Global.U[0]);
+		Destroy HUD Text(Global.U[1]);
+		Create HUD Text(All Players(All Teams), String("{0} {1}", String("Best"), String("Time")), Global.T[0], String("{0} sec",
+			Global.T[1]), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Global.U[0] = Last Text ID;
+		Create HUD Text(All Players(All Teams), String("Fastest"), Global.T[2], String("{0} m/s", Global.T[3]), Left, 1, White, White,
+			White, Visible To and String, Default Visibility);
+		Global.U[1] = Last Text ID;
+		Play Effect(All Players(All Teams), Buff Impact Sound, White, Global.I, 500);
+	}
+}
+
+rule("Player: Speedometer")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Absolute Value(Horizontal Speed Of(Event Player)));
+		Set Ultimate Ability Enabled(Event Player, True);
+		Wait(0.250, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Players: score over head")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create In-World Text(All Players(All Teams), String("{0} / {1}", Round To Integer(Score Of(Event Player), Up), 7), Event Player,
+			0.750, Clip Against Surfaces, Visible To Position and String, White, Default Visibility);
+	}
+}
+
+disabled rule("Rockets: Reduce speed (doesn't work, no damage possible)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.V *= 0.750;
+	}
+}
+
+rule("PLayers: Chance to say hello in proxmity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Distance Between(Event Player, Closest Player To(Event Player, All Teams)) < 4;
+		Random Integer(1, 100) >= 90;
+	}
+
+	actions
+	{
+		Communicate(Event Player, Hello);
+	}
+}
+
+rule("PLayers: Chance to say voice line within 2m")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Distance Between(Event Player, Closest Player To(Event Player, All Teams)) < 2;
+		Random Integer(1, 100) >= 80;
+	}
+
+	actions
+	{
+		Communicate(Event Player, Voice Line Right);
+	}
+}
+
+rule("Map: Necropolis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 30;
+	}
+
+	actions
+	{
+		Global.A = Vector(-30.324, 6.194, 26.667);
+		Global.F = Vector(-0.342, 2.279, 12.610);
+		Global.G = Vector(0.727, 4.195, -23.064);
+		Global.H = Vector(-32.312, 2.477, 0.142);
+		Global.I = Vector(23.102, 6.312, 0.159);
+		Global.P = Vector(-0.197, 2.377, -12.646);
+	}
+}
+
+rule("Powerup: GV(P), PV(q)=powerup-eligible")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.P != 0;
+		Distance Between(Position Of(Event Player), Global.P) <= 2;
+		Is Moving(Event Player) == True;
+		Event Player.Q == True;
+	}
+
+	actions
+	{
+		Big Message(Event Player, String("Faster"));
+		Event Player.V += 50;
+		Set Move Speed(Event Player, Event Player.V);
+		Play Effect(All Players(All Teams), Good Pickup Effect, Purple, Event Player, 3);
+		Play Effect(All Players(All Teams), Buff Explosion Sound, Purple, Event Player, 10);
+		Event Player.Q = False;
+		Wait(10, Ignore Condition);
+		Event Player.Q = True;
+	}
+}
+
+rule("slowdown: GV(s), PV(s)=slowdown-eligible")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.S != 0;
+		Distance Between(Position Of(Event Player), Global.S) <= 2;
+		Is Moving(Event Player) == True;
+		Event Player.S == True;
+		Event Player.V > 100;
+	}
+
+	actions
+	{
+		Big Message(Event Player, String("Slower"));
+		Event Player.V /= 2;
+		Set Move Speed(Event Player, Event Player.V);
+		Play Effect(All Players(All Teams), Bad Pickup Effect, Red, Event Player, 3);
+		Play Effect(All Players(All Teams), Debuff Impact Sound, Red, Event Player, 10);
+		Event Player.S = False;
+		Wait(5, Ignore Condition);
+		Event Player.S = True;
+	}
+}
+
+rule("Map: blizzworld")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 54;
+	}
+
+	actions
+	{
+		Global.A = Vector(-79.475, 1.798, 64.043);
+		Global.F = Vector(-20.844, 3.551, 67.832);
+		Global.G = Vector(-70.002, 3.298, 151.324);
+		Global.H = Vector(-76.901, 6.423, 66.433);
+		Global.I = Vector(-64.419, 2.149, 120.448);
+		Global.P = Vector(-45.947, 0.265, 97.890);
+		Global.S = Vector(-56.641, 6.064, 97.352);
+		Global.J = Vector(-56.948, 0.342, 68.803);
+	}
+}
+
+rule("Map: Oasis Gardens")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 173;
+	}
+
+	actions
+	{
+		Global.A = Vector(78.296, 7.043, -258.281);
+		Global.F = Vector(103.226, 9.551, -285.832);
+		Global.G = Vector(187.719, 9.551, -217.596);
+		Global.H = Vector(131.932, 4.131, -203.530);
+		Global.I = Vector(121.509, 13.050, -227.400);
+		Global.P = Vector(141.221, 8, -247.455);
+		Global.J = Vector(139.459, 7.992, -233.119);
+	}
+}
+
+rule("Map: Oasis university")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == -163;
+	}
+
+	actions
+	{
+		Global.A = Vector(-214.050, 21.885, 71.249);
+		Global.F = Vector(-172.085, 17.548, 54.001);
+		Global.G = Vector(-187.928, 12.800, -0.114);
+		Global.H = Vector(-210.744, 19.552, -59.180);
+		Global.I = Vector(-214.036, 20.552, -0.064);
+		Global.P = Vector(-187.928, 11.500, -0.114);
+	}
+}
+
+rule("Map: Paris")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == -3;
+	}
+
+	actions
+	{
+		Global.A = Vector(-0.398, 11.544, -49.909);
+		Global.F = Vector(-45.446, 17.538, 26.431);
+		Global.G = Vector(-74.471, 13.538, -15.836);
+		Global.H = Vector(-34.750, 15.538, -8.173);
+		Global.I = Vector(10.783, 11.472, -61.286);
+		Global.P = Vector(-20.005, 11.551, -19.144);
+	}
+}
+
+rule("Map: Petra")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 41;
+	}
+
+	actions
+	{
+		Global.A = Vector(-44.970, -11.460, 9.708);
+		Global.F = Vector(-18.397, 1.638, -8.515);
+		Global.G = Vector(23.850, -7.811, 52.938);
+		Global.H = Vector(-17.379, -6.496, 28.646);
+		Global.I = Vector(2.253, -8.430, 9.041);
+		Global.P = Vector(-30.081, -5.455, -0.093);
+	}
+}
+
+rule("Map: Temple of anubis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 21;
+	}
+
+	actions
+	{
+		Global.A = Vector(-33.800, 12.147, 44.882);
+		Global.F = Vector(-53.794, 11.062, 30.387);
+		Global.G = Vector(3.973, 6.147, 113.761);
+		Global.H = Vector(-38.567, 7.052, 63.942);
+		Global.I = Vector(-4.797, 4.056, 45.794);
+		Global.P = Vector(-7.864, 1.329, 101.490);
+	}
+}
+
+rule("Map: Volskaya Industries")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 34;
+	}
+
+	actions
+	{
+		Global.A = Vector(-13.796, -1.433, 115.710);
+		Global.F = Vector(19.360, -0.433, 55.788);
+		Global.G = Vector(-83.112, 1.569, 19.198);
+		Global.H = Vector(-103.218, 3.568, 78.822);
+		Global.I = Vector(-0.310, 3.472, 88.048);
+		Global.P = Vector(-32.751, 3.569, 73.187);
+	}
+}
+
+rule("Init: Jump-pad GV(J)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.J != 0;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Ring, Yellow, Global.J, 3, Visible To Position and Radius);
+		Create Icon(All Players(All Teams), Global.J, Arrow: Up, Visible To and Position, Yellow, False);
+	}
+}
+
+rule("Player: Jump-pad gv(j)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.J) < 3;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Vector(0, 1, 0), 15, To Player, Incorporate Contrary Motion);
+	}
+}
+
+disabled rule("Player (Pharah): < 5 m/s resets speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Horizontal Speed Of(Event Player) <= 5;
+		Hero Of(Event Player) == Hero(Pharah);
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, V);
+		Event Player.V = 100;
+	}
+}
+
+rule("Player (all heroes): Set move speed=PV(v)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, Event Player.V);
+		Wait(0.100, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Player: Interact = death (to change hero)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Kill(Event Player, Null);
+		Stop Chasing Player Variable(Event Player, V);
+		Event Player.V = 100;
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Map: Havana")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Z == 88;
+	}
+
+	actions
+	{
+		Global.A = Vector(141.145, 20, -43.346);
+		Global.F = Vector(19.360, -0.433, 55.788);
+		Global.G = Vector(-83.112, 1.569, 19.198);
+		Global.H = Vector(-103.218, 3.568, 78.822);
+		Global.I = Vector(-0.310, 3.472, 88.048);
+		Global.P = Vector(-72.003, 5.398, -48.974);
+	}
+}
+
+rule("Player: < 5 m/s resets speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Horizontal Speed Of(Event Player) <= 5;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, V);
+		Event Player.V = 100;
+	}
+}
