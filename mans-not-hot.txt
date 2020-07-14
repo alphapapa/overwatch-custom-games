@@ -1,0 +1,235 @@
+settings
+{
+	main
+	{
+		Description: "The opposite of Superhot.  The One controls time by standing still or crouching.  Everyone else tries to kill him."
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 5
+		Max Team 1 Players: 1
+		Return To Lobby: Never
+		Team Balancing: After A Game
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			Mercy Resurrect Counteracts Kills: Off
+			Score To Win: 10
+
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Necropolis
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Respawn Time Scalar: 50%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Ability Cooldown Time: 80%
+			Damage Received: 50%
+			Health: 300%
+
+			D.Va
+			{
+				Damage Dealt: 200%
+				Health: 250%
+				Jump Vertical Speed: 160%
+				Movement Speed: 110%
+				Projectile Speed: 400%
+				Spawn Without Mech: On
+				Ultimate Ability Self-Destruct: Off
+			}
+
+			Widowmaker
+			{
+				Health: 250%
+			}
+
+			disabled heroes
+			{
+				Junkrat
+				Pharah
+				Winston
+				Wrecking Ball
+			}
+		}
+
+		Team 2
+		{
+			disabled heroes
+			{
+				D.Va
+				Torbjörn
+			}
+		}
+
+		General
+		{
+			Baptiste
+			{
+				Immortality Field: Off
+			}
+
+			disabled heroes
+			{
+				Bastion
+				Brigitte
+				Echo
+				Mei
+				Moira
+				Orisa
+				Sigma
+				Widowmaker
+			}
+		}
+	}
+}
+
+rule("not playing")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Is Game In Progress || Is Waiting For Players) == False;
+	}
+
+	actions
+	{
+		Set Slow Motion(100);
+	}
+}
+
+rule("dead")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Number of Living Players(Team 1) == 0;
+	}
+
+	actions
+	{
+		Set Slow Motion(100);
+	}
+}
+
+rule("moving")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		(Is Moving(Event Player) && !Is Crouching(Event Player)) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(25);
+	}
+}
+
+rule("emoting")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating Any Emote(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(100);
+		Wait(1, Ignore Condition);
+		Damage(Event Player, Null, 25);
+	}
+}
+
+rule("standing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		(Is Game In Progress || Is Waiting For Players) == True;
+		Has Spawned(All Players(Team 1)) == True;
+		(Is Standing(Event Player) || Is Crouching(Event Player)) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(100);
+	}
+}
+
+rule("select hero time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
