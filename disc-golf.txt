@@ -833,3 +833,24 @@ rule("PLAYER: Init")
 		Event Player.INT_Color = Random Integer(0, 12);
 	}
 }
+
+rule("DISC: Dies (duplicates actions from other subr, but since the disc owner is not the Event Player, they must be changed here)")
+{
+	event
+	{
+		Player Died;
+		All;
+		Wrecking Ball;
+	}
+
+	actions
+	{
+		"Destroy effects for player's disc."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
+			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy In-World Text(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+		End;
+		Event Player.EFFECTS_Disc = 0;
+	}
+}
