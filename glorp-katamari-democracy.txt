@@ -1,0 +1,722 @@
+settings
+{
+	main
+	{
+		Description: "GET GLORPED!  Pilot the glorpenator with your fellow glorpians!  (Game mode by \"nobody\".  See also: Formula 76 Racing on workshop.elohell.gg)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max FFA Players: 11
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 13
+			Score To Win: 50
+
+			enabled maps
+			{
+				Black Forest
+				Black Forest Winter
+				Castillo
+				Dorado
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Necropolis
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ammunition Clip Size Scalar: 50%
+			Damage Dealt: 50%
+
+			Ana
+			{
+				Sleep Dart Cooldown Time: 200%
+			}
+
+			Ashe
+			{
+				Coach Gun Cooldown Time: 300%
+			}
+
+			Brigitte
+			{
+				Whip Shot Cooldown Time: 300%
+			}
+
+			Doomfist
+			{
+				Rising Uppercut Cooldown Time: 300%
+				Rocket Punch Cooldown Time: 300%
+				Seismic Slam Cooldown Time: 300%
+			}
+
+			Echo
+			{
+				Flight Cooldown Time: 500%
+			}
+
+			Genji
+			{
+				Swift Strike Cooldown Time: 200%
+			}
+
+			Lúcio
+			{
+				Soundwave Cooldown Time: 500%
+			}
+
+			Moira
+			{
+				Fade Cooldown Time: 500%
+			}
+
+			Pharah
+			{
+				Concussive Blast Cooldown Time: 300%
+				Hover Jets Maximum Time: 50%
+				Jump Jet Cooldown Time: 300%
+			}
+
+			Reinhardt
+			{
+				Charge Cooldown Time: 75%
+				Rocket Hammer Knockback Scalar: 250%
+			}
+
+			Sombra
+			{
+				Hack: Off
+				Stealth: Off
+				Translocator Cooldown Time: 300%
+			}
+
+			Symmetra
+			{
+				Teleporter: Off
+			}
+
+			Tracer
+			{
+				Blink Cooldown Time: 200%
+			}
+
+			Wrecking Ball
+			{
+				Healing Received: 25%
+				Jump Vertical Speed: 250%
+			}
+
+			disabled heroes
+			{
+				Wrecking Ball
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: Players_Ball
+		1: Merged_Throttles
+		2: Loop_Array_Index
+		4: Merged_Facing
+		5: Effects_Ball
+		6: Bool_Ball_Allowed_Yet
+		7: Bool_Ball_Spawned
+		9: HUD_Glorped_Players
+		10: Messages_You_Got_Glorped
+		11: Messages_Ball_Died
+		12: Messages_Ball_Spawned
+		13: Merged_Throttles_Proportional
+
+	player:
+		0: HUD_Steering
+}
+
+subroutines
+{
+	0: Merge_Throttles_and_Facing
+}
+
+rule("INIT: Message variables")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		"\"Funny\" phrases"
+		Global.Messages_Ball_Spawned = Array(Custom String("Let the glorpenating begin!"), Custom String(
+			"Help me, Glorpi-Wan Kenorpi!  You're my only glorp!"), Custom String("I am become glorpenator, glorper of worlds."),
+			Custom String("To glorp, or to glorp; that is the question."), Custom String("MOAR GLORP"), Custom String(
+			"You gonna get glorped!"));
+		Global.Messages_You_Got_Glorped = Array(Custom String("You got glorped!"), Custom String("You're all in this together now!"),
+			Custom String("Ain't it cozy in here?"), Custom String("Welcome to the club!"), Custom String("Join the party!"),
+			Custom String("You look so glorpy."), Custom String("Where would you like to glorp today?"), Custom String("Get t' glorpin'!"),
+			Custom String("WHAT AN HONOR TO BE CHOSEN BY THE GLORPENATOR!"));
+		Global.Messages_Ball_Died = Array(Custom String("Get glorped!"), Custom String("Remember kids: glorpism kills."), Custom String(
+			"You wanted a glorpocracy?  You got one!"), Custom String("That's a glorpin'"));
+	}
+}
+
+rule("Ball doesn't exist")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		"The default value when the game starts."
+		Global.Bool_Ball_Allowed_Yet == 0;
+	}
+
+	actions
+	{
+		"Set to 0 to indicate no ball exists."
+		Global.Players_Ball = 0;
+		Wait(5, Ignore Condition);
+		Global.Bool_Ball_Allowed_Yet = True;
+		Global.Bool_Ball_Spawned = False;
+	}
+}
+
+rule("Make new ball (slot 11)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(All Living Players(All Teams)) > 0;
+		"I don't like the way 0 ends up being used as a default value.  It's error-prone."
+		Global.Players_Ball == 0;
+		Global.Bool_Ball_Allowed_Yet == True;
+		"Make sure players have actually spawned, because apparently \"alive\" doesn't mean \"spawned and actually exists in the world\", sigh..."
+		Count Of(Filtered Array(All Living Players(All Teams), Has Spawned(Current Array Element))) > 0;
+	}
+
+	actions
+	{
+		"Select a random, living player to be in the ball first."
+		Global.Players_Ball = Array(Random Value In Array(All Living Players(All Teams)));
+		"Hide and phase out that player."
+		disabled Set Status(First Of(Global.Players_Ball), Null, Phased Out, 9999);
+		disabled Set Invisible(First Of(Global.Players_Ball), All);
+		"Make a dummy bot at the selected player's position.  Bot is in slot 11."
+		Create Dummy Bot(Hero(Wrecking Ball), All Teams, 11, Position Of(First Of(Global.Players_Ball)), Facing Direction Of(First Of(
+			Global.Players_Ball)));
+		"Avoid race condition, making sure ball has spawned before trying to change its form."
+		Skip If(Has Spawned(Players In Slot(11, All Teams)), 1);
+		Wait(2, Ignore Condition);
+		"Put ball in ball form."
+		disabled Start Holding Button(Players In Slot(11, All Teams), Ability 1);
+		disabled Wait(2, Ignore Condition);
+		disabled Stop Holding Button(Players In Slot(11, All Teams), Ability 1);
+		"Start applying throttle and facing to ball."
+		Start Throttle In Direction(Players In Slot(11, All Teams), Global.Merged_Throttles_Proportional, 0 + (Vector(0, 0, 0)
+			!= Global.Merged_Throttles), To World, Replace existing throttle, Direction and Magnitude);
+		Start Facing(Players In Slot(11, All Teams), Global.Merged_Facing, 100, To World, Direction and Turn Rate);
+		"Seems impossible to avoid race conditions without tracking things manually."
+		Global.Bool_Ball_Spawned = True;
+		Destroy HUD Text(Global.HUD_Glorped_Players);
+		"Create HUD"
+		Create HUD Text(All Players(All Teams), Custom String("Glorpers"), Null, String("{0} / {1}", Count Of(Global.Players_Ball),
+			Count Of(All Players(All Teams)) - 1), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Global.HUD_Glorped_Players = Last Text ID;
+		"Create and store effects."
+		Create Effect(All Players(All Teams), Good Aura, Orange, Position Of(Players In Slot(11, All Teams)), 1,
+			Visible To Position and Radius);
+		Global.Effects_Ball = Array(Last Created Entity);
+		Create Effect(All Players(All Teams), Bad Aura, Purple, Position Of(Players In Slot(11, All Teams)), 1,
+			Visible To Position and Radius);
+		Modify Global Variable(Effects_Ball, Append To Array, Last Created Entity);
+		disabled Create Effect(All Players(All Teams), Good Aura Sound, Orange, Position Of(Players In Slot(11, All Teams)), 200,
+			Visible To Position and Radius);
+		disabled Modify Global Variable(Effects_Ball, Append To Array, Last Created Entity);
+		"\"Funny\" message"
+		Big Message(All Players(All Teams), Random Value In Array(Global.Messages_Ball_Spawned));
+		"Reset ball speed"
+		Set Move Speed(Players In Slot(11, All Teams), 100);
+		"Create glorper icons HUD"
+		disabled Create HUD Text(All Players(All Teams), Null, Null, String("{0} / {1}", Count Of(Global.Players_Ball), Count Of(All Players(
+			All Teams)) - 1), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		disabled Global.HUD_Glorped_Players = Last Text ID;
+	}
+}
+
+rule("Player joins ball")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Array Contains(Global.Players_Ball, Event Player) == True;
+		Hero Of(Event Player) != Hero(Wrecking Ball);
+		Global.Bool_Ball_Spawned == True;
+	}
+
+	actions
+	{
+		"Play effects."
+		Play Effect(All Players(All Teams), Good Explosion, Purple, Event Player, 20);
+		Play Effect(All Players(All Teams), Explosion Sound, Yellow, Event Player, 200);
+		"WIP: Suck players into the ball gradually before attaching."
+		disabled Start Accelerating(Event Player, Direction Towards(Position Of(Event Player), Position Of(Players In Slot(11, All Teams))), 100,
+			20, To World, Direction Rate and Max Speed);
+		"Attach player to ball."
+		Attach Players(Event Player, Players In Slot(11, All Teams), Vector(0, 1.250, 0));
+		"Hide and phase out player."
+		Set Invisible(Event Player, All);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		"Disable abilities."
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Jump Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Disallow Button(Event Player, Interact);
+		"Show messages."
+		Small Message(Event Player, Random Value In Array(Global.Messages_You_Got_Glorped));
+		Small Message(Filtered Array(All Players(All Teams), !(Event Player == Current Array Element)), Custom String("{0} got glorped!",
+			Event Player));
+		"HUD about steering"
+		Create HUD Text(Event Player, Custom String("Glorp them all!"), Custom String("Pilot the Glorpenator with your fellow Glorpians!"),
+			Null, Right, 0, Purple, White, White, Visible To and String, Default Visibility);
+		Event Player.HUD_Steering = Last Text ID;
+		"Add health to ball"
+		Heal(Players In Slot(11, All Teams), Event Player, Health(Event Player));
+		"Set ball speed."
+		Set Move Speed(Players In Slot(11, All Teams), 100 + 5 * Count Of(Global.Players_Ball));
+	}
+}
+
+rule("Player too close to ball")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Global.Bool_Ball_Allowed_Yet == True;
+		"Player is not the dummy bot."
+		Is Dummy Bot(Event Player) == False;
+		"Ball is alive."
+		Is Alive(Players In Slot(11, All Teams)) == True;
+		"Player not already in ball."
+		Array Contains(Global.Players_Ball, Event Player) != True;
+		"Player within 3m of ball (3m seems like the right number so far)."
+		Distance Between(Position Of(Players In Slot(11, All Teams)), Position Of(Event Player)) <= 3;
+		Global.Bool_Ball_Spawned == True;
+	}
+
+	actions
+	{
+		"Add player to array.  The corresponding rule takes care of the rest."
+		Modify Global Variable(Players_Ball, Append To Array, Event Player);
+	}
+}
+
+rule("Ball dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		"Kill players in ball."
+		For Global Variable(Loop_Array_Index, 0, Count Of(Global.Players_Ball), 1);
+			Kill(Global.Players_Ball[Global.Loop_Array_Index], Attacker == Victim ? Null : Attacker);
+		End;
+		"Destroy the bot to prevent it from joining itself on respawn."
+		Destroy Dummy Bot(All Teams, 11);
+		Global.Bool_Ball_Spawned = False;
+		"Reset array."
+		Global.Players_Ball = 0;
+		"Wait before spawning another ball.  (I don't like having to do this, but it seems necessary to avoid race conditions.)"
+		Global.Bool_Ball_Allowed_Yet = False;
+		Wait(5, Ignore Condition);
+		Global.Bool_Ball_Allowed_Yet = True;
+		"Destroy effects."
+		For Global Variable(Loop_Array_Index, 0, Count Of(Global.Effects_Ball), 1);
+			Destroy Effect(Global.Effects_Ball[Global.Loop_Array_Index]);
+		End;
+		"Clear HUD"
+		Destroy HUD Text(Global.HUD_Glorped_Players);
+		"\"Funny\" message"
+		Big Message(All Players(All Teams), Random Value In Array(Global.Messages_Ball_Died));
+	}
+}
+
+rule("Player dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Hero Of(Event Player) != Hero(Wrecking Ball);
+	}
+
+	actions
+	{
+		"Unset invisible, phased out, and attached."
+		Set Invisible(Event Player, None);
+		Clear Status(Event Player, Phased Out);
+		Detach Players(Event Player);
+		Set Melee Enabled(Event Player, True);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Allow Button(Event Player, Interact);
+		Set Jump Enabled(Event Player, True);
+		"Clear HUD"
+		Destroy HUD Text(Event Player.HUD_Steering);
+		"Reset camera."
+		Stop Camera(Event Player);
+	}
+}
+
+rule("Player leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		"If variable is not an array, the ball dummy bot is the one who \"left\", so don't turn the variable back into an array."
+		Abort If(Global.Players_Ball == 0);
+		Modify Global Variable(Players_Ball, Remove From Array By Value, Event Player);
+		"If player was only ball player, kill the ball."
+		If(Global.Players_Ball[0] == 0);
+			Kill(Players In Slot(11, All Teams), Null);
+		End;
+	}
+}
+
+rule("ONGOING: Apply ball throttles to ball")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.Bool_Ball_Allowed_Yet == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Merge_Throttles_and_Facing);
+		Call Subroutine(Sub1);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: Merge throttles and facing")
+{
+	event
+	{
+		Subroutine;
+		Merge_Throttles_and_Facing;
+	}
+
+	actions
+	{
+		Global.Merged_Throttles = Vector(0, 0, 0);
+		Global.Merged_Facing = Vector(0, 0, 0);
+		For Global Variable(Loop_Array_Index, 0, Count Of(Global.Players_Ball), 1);
+			Global.Merged_Throttles += World Vector Of(Throttle Of(Global.Players_Ball[Global.Loop_Array_Index]),
+				Global.Players_Ball[Global.Loop_Array_Index], Rotation);
+			Global.Merged_Facing += World Vector Of(Facing Direction Of(Global.Players_Ball[Global.Loop_Array_Index]),
+				Global.Players_Ball[Global.Loop_Array_Index], Rotation);
+		End;
+	}
+}
+
+rule("All players GLORPED!")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For All(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element) == False), Array Contains(
+			Global.Players_Ball, Current Array Element)) == True;
+		Count Of(All Living Players(All Teams)) > 2;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Custom String("Y'all done got glorped!"));
+		Play Effect(All Players(All Teams), Good Explosion, Aqua, Position Of(Players In Slot(11, All Teams)), 100);
+		Wait(3, Ignore Condition);
+		Kill(Players In Slot(11, All Teams), Null);
+	}
+}
+
+rule("Damage slows")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Event Player != Players In Slot(11, All Teams);
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 80);
+		Wait(1, Ignore Condition);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Ball: Jumping")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Filtered Array(Global.Players_Ball, Is Button Held(Current Array Element, Jump))) >= Count Of(Global.Players_Ball) / 2;
+	}
+
+	actions
+	{
+		Press Button(Players In Slot(11, All Teams), Jump);
+	}
+}
+
+rule("Ball: Ability 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Filtered Array(Global.Players_Ball, Is Button Held(Current Array Element, Ability 1))) >= Count Of(Global.Players_Ball)
+			/ 2;
+	}
+
+	actions
+	{
+		Press Button(Players In Slot(11, All Teams), Ability 1);
+	}
+}
+
+disabled rule("DEBUG: Throttle HUD")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Host Player, Null, Custom String("Ball throttle: {0}", Global.Merged_Throttles_Proportional), Null, Left, 0, White,
+			White, White, Visible To and String, Default Visibility);
+		disabled Create HUD Text(Event Player, Null, Custom String("Your throttle: {0}", World Vector Of(Throttle Of(Event Player), Event Player,
+			Rotation)), Null, Left, 0, White, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+disabled rule("Keep ball in ball form: hacked, frozen")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		(Has Status(Players In Slot(11, All Teams), Hacked) || Has Status(Players In Slot(11, All Teams), Frozen)) == True;
+		Has Spawned(Players In Slot(11, All Teams)) == True;
+	}
+
+	actions
+	{
+		"Wait for it to end, then return ball to ball form."
+		Wait(6, Ignore Condition);
+		Press Button(Players In Slot(11, All Teams), Ability 1);
+	}
+}
+
+disabled rule("Keep ball in ball form: stunned, slept")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		(Has Status(Players In Slot(11, All Teams), Asleep) || Has Status(Players In Slot(11, All Teams), Stunned)) == True;
+		Has Spawned(Players In Slot(11, All Teams)) == True;
+	}
+
+	actions
+	{
+		"Wait for it to end, then return ball to ball form."
+		Wait(5, Ignore Condition);
+		Press Button(Players In Slot(11, All Teams), Ability 1);
+	}
+}
+
+disabled rule("Ball: Secondary Fire (this would require a lot more work, and probably wouldn't work well in practice, but maybe we can try it)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Filtered Array(Global.Players_Ball, Is Button Held(Current Array Element, Secondary Fire))) >= Count Of(
+			Global.Players_Ball) / 2;
+	}
+
+	actions
+	{
+		Press Button(Players In Slot(11, All Teams), Secondary Fire);
+	}
+}
+
+rule("Third-person camera code by Mornedil#2772 (Import code: TCQ42)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		"Player is in ball.  (Disable rule to always apply this camera.)"
+		Array Contains(Global.Players_Ball, Event Player) == True;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Facing Direction Of(Event Player) * 0.200 + Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + World Vector Of(Vector(-0.500, 0.500, -1), Event Player, Rotation) + Facing Direction Of(
+			Event Player) * Vector(2, 2 * 1, 2) * -1, All Players(All Teams), Event Player, True), Eye Position(Event Player)
+			+ World Vector Of(Vector(-0.500, 0.500, -1), Event Player, Rotation) + Facing Direction Of(Event Player) * 500, 50);
+	}
+}
+
+rule("SUBR: Merge throttles and facing (proportional)")
+{
+	event
+	{
+		Subroutine;
+		Sub1;
+	}
+
+	actions
+	{
+		Global.Merged_Throttles_Proportional = Vector(0, 0, 0);
+		disabled Global.Merged_Facing = Vector(0, 0, 0);
+		For Global Variable(Loop_Array_Index, 0, Count Of(Global.Players_Ball), 1);
+			Global.Merged_Throttles_Proportional += World Vector Of(Throttle Of(Global.Players_Ball[Global.Loop_Array_Index]),
+				Global.Players_Ball[Global.Loop_Array_Index], Rotation) / Count Of(Global.Players_Ball);
+			disabled Global.Merged_Facing += World Vector Of(Facing Direction Of(Global.Players_Ball[Global.Loop_Array_Index]),
+				Global.Players_Ball[Global.Loop_Array_Index], Rotation);
+		End;
+	}
+}
