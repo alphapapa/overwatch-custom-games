@@ -655,8 +655,6 @@ rule("SUBR: Clear all event-player-related things")
 
 	actions
 	{
-		"Destroy dummy bot for player's disc."
-		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
 		"Destroy effects for player's disc."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
 			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
@@ -669,8 +667,9 @@ rule("SUBR: Clear all event-player-related things")
 			Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
-		"Destroy last-throw HUD. (Shouldn't be necessary, but just in case...)"
 		Destroy HUD Text(Event Player.HUD_Last_Throw);
+		"Destroy dummy bot for player's disc."
+		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
 	}
 }
 
