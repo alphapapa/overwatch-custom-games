@@ -106,6 +106,7 @@ variables
 		10: HUD_Holding_Disc
 		11: BOOL_Throwing_Disc
 		12: HUD_Last_Throw
+		13: INT_Color
 		20: EFFECT_Goal_Name
 		21: EFFECT_Tee_Name
 		22: EFFECT_Tee
@@ -119,6 +120,8 @@ subroutines
 	0: Disc_Clear
 	1: Disc_Spawn
 	4: PLAYER_Clear_All_Things
+	5: Player_Disc_Create_Effects
+	6: Player_Disc_Clear_Effects
 }
 
 rule("HUD: Instructions")
@@ -135,6 +138,8 @@ rule("HUD: Instructions")
 
 	actions
 	{
+		Create HUD Text(All Players(All Teams), Custom String("Set Color"), Custom String(""), Custom String("Interact + Reload "), Right,
+			0, White, White, White, Visible To and String, Default Visibility);
 		Create HUD Text(All Players(All Teams), Custom String("Place goal"), Custom String(""), Custom String("Interact + Crouch"), Right,
 			0, Red, White, White, Visible To and String, Default Visibility);
 		Create HUD Text(All Players(All Teams), Custom String("Place tee"), Custom String(""), Custom String("Interact + Jump     "),
@@ -193,15 +198,8 @@ rule("SUBR: Disc_Spawn (for player in variable Global.PLAYER_Spawning_Disc)")
 		"Make bot invisible and phased out."
 		Set Invisible(Event Player.ENTITY_Disc, All);
 		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
-		Create Effect(All Players(All Teams), Sphere, White, Position Of(Event Player.ENTITY_Disc), 0.500, Visible To Position and Radius);
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
-		Create Effect(All Players(All Teams), Sphere, Red, Position Of(Event Player.ENTITY_Disc), 0.250, Visible To Position and Radius);
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
-		Create Effect(All Players(All Teams), Sphere, Blue, Position Of(Event Player.ENTITY_Disc), 0.750, Visible To Position and Radius);
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
-		Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
-			Visible To Position and String, White, Default Visibility);
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+		"Create effects."
+		Call Subroutine(Player_Disc_Create_Effects);
 	}
 }
 
@@ -217,12 +215,7 @@ rule("SUBR: Disc_Clear (for player in variable Global.PLAYER_Spawning_Disc)")
 	{
 		"Destroy dummy bot for player's disc."
 		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
-		"Destroy effects for player's disc."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy In-World Text(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-		End;
+		Call Subroutine(Player_Disc_Clear_Effects);
 		"Destroy effects for player."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
 			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
@@ -481,7 +474,7 @@ rule("DISC: Cancel motion on ground")
 	}
 }
 
-rule("DEBUG: Destroy all bots")
+disabled rule("DEBUG: Destroy all bots")
 {
 	event
 	{
@@ -619,6 +612,11 @@ rule("PLAYER: Leaves match")
 		All;
 	}
 
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Wrecking Ball);
+	}
+
 	actions
 	{
 		disabled Small Message(Host Player, Custom String("Player left match: {0}", Event Player));
@@ -673,5 +671,166 @@ rule("SUBR: Clear all event-player-related things")
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
 		"Destroy last-throw HUD. (Shouldn't be necessary, but just in case...)"
 		Destroy HUD Text(Event Player.HUD_Last_Throw);
+	}
+}
+
+rule("PLAYER: Change color")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		"Increment color."
+		Event Player.INT_Color += 1;
+		"Wrap color back to 0."
+		If(Event Player.INT_Color > 12);
+			Event Player.INT_Color = 0;
+		End;
+		"Disc exists: Change its effect color."
+		If(Event Player.ENTITY_Disc != 0);
+			"Clear disc effects."
+			Call Subroutine(Player_Disc_Clear_Effects);
+			Call Subroutine(Player_Disc_Create_Effects);
+		End;
+	}
+}
+
+rule("SUBR: Create disc effects (call with player as Event Player)")
+{
+	event
+	{
+		Subroutine;
+		Player_Disc_Create_Effects;
+	}
+
+	actions
+	{
+		"Create disc visual effects."
+		If(Event Player.INT_Color == 0);
+			Create Effect(All Players(All Teams), Sphere, White, Position Of(Event Player.ENTITY_Disc), 0.750, Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 1);
+			Create Effect(All Players(All Teams), Sphere, Yellow, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 2);
+			Create Effect(All Players(All Teams), Sphere, Green, Position Of(Event Player.ENTITY_Disc), 0.750, Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 3);
+			Create Effect(All Players(All Teams), Sphere, Purple, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 4);
+			Create Effect(All Players(All Teams), Sphere, Red, Position Of(Event Player.ENTITY_Disc), 0.750, Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 5);
+			Create Effect(All Players(All Teams), Sphere, Blue, Position Of(Event Player.ENTITY_Disc), 0.750, Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 6);
+			Create Effect(All Players(All Teams), Sphere, Team 1, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 7);
+			Create Effect(All Players(All Teams), Sphere, Team 2, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 8);
+			Create Effect(All Players(All Teams), Sphere, Aqua, Position Of(Event Player.ENTITY_Disc), 0.750, Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 9);
+			Create Effect(All Players(All Teams), Sphere, Orange, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 10);
+			Create Effect(All Players(All Teams), Sphere, Sky Blue, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 11);
+			Create Effect(All Players(All Teams), Sphere, Turquoise, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		Else If(Event Player.INT_Color == 12);
+			Create Effect(All Players(All Teams), Sphere, Lime Green, Position Of(Event Player.ENTITY_Disc), 0.750,
+				Visible To Position and Radius);
+		End;
+		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+		Create Effect(All Players(All Teams), Sphere, White, Position Of(Event Player.ENTITY_Disc), 0.600, Visible To Position and Radius);
+		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+		"Create player name text on disc."
+		If(Event Player.INT_Color == 0);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, White, Default Visibility);
+		Else If(Event Player.INT_Color == 1);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Yellow, Default Visibility);
+		Else If(Event Player.INT_Color == 2);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Green, Default Visibility);
+		Else If(Event Player.INT_Color == 3);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Purple, Default Visibility);
+		Else If(Event Player.INT_Color == 4);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Red, Default Visibility);
+		Else If(Event Player.INT_Color == 5);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Blue, Default Visibility);
+		Else If(Event Player.INT_Color == 6);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Team 1, Default Visibility);
+		Else If(Event Player.INT_Color == 7);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Team 2, Default Visibility);
+		Else If(Event Player.INT_Color == 8);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Aqua, Default Visibility);
+		Else If(Event Player.INT_Color == 9);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Orange, Default Visibility);
+		Else If(Event Player.INT_Color == 10);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Sky Blue, Default Visibility);
+		Else If(Event Player.INT_Color == 11);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Turquoise, Default Visibility);
+		Else If(Event Player.INT_Color == 12);
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+				Visible To Position and String, Lime Green, Default Visibility);
+		End;
+		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+	}
+}
+
+rule("SUBR: Clear player disc effects (call with player as Event Player)")
+{
+	event
+	{
+		Subroutine;
+		Player_Disc_Clear_Effects;
+	}
+
+	actions
+	{
+		"Destroy effects for player's disc."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
+			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy In-World Text(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+		End;
+		Event Player.ENTITY_Disc.EFFECTS_Disc = 0;
+	}
+}
+
+rule("PLAYER: Init")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.INT_Color = Random Integer(0, 12);
 	}
 }
