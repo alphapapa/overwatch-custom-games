@@ -107,6 +107,9 @@ variables
 		11: BOOL_Throwing_Disc
 		12: HUD_Last_Throw
 		13: INT_Color
+		14: VECTOR_Last_Throw_From
+		15: INT_Last_Throw_Distance
+		16: PLAYER_Disc_Owner
 		20: EFFECT_Goal_Name
 		21: EFFECT_Tee_Name
 		22: EFFECT_Tee
@@ -195,6 +198,8 @@ rule("SUBR: Disc_Spawn (for player in variable Global.PLAYER_Spawning_Disc)")
 		Create Dummy Bot(Hero(Wrecking Ball), All Teams, -1, Position Of(Event Player), Vector(0, 0, 0));
 		"Save bot to player's variable."
 		Event Player.ENTITY_Disc = Last Created Entity;
+		"Save player to bot variable."
+		Event Player.ENTITY_Disc.PLAYER_Disc_Owner = Event Player;
 		"Make bot invisible and phased out."
 		Set Invisible(Event Player.ENTITY_Disc, All);
 		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
@@ -329,6 +334,8 @@ rule("PLAYER: Throw disc")
 		"Clear player-holding-disc effects."
 		Call Subroutine(Disc_Clear);
 		Call Subroutine(Disc_Spawn);
+		"Record position of throw."
+		Event Player.ENTITY_Disc.VECTOR_Last_Throw_From = Position Of(Event Player);
 		"Calcuate and set disc curve vector and speed."
 		Event Player.ENTITY_Disc.VECTOR_Disc_Curve_Impulse = Event Player.INT_Curve_Angle - 25 < 0 ? Vector(1, 0, 0) : Vector(-1, 0, 0);
 		If(Event Player.INT_Curve_Angle <= 25);
@@ -358,8 +365,9 @@ rule("PLAYER: Throw disc")
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
 		"Show last-throw HUD."
 		Destroy HUD Text(Event Player.HUD_Last_Throw);
-		Create HUD Text(Event Player, Custom String("Last throw"), Null, Custom String("Strength: {0}%", Absolute Value(
-			Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, None, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
+			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
+			Default Visibility);
 		Event Player.HUD_Last_Throw = Last Text ID;
 	}
 }
@@ -451,6 +459,8 @@ rule("DISC: Cancel motion on ground")
 	actions
 	{
 		Event Player.BOOL_Disc_Thrown = False;
+		Event Player.PLAYER_Disc_Owner.INT_Last_Throw_Distance = Distance Between(Event Player.VECTOR_Last_Throw_From, Position Of(
+			Event Player));
 	}
 }
 
