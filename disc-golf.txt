@@ -218,9 +218,9 @@ rule("SUBR: Disc_Clear (for player in variable Global.PLAYER_Spawning_Disc)")
 
 	actions
 	{
+		Call Subroutine(Player_Disc_Clear_Effects);
 		"Destroy dummy bot for player's disc."
 		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
-		Call Subroutine(Player_Disc_Clear_Effects);
 		"Destroy effects for player."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
 			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
@@ -645,21 +645,7 @@ rule("SUBR: Clear all event-player-related things")
 
 	actions
 	{
-		"Destroy effects for player's disc."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy In-World Text(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-		End;
-		"Destroy effects for player."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-		End;
-		Destroy HUD Text(Event Player.HUD_Holding_Disc);
-		Destroy HUD Text(Event Player.HUD_Last_Throw);
-		"Destroy dummy bot for player's disc."
-		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
+		Call Subroutine(Disc_Clear);
 	}
 }
 
