@@ -105,6 +105,7 @@ variables
 		9: INT_Disc_Curve_Speed
 		10: HUD_Holding_Disc
 		11: BOOL_Throwing_Disc
+		12: HUD_Last_Throw
 		20: EFFECT_Goal_Name
 		21: EFFECT_Tee_Name
 		22: EFFECT_Tee
@@ -117,6 +118,7 @@ subroutines
 {
 	0: Disc_Clear
 	1: Disc_Spawn
+	4: PLAYER_Clear_All_Things
 }
 
 rule("HUD: Instructions")
@@ -361,6 +363,11 @@ rule("PLAYER: Throw disc")
 		Event Player.BOOL_Holding_Disc = False;
 		Clear Status(Event Player, Rooted);
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
+		"Show last-throw HUD."
+		Destroy HUD Text(Event Player.HUD_Last_Throw);
+		Create HUD Text(Event Player, Custom String("Last throw"), Null, Custom String("Strength: {0}%", Absolute Value(
+			Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, None, Default Visibility);
+		Event Player.HUD_Last_Throw = Last Text ID;
 	}
 }
 
@@ -615,7 +622,7 @@ rule("PLAYER: Leaves match")
 	actions
 	{
 		disabled Small Message(Host Player, Custom String("Player left match: {0}", Event Player));
-		Call Subroutine(Disc_Clear);
+		Call Subroutine(PLAYER_Clear_All_Things);
 	}
 }
 
@@ -637,5 +644,34 @@ rule("PLAYER: Begin throwing (holding disc and pressing primary fire)")
 	actions
 	{
 		Event Player.BOOL_Throwing_Disc = True;
+	}
+}
+
+rule("SUBR: Clear all event-player-related things")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Clear_All_Things;
+	}
+
+	actions
+	{
+		"Destroy dummy bot for player's disc."
+		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
+		"Destroy effects for player's disc."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
+			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy In-World Text(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+		End;
+		"Destroy effects for player."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
+			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+		End;
+		Destroy HUD Text(Event Player.HUD_Holding_Disc);
+		"Destroy last-throw HUD. (Shouldn't be necessary, but just in case...)"
+		Destroy HUD Text(Event Player.HUD_Last_Throw);
 	}
 }
