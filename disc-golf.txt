@@ -49,6 +49,16 @@ settings
 			Ultimate Generation - Combat: 0%
 			Ultimate Generation - Passive: 0%
 
+			Ana
+			{
+				Sleep Dart: Off
+			}
+
+			Genji
+			{
+				Secondary Fire: Off
+			}
+
 			Symmetra
 			{
 				Sentry Turret: Off
@@ -62,6 +72,11 @@ settings
 			Wrecking Ball
 			{
 				Movement Gravity: 50%
+			}
+
+			Zarya
+			{
+				Secondary Fire: Off
 			}
 
 			disabled heroes
