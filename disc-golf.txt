@@ -756,46 +756,46 @@ rule("SUBR: Create disc effects (call with player as Event Player)")
 		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
 		"Create player name text on disc."
 		If(Event Player.INT_Color == 0);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, White, Default Visibility);
 		Else If(Event Player.INT_Color == 1);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Yellow, Default Visibility);
 		Else If(Event Player.INT_Color == 2);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Green, Default Visibility);
 		Else If(Event Player.INT_Color == 3);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Purple, Default Visibility);
 		Else If(Event Player.INT_Color == 4);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Red, Default Visibility);
 		Else If(Event Player.INT_Color == 5);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Blue, Default Visibility);
 		Else If(Event Player.INT_Color == 6);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Team 1, Default Visibility);
 		Else If(Event Player.INT_Color == 7);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Team 2, Default Visibility);
 		Else If(Event Player.INT_Color == 8);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Aqua, Default Visibility);
 		Else If(Event Player.INT_Color == 9);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Orange, Default Visibility);
 		Else If(Event Player.INT_Color == 10);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Sky Blue, Default Visibility);
 		Else If(Event Player.INT_Color == 11);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Turquoise, Default Visibility);
 		Else If(Event Player.INT_Color == 12);
-			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Clip Against Surfaces,
+			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Lime Green, Default Visibility);
 		End;
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Text ID);
 	}
 }
 
