@@ -411,7 +411,7 @@ rule("INIT")
 
 	actions
 	{
-		Event Player.INT_Curve_Angle = 25;
+		Event Player.INT_Curve_Angle = 12.500;
 	}
 }
 
