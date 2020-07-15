@@ -192,7 +192,7 @@ rule("MAP: BIizzard World")
 	}
 }
 
-rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"Ongoing - Global\"")
+rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"Ongoing - Global\")")
 {
 	event
 	{
