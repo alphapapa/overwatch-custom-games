@@ -152,9 +152,9 @@ rule("MAP: BIizzard World")
 	actions
 	{
 		Global.VECTORS_Tee_Positions = Array(False, Vector(-70.980, 6.870, 111.910), Vector(-64.480, 0.690, 120.500), Vector(-42.520,
-			4.810, 90.680));
+			4.810, 90.680), Vector(-53.360, -0.160, 65.150), Vector(-62.705, 6.600, 80.572));
 		Global.VECTORS_Hole_Positions = Array(False, Vector(-78.100, 0.600, 128.400), Vector(-55.220, 4.530, 98.820), Vector(-41.650,
-			-0.200, 62.210));
+			-0.200, 62.210), Vector(-77.350, 4.880, 66.080), Vector(-31.650, 5.820, 100.370));
 	}
 }
 
