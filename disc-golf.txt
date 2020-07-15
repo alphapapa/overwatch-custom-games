@@ -22,7 +22,6 @@ settings
 			enabled maps
 			{
 				Blizzard World
-				Blizzard World Winter
 			}
 		}
 
@@ -91,6 +90,9 @@ variables
 {
 	global:
 		6: HUD_Instructions
+		7: VECTORS_Tee_Positions
+		8: VECTORS_Hole_Positions
+		10: EFFECTS_Tees_Holes
 		25: INT_Loop_Index
 
 	player:
@@ -110,12 +112,17 @@ variables
 		14: VECTOR_Last_Throw_From
 		15: INT_Last_Throw_Distance
 		16: PLAYER_Disc_Owner
+		17: INT_Current_Hole
+		18: EFFECTS_Current_Hole
+		19: BOOL_Playing_Hole
 		20: EFFECT_Goal_Name
 		21: EFFECT_Tee_Name
 		22: EFFECT_Tee
 		23: POINT_Tee
 		24: EFFECT_Goal
 		25: POINT_Goal
+		26: STRING_Playing_Hole
+		27: INT_Current_Strokes
 }
 
 subroutines
@@ -125,6 +132,115 @@ subroutines
 	4: PLAYER_Clear_All_Things
 	5: Player_Disc_Create_Effects
 	6: Player_Disc_Clear_Effects
+	7: PLAYER_Create_Hole_Effects
+	8: PLAYER_Clear_Hole_Effects
+}
+
+rule("MAP: BIizzard World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Blizzard World);
+	}
+
+	actions
+	{
+		Global.VECTORS_Tee_Positions = Array(Null, Vector(-70.980, 6.870, 111.910), Vector(-64.480, 0.690, 120.500), Vector(-42.520, 4.810,
+			90.680));
+		Global.VECTORS_Hole_Positions = Array(Null, Vector(-78.100, 0.600, 128.400), Vector(-55.338, 5.775, 98.789), Vector(-41.650,
+			-0.200, 62.210));
+	}
+}
+
+rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"Ongoing - Global\"")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.EFFECTS_Tees_Holes == 0;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
+			"Create effects for tee and hole."
+			Create Effect(All Players(All Teams), Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
+			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
+			Create Effect(All Players(All Teams), Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
+			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
+			"Labels"
+			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, None, Green, Default Visibility);
+			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, None, White, Default Visibility);
+			"Do it again and then delete it to workaround insane bug?!"
+			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, None, White, Default Visibility);
+			Destroy In-World Text(Last Text ID);
+			disabled Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
+			disabled Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
+		End;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Wrecking Ball);
+	}
+
+	actions
+	{
+		Event Player.INT_Color = Random Integer(0, 12);
+		Event Player.INT_Current_Hole = 1;
+		Event Player.BOOL_Playing_Hole = False;
+		Event Player.STRING_Playing_Hole = Custom String("None");
+		Create HUD Text(Event Player, Custom String("Playing"), Custom String("Strokes: {0}", Event Player.INT_Current_Strokes),
+			Custom String("Hole: {0}", Event Player.STRING_Playing_Hole), Left, 9, Green, White, White, String, Default Visibility);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) != Hero(Wrecking Ball);
+	}
+
+	actions
+	{
+		Event Player.INT_Curve_Angle = 12.500;
+		Set Status(Event Player, Null, Phased Out, 9999);
+		"Move player to current tee."
+		Teleport(Event Player, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]);
+	}
 }
 
 rule("HUD: Instructions")
@@ -162,7 +278,7 @@ rule("HUD: Instructions")
 	}
 }
 
-rule("PLAYER: Spawn disc")
+rule("PLAYER: Spawn disc / Begin hole")
 {
 	event
 	{
@@ -181,6 +297,15 @@ rule("PLAYER: Spawn disc")
 	{
 		Call Subroutine(Disc_Clear);
 		Call Subroutine(Disc_Spawn);
+		"On a tee: Begin playing the hole."
+		If(Distance Between(Position Of(Event Player), Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]) <= 1);
+			Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
+			Event Player.INT_Current_Strokes = 0;
+		"Not at a tee: Stop playing hole and spawn \"free\" disc."
+		Else;
+			Event Player.STRING_Playing_Hole = Custom String("None");
+			Event Player.INT_Current_Strokes = 0;
+		End;
 	}
 }
 
@@ -208,7 +333,7 @@ rule("SUBR: Disc_Spawn (for player in variable Global.PLAYER_Spawning_Disc)")
 	}
 }
 
-rule("SUBR: Disc_Clear (for player in variable Global.PLAYER_Spawning_Disc)")
+rule("SUBR: Disc_Clear (for Event Player)")
 {
 	event
 	{
@@ -224,7 +349,7 @@ rule("SUBR: Disc_Clear (for player in variable Global.PLAYER_Spawning_Disc)")
 		"Destroy effects for player."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
 			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			disabled Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
 		"Set player disc variables to 0."
 		Event Player.ENTITY_Disc = 0;
@@ -266,6 +391,7 @@ rule("PLAYER: Set throw charge (reload)")
 	conditions
 	{
 		Is Button Held(Event Player, Reload) == True;
+		Is Button Held(Event Player, Interact) == False;
 	}
 
 	actions
@@ -307,8 +433,6 @@ rule("PLAYER: Pick up disc")
 		Create HUD Text(Event Player, Custom String("Holding disc"), Custom String("To throw"), Custom String(
 			"hold Primary Fire, rotate slowly, and release"), Top, 0, White, Turquoise, White, Visible To and String, Default Visibility);
 		Event Player.HUD_Holding_Disc = Last Text ID;
-		"Reset angle."
-		disabled Event Player.INT_Curve_Angle = 25;
 		Event Player.BOOL_Throwing_Disc = False;
 	}
 }
@@ -369,6 +493,8 @@ rule("PLAYER: Throw disc")
 			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
 			Default Visibility);
 		Event Player.HUD_Last_Throw = Last Text ID;
+		"Increment stroke counter."
+		Event Player.INT_Current_Strokes += 1;
 	}
 }
 
@@ -461,6 +587,16 @@ rule("DISC: Cancel motion on ground")
 		Event Player.BOOL_Disc_Thrown = False;
 		Event Player.PLAYER_Disc_Owner.INT_Last_Throw_Distance = Distance Between(Event Player.VECTOR_Last_Throw_From, Position Of(
 			Event Player));
+		"Playing the hole:"
+		If(Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole != Custom String("None"));
+			"Disc in hole: score."
+			If(Distance Between(Event Player, Global.VECTORS_Hole_Positions[Event Player.PLAYER_Disc_Owner.INT_Current_Hole]) <= 2);
+				Big Message(All Players(All Teams), Custom String("{0} made #{1} with {2} strokes", Event Player.PLAYER_Disc_Owner,
+					Event Player.PLAYER_Disc_Owner.INT_Current_Hole + 1, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
+				Modify Player Score(Event Player.PLAYER_Disc_Owner, Score Of(Event Player.PLAYER_Disc_Owner)
+					- Event Player.PLAYER_Disc_Owner.INT_Current_Strokes);
+			End;
+		End;
 	}
 }
 
@@ -795,42 +931,6 @@ rule("SUBR: Clear player disc effects (call with player as Event Player)")
 	}
 }
 
-rule("PLAYER: Spawns")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Has Spawned(Event Player) == True;
-	}
-
-	actions
-	{
-		Event Player.INT_Curve_Angle = 12.500;
-		Set Status(Event Player, Null, Phased Out, 9999);
-	}
-}
-
-rule("PLAYER: Joins")
-{
-	event
-	{
-		Player Joined Match;
-		All;
-		All;
-	}
-
-	actions
-	{
-		Event Player.INT_Color = Random Integer(0, 12);
-	}
-}
-
 rule("DISC: Dies (duplicates actions from other subr, but since the disc owner is not the Event Player, they must be changed here)")
 {
 	event
@@ -849,5 +949,49 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 			Destroy In-World Text(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
 		Event Player.EFFECTS_Disc = 0;
+	}
+}
+
+disabled rule("SUBR: PLAYER: Activate hole")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Create_Hole_Effects;
+	}
+
+	actions
+	{
+		"Clear effects from previous hole."
+		Call Subroutine(PLAYER_Clear_Hole_Effects);
+		"Create effects for new hole."
+		Create Effect(Event Player, Sphere, Green, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole], 0.250, None);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Sphere, Red, Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole], 3, None);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Created Entity);
+		Create In-World Text(Event Player, Event Player.INT_Current_Hole + 1, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole],
+			1, Do Not Clip, None, Green, Default Visibility);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Text ID);
+		Create In-World Text(Event Player, Event Player.INT_Current_Hole + 1, Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole],
+			1, Do Not Clip, None, Red, Default Visibility);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Text ID);
+	}
+}
+
+disabled rule("SUBR: PLAYER: Clear hole effects")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Clear_Hole_Effects;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Current_Hole), 1);
+			Destroy Effect(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
+			Destroy Icon(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
+			Destroy In-World Text(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
+		End;
 	}
 }
