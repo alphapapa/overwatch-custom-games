@@ -208,8 +208,14 @@ rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"O
 
 	actions
 	{
+		"Delete and recreate all effects (not sure why, but seems to be necessary for new players to see them)."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Global.EFFECTS_Tees_Holes), 1);
+			Destroy Effect(Global.EFFECTS_Tees_Holes[Global.INT_Loop_Index]);
+			Destroy In-World Text(Global.EFFECTS_Tees_Holes[Global.INT_Loop_Index]);
+		End;
+		Global.EFFECTS_Tees_Holes = 0;
+		"Create tee and hole effects and text."
 		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
-			"Create effects for tee and hole."
 			Create Effect(All Players(All Teams), Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
 			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
 			Create Effect(All Players(All Teams), Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
@@ -217,9 +223,11 @@ rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"O
 			"Labels"
 			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
 				Do Not Clip, None, Green, Default Visibility);
+			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
 			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
 				Do Not Clip, None, White, Default Visibility);
-			"Do it again and then delete it to workaround insane bug?!"
+			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
+			"Do it again and then delete it to workaround insane bug?!  Seems to work but no idea why it's necessary or why it works around it."
 			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
 				Do Not Clip, None, White, Default Visibility);
 			Destroy In-World Text(Last Text ID);
