@@ -682,6 +682,16 @@ rule("DEBUG: Create goals")
 
 	actions
 	{
+		If(Is True For Any(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Current Array Element, Position Of(
+			Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to a tee."));
+			Abort;
+		End;
+		If(Is True For Any(Global.VECTORS_Hole_Positions, Current Array Element != 0 && Distance Between(Current Array Element,
+			Position Of(Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to another hole."));
+			Abort;
+		End;
 		Destroy Effect(Event Player.EFFECT_Goal);
 		Event Player.POINT_Goal = Position Of(Event Player);
 		Create Effect(All Players(All Teams), Sphere, Red, Event Player.POINT_Goal, 2, Visible To Position and Radius);
@@ -737,6 +747,16 @@ rule("DEBUG: Create tees")
 
 	actions
 	{
+		If(Is True For Any(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Current Array Element, Position Of(
+			Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to another tee."));
+			Abort;
+		End;
+		If(Is True For Any(Global.VECTORS_Hole_Positions, Current Array Element != 0 && Distance Between(Current Array Element,
+			Position Of(Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to a hole."));
+			Abort;
+		End;
 		Destroy Effect(Event Player.EFFECT_Tee);
 		Event Player.POINT_Tee = Position Of(Event Player);
 		Create Effect(All Players(All Teams), Sphere, Green, Event Player.POINT_Tee, 0.250, Visible To Position and Radius);
