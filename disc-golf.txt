@@ -93,6 +93,7 @@ variables
 		7: VECTORS_Tee_Positions
 		8: VECTORS_Hole_Positions
 		10: EFFECTS_Tees_Holes
+		24: VECTORS_Temp
 		25: INT_Loop_Index
 
 	player:
@@ -150,9 +151,9 @@ rule("MAP: BIizzard World")
 
 	actions
 	{
-		Global.VECTORS_Tee_Positions = Array(Null, Vector(-70.980, 6.870, 111.910), Vector(-64.480, 0.690, 120.500), Vector(-42.520, 4.810,
-			90.680));
-		Global.VECTORS_Hole_Positions = Array(Null, Vector(-78.100, 0.600, 128.400), Vector(-55.338, 5.775, 98.789), Vector(-41.650,
+		Global.VECTORS_Tee_Positions = Array(False, Vector(-70.980, 6.870, 111.910), Vector(-64.480, 0.690, 120.500), Vector(-42.520,
+			4.810, 90.680));
+		Global.VECTORS_Hole_Positions = Array(False, Vector(-78.100, 0.600, 128.400), Vector(-55.220, 4.530, 98.820), Vector(-41.650,
 			-0.200, 62.210));
 	}
 }
@@ -168,7 +169,7 @@ rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"O
 
 	conditions
 	{
-		Global.EFFECTS_Tees_Holes == 0;
+		disabled Global.EFFECTS_Tees_Holes == 0;
 	}
 
 	actions
@@ -298,13 +299,29 @@ rule("PLAYER: Spawn disc / Begin hole")
 		Call Subroutine(Disc_Clear);
 		Call Subroutine(Disc_Spawn);
 		"On a tee: Begin playing the hole."
-		If(Distance Between(Position Of(Event Player), Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]) <= 1);
-			Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
+		disabled If(Distance Between(Position Of(Event Player), Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]) <= 1);
+		disabled Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
+		disabled Event Player.INT_Current_Strokes = 0;
+		"Not at a tee: Stop playing hole and spawn \"free\" disc."
+		disabled Else;
+		disabled Event Player.STRING_Playing_Hole = Custom String("None");
+		disabled Event Player.INT_Current_Strokes = 0;
+		disabled End;
+		"Find any tee the player is next to."
+		disabled Global.VECTORS_Temp = 0;
+		Global.VECTORS_Temp = Filtered Array(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Position Of(
+			Event Player), Current Array Element) <= 1);
+		"Player is on a tee: set his current hole to that number."
+		If(First Of(Global.VECTORS_Temp) != 0);
+			Event Player.INT_Current_Hole = Index Of Array Value(Global.VECTORS_Tee_Positions, Global.VECTORS_Temp);
 			Event Player.INT_Current_Strokes = 0;
+			Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
+			Small Message(All Players(All Teams), Custom String("{0} is playing hole #{1}", Event Player, Event Player.STRING_Playing_Hole));
 		"Not at a tee: Stop playing hole and spawn \"free\" disc."
 		Else;
 			Event Player.STRING_Playing_Hole = Custom String("None");
 			Event Player.INT_Current_Strokes = 0;
+			Small Message(Event Player, Custom String("Spawned free disc, not playing a hole"));
 		End;
 	}
 }
@@ -567,7 +584,7 @@ rule("PLAYER: Record turn rate")
 	}
 }
 
-rule("DISC: Cancel motion on ground")
+rule("DISC: Came to rest")
 {
 	event
 	{
@@ -590,11 +607,12 @@ rule("DISC: Cancel motion on ground")
 		"Playing the hole:"
 		If(Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole != Custom String("None"));
 			"Disc in hole: score."
-			If(Distance Between(Event Player, Global.VECTORS_Hole_Positions[Event Player.PLAYER_Disc_Owner.INT_Current_Hole]) <= 2);
+			If(Distance Between(Event Player, Global.VECTORS_Hole_Positions[Event Player.PLAYER_Disc_Owner.INT_Current_Hole]) <= 2.500);
 				Big Message(All Players(All Teams), Custom String("{0} made #{1} with {2} strokes", Event Player.PLAYER_Disc_Owner,
-					Event Player.PLAYER_Disc_Owner.INT_Current_Hole + 1, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
+					Event Player.PLAYER_Disc_Owner.INT_Current_Hole, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
 				Modify Player Score(Event Player.PLAYER_Disc_Owner, Score Of(Event Player.PLAYER_Disc_Owner)
 					- Event Player.PLAYER_Disc_Owner.INT_Current_Strokes);
+				disabled Event Player.PLAYER_Disc_Owner.INT_Current_Hole += 1;
 			End;
 		End;
 	}
