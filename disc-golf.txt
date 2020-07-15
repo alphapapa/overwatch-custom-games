@@ -157,6 +157,7 @@ variables
 		25: POINT_Goal
 		26: STRING_Playing_Hole
 		27: INT_Current_Strokes
+		28: STRINGS_Disc_Status
 }
 
 subroutines
@@ -259,6 +260,9 @@ rule("PLAYER: Joins")
 		Event Player.STRING_Playing_Hole = Custom String("None");
 		Create HUD Text(Event Player, Custom String("Playing"), Custom String("Strokes: {0}", Event Player.INT_Current_Strokes),
 			Custom String("Hole: {0}", Event Player.STRING_Playing_Hole), Left, 9, Green, White, White, String, Default Visibility);
+		Create HUD Text(Event Player, Event Player.STRINGS_Disc_Status[0], Event Player.STRINGS_Disc_Status[1],
+			Event Player.STRINGS_Disc_Status[2], Top, 0, White, Turquoise, White, String, Default Visibility);
+		Event Player.STRINGS_Disc_Status = Array(Custom String("No disc"), Custom String("Now you can"), Custom String("Spawn a disc"));
 	}
 }
 
@@ -367,6 +371,8 @@ rule("PLAYER: Spawn disc / Begin hole")
 			Event Player.INT_Current_Strokes = 0;
 			Small Message(Event Player, Custom String("Spawned free disc, not playing a hole"));
 		End;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc spawned"), Custom String("Now you can"), Custom String(
+			"Pick it up or spawn a new one"));
 	}
 }
 
@@ -492,10 +498,9 @@ rule("PLAYER: Pick up disc")
 		Modify Player Variable(Event Player, EFFECTS_Disc, Append To Array, Last Created Entity);
 		Event Player.BOOL_Holding_Disc = True;
 		Set Status(Event Player, Null, Rooted, 9999);
-		Create HUD Text(Event Player, Custom String("Holding disc"), Custom String("To throw"), Custom String(
-			"hold Primary Fire, rotate slowly, and release"), Top, 0, White, Turquoise, White, Visible To and String, Default Visibility);
-		Event Player.HUD_Holding_Disc = Last Text ID;
 		Event Player.BOOL_Throwing_Disc = False;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Holding disc"), Custom String("To throw"), Custom String(
+			"hold Primary Fire, rotate slowly, and release"));
 	}
 }
 
@@ -559,6 +564,8 @@ rule("PLAYER: Throw disc")
 		Event Player.HUD_Last_Throw = Last Text ID;
 		"Increment stroke counter."
 		Event Player.INT_Current_Strokes += 1;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc thrown"), Custom String("Now you can"), Custom String(
+			"Go pick it up or spawn a new one"));
 	}
 }
 
@@ -1093,6 +1100,10 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 			Destroy In-World Text(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
 		Event Player.EFFECTS_Disc = 0;
+		Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
+			"Spawn a disc"));
+		"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
+		Destroy Dummy Bot(All Teams, Slot Of(Event Player));
 	}
 }
 
