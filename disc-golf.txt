@@ -238,6 +238,7 @@ rule("PLAYER: Spawns")
 	actions
 	{
 		Event Player.INT_Curve_Angle = 12.500;
+		Set Ultimate Charge(Event Player, 12.500);
 		Set Status(Event Player, Null, Phased Out, 9999);
 		"Move player to current tee."
 		Teleport(Event Player, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]);
@@ -375,27 +376,6 @@ rule("SUBR: Disc_Clear (for Event Player)")
 	}
 }
 
-rule("PLAYER: Throw charge meter (ult meter)")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Alive(Event Player) == True;
-		Ultimate Charge Percent(Event Player) != Event Player.INT_Curve_Angle;
-	}
-
-	actions
-	{
-		Set Ultimate Charge(Event Player, Event Player.INT_Curve_Angle);
-	}
-}
-
 rule("PLAYER: Set throw charge (reload)")
 {
 	event
@@ -417,10 +397,31 @@ rule("PLAYER: Set throw charge (reload)")
 			Event Player.INT_Curve_Angle += 1;
 		Else;
 			Event Player.INT_Curve_Angle = 0;
-			Set Ultimate Charge(Event Player, 0);
 		End;
-		Wait(0.250, Ignore Condition);
+		Set Ultimate Charge(Event Player, Event Player.INT_Curve_Angle);
+		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
+	}
+}
+
+disabled rule("PLAYER: Throw charge meter (ult meter)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Ultimate Charge Percent(Event Player) != Event Player.INT_Curve_Angle;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Event Player.INT_Curve_Angle);
 	}
 }
 
