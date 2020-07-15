@@ -651,6 +651,7 @@ rule("DISC: Came to rest")
 				Big Message(All Players(All Teams), Custom String("{0} made #{1} with {2} strokes", Event Player.PLAYER_Disc_Owner,
 					Event Player.PLAYER_Disc_Owner.INT_Current_Hole, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
 				Modify Player Score(Event Player.PLAYER_Disc_Owner, -1 * Event Player.PLAYER_Disc_Owner.INT_Current_Strokes);
+				Event Player.STRING_Playing_Hole = Custom String("None");
 				disabled Event Player.PLAYER_Disc_Owner.INT_Current_Hole += 1;
 			End;
 		End;
