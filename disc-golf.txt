@@ -1018,7 +1018,7 @@ rule("SUBR: Create disc effects (call with player as Event Player)")
 				Visible To Position and Radius);
 		End;
 		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
-		Create Effect(All Players(All Teams), Sphere, White, Position Of(Event Player.ENTITY_Disc), 0.600, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, White, Position Of(Event Player.ENTITY_Disc), 0.300, Visible To Position and Radius);
 		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
 		"Create player name text on disc."
 		If(Event Player.INT_Color == 0);
