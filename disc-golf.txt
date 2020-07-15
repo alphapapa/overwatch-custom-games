@@ -141,7 +141,6 @@ variables
 		9: INT_Disc_Curve_Speed
 		10: HUD_Holding_Disc
 		11: BOOL_Throwing_Disc
-		12: HUD_Last_Throw
 		13: INT_Color
 		14: VECTOR_Last_Throw_From
 		15: INT_Last_Throw_Distance
@@ -265,6 +264,9 @@ rule("PLAYER: Joins")
 		Create HUD Text(Event Player, Event Player.STRINGS_Disc_Status[0], Event Player.STRINGS_Disc_Status[1],
 			Event Player.STRINGS_Disc_Status[2], Top, 0, White, Turquoise, White, String, Default Visibility);
 		Event Player.STRINGS_Disc_Status = Array(Custom String("No disc"), Custom String("Now you can"), Custom String("Spawn a disc"));
+		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
+			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
+			Default Visibility);
 	}
 }
 
@@ -558,12 +560,6 @@ rule("PLAYER: Throw disc")
 		Event Player.BOOL_Holding_Disc = False;
 		Clear Status(Event Player, Rooted);
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
-		"Show last-throw HUD."
-		Destroy HUD Text(Event Player.HUD_Last_Throw);
-		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
-			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
-			Default Visibility);
-		Event Player.HUD_Last_Throw = Last Text ID;
 		"Increment stroke counter."
 		Event Player.INT_Current_Strokes += 1;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc thrown"), Custom String("Now you can"), Custom String(
