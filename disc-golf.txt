@@ -597,6 +597,7 @@ rule("DISC: Came to rest")
 	{
 		Hero Of(Event Player) == Hero(Wrecking Ball);
 		Is In Air(Event Player) == False;
+		Speed Of(Event Player) == 0;
 	}
 
 	actions
@@ -607,7 +608,7 @@ rule("DISC: Came to rest")
 		"Playing the hole:"
 		If(Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole != Custom String("None"));
 			"Disc in hole: score."
-			If(Distance Between(Event Player, Global.VECTORS_Hole_Positions[Event Player.PLAYER_Disc_Owner.INT_Current_Hole]) <= 2.500);
+			If(Distance Between(Event Player, Global.VECTORS_Hole_Positions[Event Player.PLAYER_Disc_Owner.INT_Current_Hole]) <= 2);
 				Big Message(All Players(All Teams), Custom String("{0} made #{1} with {2} strokes", Event Player.PLAYER_Disc_Owner,
 					Event Player.PLAYER_Disc_Owner.INT_Current_Hole, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
 				Modify Player Score(Event Player.PLAYER_Disc_Owner, Score Of(Event Player.PLAYER_Disc_Owner)
