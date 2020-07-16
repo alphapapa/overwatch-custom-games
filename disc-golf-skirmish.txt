@@ -9,6 +9,7 @@ settings
 	{
 		Allow Players Who Are In Queue: Yes
 		Max Spectators: 12
+		Max Team 1 Players: 4
 		Max Team 2 Players: 0
 	}
 
@@ -51,12 +52,22 @@ settings
 		{
 			Health: 500%
 			Quick Melee: Off
+
+			Torbjörn
+			{
+				Movement Gravity: 50%
+			}
 		}
 
 		Team 2
 		{
 			Health: 500%
 			Quick Melee: Off
+
+			Torbjörn
+			{
+				Movement Gravity: 50%
+			}
 		}
 
 		Team FFA
@@ -79,6 +90,7 @@ settings
 			Torbjörn
 			{
 				Deploy Turret: Off
+				Movement Gravity: 50%
 			}
 
 			Zarya
@@ -96,15 +108,9 @@ settings
 			Ultimate Generation - Combat: 0%
 			Ultimate Generation - Passive: 0%
 
-			Wrecking Ball
-			{
-				Movement Gravity: 50%
-				Roll: Off
-			}
-
 			disabled heroes
 			{
-				Wrecking Ball
+				Torbjörn
 			}
 		}
 	}
@@ -129,11 +135,13 @@ variables
 		3: BOOL_Disc_Thrown
 		4: ENTITY_Disc
 		5: EFFECTS_Disc
+		6: EFFECTS_Tees_Holes
 		7: BOOL_Holding_Disc
 		8: VECTOR_Disc_Curve_Impulse
 		9: INT_Disc_Curve_Speed
 		10: HUD_Holding_Disc
 		11: BOOL_Throwing_Disc
+		12: TEXTS_Tees_Holes
 		13: INT_Color
 		14: VECTOR_Last_Throw_From
 		15: INT_Last_Throw_Distance
@@ -141,8 +149,8 @@ variables
 		17: INT_Current_Hole
 		18: EFFECTS_Current_Hole
 		19: BOOL_Playing_Hole
-		20: EFFECT_Goal_Name
-		21: EFFECT_Tee_Name
+		20: TEXT_Goal_Name
+		21: TEXT_Tee_Name
 		22: EFFECT_Tee
 		23: POINT_Tee
 		24: EFFECT_Goal
@@ -150,15 +158,17 @@ variables
 		26: STRING_Playing_Hole
 		27: INT_Current_Strokes
 		28: STRINGS_Disc_Status
+		29: TEXT_Disc
 }
 
 subroutines
 {
 	0: Disc_Destroy
 	1: Disc_Spawn
+	2: PLAYER_Create_Course_Effects
 	4: PLAYER_Clear_All_Things
-	5: Player_Disc_Create_Effects
-	6: Player_Disc_Clear_Effects
+	5: PLAYER_Disc_Create_Effects
+	6: PLAYER_Disc_Clear_Effects
 	7: PLAYER_Create_Hole_Effects
 	8: PLAYER_Clear_Hole_Effects
 	9: PLAYER_Clear_Self_Effects
@@ -187,19 +197,12 @@ rule("MAP: BIizzard World")
 	}
 }
 
-rule("WIP REWRITE: INIT: Tee/Hole Effects (only seems to work with this event rather than \"Ongoing - Global\")")
+rule("SUBR: PLAYER_Create_Course_Effects")
 {
 	event
 	{
-		Player Joined Match;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		disabled Global.EFFECTS_Tees_Holes == 0;
-		disabled Current Game Mode == Game Mode(Skirmish);
+		Subroutine;
+		PLAYER_Create_Course_Effects;
 	}
 
 	actions
@@ -207,16 +210,16 @@ rule("WIP REWRITE: INIT: Tee/Hole Effects (only seems to work with this event ra
 		"Create tee and hole effects and text."
 		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
 			Create Effect(Event Player, Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
+			Modify Player Variable(Event Player, EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
 			Create Effect(Event Player, Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
+			Modify Player Variable(Event Player, EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
 			"Labels"
 			Create In-World Text(Event Player, Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1, Do Not Clip,
 				None, Green, Default Visibility);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
+			Modify Player Variable(Event Player, TEXTS_Tees_Holes, Append To Array, Last Text ID);
 			Create In-World Text(Event Player, Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1, Do Not Clip,
 				None, White, Default Visibility);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
+			Modify Player Variable(Event Player, TEXTS_Tees_Holes, Append To Array, Last Text ID);
 			"Do it again and then delete it to workaround insane bug?!  Seems to work but no idea why it's necessary or why it works around it."
 			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
 				Do Not Clip, None, White, Default Visibility);
@@ -237,7 +240,7 @@ disabled rule("INIT: Tee/Hole Effects (only seems to work with this event rather
 	conditions
 	{
 		disabled Global.EFFECTS_Tees_Holes == 0;
-		Hero Of(Event Player) != Hero(Wrecking Ball);
+		Hero Of(Event Player) != Hero(Torbjörn);
 	}
 
 	actions
@@ -280,17 +283,21 @@ rule("PLAYER: Joins")
 	event
 	{
 		Player Joined Match;
-		All;
+		Team 1;
 		All;
 	}
 
 	conditions
 	{
-		Hero Of(Event Player) != Hero(Wrecking Ball);
+		disabled Hero Of(Event Player) != Hero(Torbjörn);
+		disabled Team Of(Event Player) == Team 1;
 	}
 
 	actions
 	{
+		Event Player.EFFECTS_Tees_Holes = Empty Array;
+		Event Player.TEXTS_Tees_Holes = Empty Array;
+		Event Player.EFFECTS_Disc = Empty Array;
 		Event Player.INT_Color = Random Integer(0, 12);
 		Event Player.INT_Current_Hole = 1;
 		Event Player.BOOL_Playing_Hole = False;
@@ -303,6 +310,8 @@ rule("PLAYER: Joins")
 		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
 			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
 			Default Visibility);
+		Call Subroutine(PLAYER_Create_Course_Effects);
+		Event Player.ENTITY_Disc = False;
 	}
 }
 
@@ -311,28 +320,54 @@ rule("PLAYER: Spawns")
 	event
 	{
 		Ongoing - Each Player;
-		All;
+		Team 1;
 		All;
 	}
 
 	conditions
 	{
 		Has Spawned(Event Player) == True;
-		Hero Of(Event Player) != Hero(Wrecking Ball);
+		disabled Hero Of(Event Player) != Hero(Torbjörn);
+		disabled Team Of(Event Player) == Team 1;
 	}
 
 	actions
 	{
-		Event Player.INT_Curve_Angle = 12.500;
-		Set Ultimate Charge(Event Player, 12.500);
+		Event Player.INT_Curve_Angle = 37.500;
+		Set Ultimate Charge(Event Player, 37.500);
 		Set Status(Event Player, Null, Phased Out, 9999);
 		"Move player to current tee."
 		Teleport(Event Player, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]);
 		"No disc: spawn it."
-		If(Event Player.ENTITY_Disc == 0);
+		If(Event Player.ENTITY_Disc == False);
 			"Create effects."
 			Call Subroutine(Disc_Spawn);
 		End;
+		Disallow Button(Event Player, Ultimate);
+	}
+}
+
+rule("PLAYER: Leaves match")
+{
+	event
+	{
+		Player Left Match;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		disabled Hero Of(Event Player) != Hero(Torbjörn);
+		disabled Team Of(Event Player) == Team 1;
+	}
+
+	actions
+	{
+		disabled Small Message(Host Player, Custom String("Player left match: {0}", Event Player));
+		Call Subroutine(PLAYER_Clear_Hole_Effects);
+		Call Subroutine(PLAYER_Clear_Self_Effects);
+		Call Subroutine(Disc_Destroy);
 	}
 }
 
@@ -395,7 +430,7 @@ rule("PLAYER: Spawn disc / Begin hole")
 		End;
 		"Move dummy bot to player's position."
 		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
-		Call Subroutine(Player_Disc_Create_Effects);
+		Call Subroutine(PLAYER_Disc_Create_Effects);
 		"Find any tee the player is next to."
 		Global.VECTORS_Temp = Filtered Array(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Position Of(
 			Event Player), Current Array Element) <= 1);
@@ -427,7 +462,7 @@ rule("SUBR: Disc_Spawn (for Event Player)")
 	actions
 	{
 		"Create dummy bot for disc at player's position."
-		Create Dummy Bot(Hero(Wrecking Ball), Team 2, -1, Position Of(Event Player), Vector(0, 0, 0));
+		Create Dummy Bot(Hero(Torbjörn), Team 2, -1, Position Of(Event Player), Vector(0, 0, 0));
 		"Save bot to player's variable."
 		Event Player.ENTITY_Disc = Last Created Entity;
 		"Save player to bot variable."
@@ -452,17 +487,12 @@ rule("SUBR: Disc_Destroy (for Event Player)")
 
 	actions
 	{
-		Call Subroutine(Player_Disc_Clear_Effects);
+		Call Subroutine(PLAYER_Disc_Clear_Effects);
 		"Destroy dummy bot for player's disc."
 		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
-		"Destroy effects for player."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			disabled Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-		End;
 		"Set player disc variables to 0."
-		Event Player.ENTITY_Disc = 0;
-		Event Player.EFFECTS_Disc = 0;
+		Event Player.ENTITY_Disc = False;
+		Event Player.EFFECTS_Disc = Empty Array;
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
 	}
 }
@@ -495,27 +525,6 @@ rule("PLAYER: Set throw charge (reload)")
 	}
 }
 
-disabled rule("PLAYER: Throw charge meter (ult meter)")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Alive(Event Player) == True;
-		Ultimate Charge Percent(Event Player) != Event Player.INT_Curve_Angle;
-	}
-
-	actions
-	{
-		Set Ultimate Charge(Event Player, Event Player.INT_Curve_Angle);
-	}
-}
-
 rule("PLAYER: Pick up disc")
 {
 	event
@@ -527,7 +536,7 @@ rule("PLAYER: Pick up disc")
 
 	conditions
 	{
-		Event Player.ENTITY_Disc != 0;
+		Event Player.ENTITY_Disc != False;
 		Distance Between(Event Player.ENTITY_Disc, Event Player) <= 1.500;
 		Is Button Held(Event Player, Crouch) == True;
 		Event Player.BOOL_Holding_Disc != True;
@@ -535,12 +544,12 @@ rule("PLAYER: Pick up disc")
 
 	actions
 	{
-		Call Subroutine(Player_Disc_Clear_Effects);
+		Event Player.BOOL_Holding_Disc = True;
+		Event Player.BOOL_Throwing_Disc = False;
+		Set Status(Event Player, Null, Rooted, 9999);
+		Call Subroutine(PLAYER_Disc_Clear_Effects);
 		Create Effect(All Players(All Teams), Ring, Green, Event Player, 1, Visible To Position and Radius);
 		Modify Player Variable(Event Player, EFFECTS_Disc, Append To Array, Last Created Entity);
-		Event Player.BOOL_Holding_Disc = True;
-		Set Status(Event Player, Null, Rooted, 9999);
-		Event Player.BOOL_Throwing_Disc = False;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Holding disc"), Custom String("To throw"), Custom String(
 			"hold Primary Fire, rotate slowly, and release"));
 	}
@@ -565,10 +574,7 @@ rule("PLAYER: Throw disc")
 	actions
 	{
 		Call Subroutine(PLAYER_Clear_Self_Effects);
-		Call Subroutine(Player_Disc_Create_Effects);
-		"Clear player-holding-disc effects."
-		disabled Call Subroutine(Disc_Destroy);
-		disabled Call Subroutine(Disc_Spawn);
+		Call Subroutine(PLAYER_Disc_Create_Effects);
 		"Record position of throw."
 		Event Player.ENTITY_Disc.VECTOR_Last_Throw_From = Position Of(Event Player);
 		"Calcuate and set disc curve vector and speed."
@@ -586,7 +592,7 @@ rule("PLAYER: Throw disc")
 		disabled Event Player.ENTITY_Disc.INT_Disc_Curve_Speed = Event Player.ENTITY_Disc.INT_Disc_Curve_Speed * (Min(50, Absolute Value(
 			Event Player.INT_Turn_Rate)) / 50);
 		"Wait for dummy to spawn in.  (Maybe we could just phase it out until after it's thrown instead.)"
-		Wait(0.150, Ignore Condition);
+		disabled Wait(0.150, Ignore Condition);
 		Set Facing(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), To World);
 		"Apply impulse to disc (uncapped speed)."
 		disabled Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Absolute Value(Event Player.INT_Turn_Rate) * 2,
@@ -595,6 +601,7 @@ rule("PLAYER: Throw disc")
 		Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Min(40, Absolute Value(Event Player.INT_Turn_Rate) * 2),
 			To World, Incorporate Contrary Motion);
 		Event Player.ENTITY_Disc.BOOL_Disc_Thrown = True;
+		Event Player.BOOL_Throwing_Disc = False;
 		Event Player.BOOL_Holding_Disc = False;
 		Clear Status(Event Player, Rooted);
 		Destroy HUD Text(Event Player.HUD_Holding_Disc);
@@ -602,26 +609,6 @@ rule("PLAYER: Throw disc")
 		Event Player.INT_Current_Strokes += 1;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc thrown"), Custom String("Now you can"), Custom String(
 			"Go pick it up or spawn a new one"));
-	}
-}
-
-rule("PLAYER: Disable buttons")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Alive(Event Player) == True;
-	}
-
-	actions
-	{
-		Disallow Button(Event Player, Ultimate);
 	}
 }
 
@@ -636,7 +623,8 @@ rule("DISC: Apply sideways motion in air")
 
 	conditions
 	{
-		Hero Of(Event Player) == Hero(Wrecking Ball);
+		disabled Hero Of(Event Player) == Hero(Torbjörn);
+		Team Of(Event Player) == Team 2;
 		Is In Air(Event Player) == True;
 		Event Player.BOOL_Disc_Thrown == True;
 	}
@@ -662,7 +650,8 @@ rule("PLAYER: Record turn rate")
 
 	conditions
 	{
-		Event Player.BOOL_Holding_Disc == True;
+		disabled Event Player.BOOL_Holding_Disc == True;
+		Event Player.BOOL_Throwing_Disc == True;
 	}
 
 	actions
@@ -685,7 +674,8 @@ rule("DISC: Came to rest")
 
 	conditions
 	{
-		Hero Of(Event Player) == Hero(Wrecking Ball);
+		Team Of(Event Player) == Team 2;
+		disabled Hero Of(Event Player) == Hero(Torbjörn);
 		Is In Air(Event Player) == False;
 		Speed Of(Event Player) == 0;
 	}
@@ -702,8 +692,8 @@ rule("DISC: Came to rest")
 				Big Message(All Players(All Teams), Custom String("{0} made #{1} with {2} strokes", Event Player.PLAYER_Disc_Owner,
 					Event Player.PLAYER_Disc_Owner.INT_Current_Hole, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
 				Modify Player Score(Event Player.PLAYER_Disc_Owner, -1 * Event Player.PLAYER_Disc_Owner.INT_Current_Strokes);
-				Event Player.STRING_Playing_Hole = Custom String("None");
-				disabled Event Player.PLAYER_Disc_Owner.INT_Current_Hole += 1;
+				Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole = Custom String("None");
+				disabled Event Player.PLAYER_Disc_Owner.INT_Current_Hole = 0;
 			End;
 		End;
 	}
@@ -744,7 +734,7 @@ disabled rule("DEBUG: HUD")
 
 	conditions
 	{
-		Hero Of(Event Player) != Hero(Wrecking Ball);
+		Hero Of(Event Player) != Hero(Torbjörn);
 	}
 
 	actions
@@ -786,10 +776,10 @@ rule("DEBUG: Create goals")
 		Event Player.POINT_Goal = Position Of(Event Player);
 		Create Effect(All Players(All Teams), Sphere, Red, Event Player.POINT_Goal, 2, Visible To Position and Radius);
 		Event Player.EFFECT_Goal = Last Created Entity;
-		Destroy Effect(Event Player.EFFECT_Goal_Name);
+		Destroy In-World Text(Event Player.TEXT_Goal_Name);
 		Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.POINT_Goal), 0.750, Do Not Clip,
 			Visible To Position and String, Red, Default Visibility);
-		Event Player.EFFECT_Goal_Name = Last Created Entity;
+		Event Player.TEXT_Goal_Name = Last Text ID;
 	}
 }
 
@@ -804,7 +794,7 @@ disabled rule("SCORE (not working, will be easier with actual designed courses)"
 
 	conditions
 	{
-		Hero Of(Event Player) == Hero(Wrecking Ball);
+		Hero Of(Event Player) == Hero(Torbjörn);
 		Is In Air(Event Player) == False;
 		Speed Of(Event Player) == 0;
 		Is Alive(Event Player) == True;
@@ -851,31 +841,10 @@ rule("DEBUG: Create tees")
 		Event Player.POINT_Tee = Position Of(Event Player);
 		Create Effect(All Players(All Teams), Sphere, Green, Event Player.POINT_Tee, 0.250, Visible To Position and Radius);
 		Event Player.EFFECT_Tee = Last Created Entity;
-		Destroy Effect(Event Player.EFFECT_Tee_Name);
+		Destroy In-World Text(Event Player.TEXT_Tee_Name);
 		Create In-World Text(All Players(All Teams), Event Player, Event Player.POINT_Tee, 0.750, Do Not Clip,
 			Visible To Position and String, Green, Default Visibility);
-		Event Player.EFFECT_Tee_Name = Last Created Entity;
-	}
-}
-
-rule("PLAYER: Leaves match")
-{
-	event
-	{
-		Player Left Match;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Hero Of(Event Player) != Hero(Wrecking Ball);
-	}
-
-	actions
-	{
-		disabled Small Message(Host Player, Custom String("Player left match: {0}", Event Player));
-		Call Subroutine(PLAYER_Clear_All_Things);
+		Event Player.TEXT_Tee_Name = Last Text ID;
 	}
 }
 
@@ -897,10 +866,12 @@ rule("PLAYER: Begin throwing (holding disc and pressing primary fire)")
 	actions
 	{
 		Event Player.BOOL_Throwing_Disc = True;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Throwing disc"), Custom String("Now you can"), Custom String(
+			"Aim up slightly, and release the disc while turning slowly"));
 	}
 }
 
-rule("SUBR: Clear all event-player-related things")
+rule("SUBR: PLAYER_Clear_All_Things")
 {
 	event
 	{
@@ -911,6 +882,7 @@ rule("SUBR: Clear all event-player-related things")
 	actions
 	{
 		Call Subroutine(Disc_Destroy);
+		Call Subroutine(PLAYER_Clear_Self_Effects);
 	}
 }
 
@@ -938,20 +910,20 @@ rule("PLAYER: Change color")
 			Event Player.INT_Color = 0;
 		End;
 		"Disc exists: Change its effect color."
-		If(Event Player.ENTITY_Disc != 0);
+		If(Event Player.ENTITY_Disc != False);
 			"Clear disc effects."
-			Call Subroutine(Player_Disc_Clear_Effects);
-			Call Subroutine(Player_Disc_Create_Effects);
+			Call Subroutine(PLAYER_Disc_Clear_Effects);
+			Call Subroutine(PLAYER_Disc_Create_Effects);
 		End;
 	}
 }
 
-rule("SUBR: Clear player disc effects (call with player as Event Player)")
+rule("SUBR: PLAYER_Disc_Clear_Effects")
 {
 	event
 	{
 		Subroutine;
-		Player_Disc_Clear_Effects;
+		PLAYER_Disc_Clear_Effects;
 	}
 
 	actions
@@ -959,10 +931,10 @@ rule("SUBR: Clear player disc effects (call with player as Event Player)")
 		"Destroy effects for player's disc."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
 			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy In-World Text(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
+			disabled Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
-		Event Player.ENTITY_Disc.EFFECTS_Disc = 0;
+		Event Player.ENTITY_Disc.EFFECTS_Disc = Empty Array;
+		Destroy In-World Text(Event Player.TEXT_Disc);
 	}
 }
 
@@ -1010,16 +982,17 @@ disabled rule("SUBR: PLAYER: Clear hole effects")
 	}
 }
 
-rule("SUBR: Create disc effects (call with player as Event Player)")
+rule("SUBR: PLAYER_Disc_Create_Effects")
 {
 	event
 	{
 		Subroutine;
-		Player_Disc_Create_Effects;
+		PLAYER_Disc_Create_Effects;
 	}
 
 	actions
 	{
+		Event Player.ENTITY_Disc.EFFECTS_Disc = Empty Array;
 		"Create disc visual effects."
 		If(Event Player.INT_Color == 0);
 			Play Effect(All Players(All Teams), Ring Explosion, White, Position Of(Event Player), 3);
@@ -1113,8 +1086,7 @@ rule("SUBR: Create disc effects (call with player as Event Player)")
 			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
 				Visible To Position and String, Lime Green, Default Visibility);
 		End;
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Text ID);
-		Play Effect(All Players(All Teams), Buff Impact Sound, White, Event Player, 2);
+		Event Player.TEXT_Disc = Last Text ID;
 	}
 }
 
@@ -1123,8 +1095,8 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 	event
 	{
 		Player Died;
+		Team 2;
 		All;
-		Wrecking Ball;
 	}
 
 	actions
@@ -1132,10 +1104,9 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 		"Destroy effects for player's disc."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
 			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			Destroy In-World Text(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			disabled Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
-		Event Player.EFFECTS_Disc = 0;
+		Event Player.EFFECTS_Disc = Empty Array;
 		Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
 			"Spawn a disc"));
 		"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
@@ -1143,7 +1114,7 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 	}
 }
 
-rule("Game start: Warn that this doesn't work (sadly, too many workshop bugs it seems.  Maybe with enough fiddling it can be fixed...)")
+disabled rule("Game start: Warn that this doesn't work (sadly, too many workshop bugs it seems.  Maybe with enough fiddling it can be fixed...)")
 {
 	event
 	{
@@ -1180,8 +1151,7 @@ rule("SUBR: PLAYER_Clear_Self_Effects")
 			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 			disabled Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
 		End;
-		Event Player.EFFECTS_Disc = 0;
-		Destroy HUD Text(Event Player.HUD_Holding_Disc);
+		Event Player.EFFECTS_Disc = Empty Array;
 	}
 }
 
