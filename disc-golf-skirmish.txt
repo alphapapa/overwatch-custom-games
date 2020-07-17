@@ -159,6 +159,7 @@ variables
 		27: INT_Current_Strokes
 		28: STRINGS_Disc_Status
 		29: TEXT_Disc
+		30: BOOL_Disc_Visible
 }
 
 subroutines
@@ -172,6 +173,8 @@ subroutines
 	7: PLAYER_Create_Hole_Effects
 	8: PLAYER_Clear_Hole_Effects
 	9: PLAYER_Clear_Self_Effects
+	10: Create_Course_Effects
+	11: Clear_Course_Effects
 }
 
 rule("MAP: BIizzard World")
@@ -197,7 +200,7 @@ rule("MAP: BIizzard World")
 	}
 }
 
-rule("SUBR: PLAYER_Create_Course_Effects")
+disabled rule("SUBR: PLAYER_Create_Course_Effects")
 {
 	event
 	{
@@ -228,53 +231,22 @@ rule("SUBR: PLAYER_Create_Course_Effects")
 	}
 }
 
-disabled rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"Ongoing - Global\")")
+rule("INIT: Tee/Hole Effects (only seems to work with this event rather than \"Ongoing - Global\")")
 {
 	event
 	{
 		Player Joined Match;
+		Team 1;
 		All;
-		All;
-	}
-
-	conditions
-	{
-		disabled Global.EFFECTS_Tees_Holes == 0;
-		Hero Of(Event Player) != Hero(Torbjörn);
 	}
 
 	actions
 	{
-		"Delete and recreate all text (not sure why, but seems to be necessary for new players to see them)."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Global.TEXT_Tees_Holes), 1);
-			Destroy In-World Text(Global.EFFECTS_Tees_Holes[Global.INT_Loop_Index]);
+		"Only call the clear subr if effects have already been created. (I've been told that attempting to delete non-existent effects causes bugs.)"
+		If(Global.EFFECTS_Tees_Holes != 0 && Global.EFFECTS_Tees_Holes != Empty Array);
+			Call Subroutine(Clear_Course_Effects);
 		End;
-		Global.TEXT_Tees_Holes = 0;
-		"Delete and recreate all effects (not sure why, but seems to be necessary for new players to see them)."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Global.EFFECTS_Tees_Holes), 1);
-			Destroy Effect(Global.EFFECTS_Tees_Holes[Global.INT_Loop_Index]);
-		End;
-		Global.EFFECTS_Tees_Holes = 0;
-		"Create tee and hole effects and text."
-		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
-			Create Effect(All Players(All Teams), Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
-			Create Effect(All Players(All Teams), Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
-			"Labels"
-			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
-				Do Not Clip, None, Green, Default Visibility);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
-			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
-				Do Not Clip, None, White, Default Visibility);
-			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
-			"Do it again and then delete it to workaround insane bug?!  Seems to work but no idea why it's necessary or why it works around it."
-			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
-				Do Not Clip, None, White, Default Visibility);
-			Destroy In-World Text(Last Text ID);
-			disabled Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
-			disabled Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Text ID);
-		End;
+		Call Subroutine(Create_Course_Effects);
 	}
 }
 
@@ -310,7 +282,7 @@ rule("PLAYER: Joins")
 		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
 			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
 			Default Visibility);
-		Call Subroutine(PLAYER_Create_Course_Effects);
+		disabled Call Subroutine(PLAYER_Create_Course_Effects);
 		Event Player.ENTITY_Disc = False;
 	}
 }
@@ -356,16 +328,8 @@ rule("PLAYER: Leaves match")
 		All;
 	}
 
-	conditions
-	{
-		disabled Hero Of(Event Player) != Hero(Torbjörn);
-		disabled Team Of(Event Player) == Team 1;
-	}
-
 	actions
 	{
-		disabled Small Message(Host Player, Custom String("Player left match: {0}", Event Player));
-		Call Subroutine(PLAYER_Clear_Hole_Effects);
 		Call Subroutine(PLAYER_Clear_Self_Effects);
 		Call Subroutine(Disc_Destroy);
 	}
@@ -472,8 +436,6 @@ rule("SUBR: Disc_Spawn (for Event Player)")
 		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
 		"Move dummy bot to player's position."
 		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
-		Global.BOOL_Disc_Spawned = 0;
-		Global.BOOL_Disc_Spawned = Number of Players(All Teams);
 	}
 }
 
@@ -546,6 +508,7 @@ rule("PLAYER: Pick up disc")
 	{
 		Event Player.BOOL_Holding_Disc = True;
 		Event Player.BOOL_Throwing_Disc = False;
+		Event Player.BOOL_Disc_Visible = False;
 		Set Status(Event Player, Null, Rooted, 9999);
 		Call Subroutine(PLAYER_Disc_Clear_Effects);
 		Create Effect(All Players(All Teams), Ring, Green, Event Player, 1, Visible To Position and Radius);
@@ -910,75 +873,12 @@ rule("PLAYER: Change color")
 			Event Player.INT_Color = 0;
 		End;
 		"Disc exists: Change its effect color."
-		If(Event Player.ENTITY_Disc != False);
+		If(Event Player.EFFECTS_Disc != Empty Array);
 			"Clear disc effects."
 			Call Subroutine(PLAYER_Disc_Clear_Effects);
 			Call Subroutine(PLAYER_Disc_Create_Effects);
 		End;
-	}
-}
-
-rule("SUBR: PLAYER_Disc_Clear_Effects")
-{
-	event
-	{
-		Subroutine;
-		PLAYER_Disc_Clear_Effects;
-	}
-
-	actions
-	{
-		"Destroy effects for player's disc."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.ENTITY_Disc.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-			disabled Destroy Icon(Event Player.ENTITY_Disc.EFFECTS_Disc[Global.INT_Loop_Index]);
-		End;
-		Event Player.ENTITY_Disc.EFFECTS_Disc = Empty Array;
-		Destroy In-World Text(Event Player.TEXT_Disc);
-	}
-}
-
-disabled rule("SUBR: PLAYER: Activate hole")
-{
-	event
-	{
-		Subroutine;
-		PLAYER_Create_Hole_Effects;
-	}
-
-	actions
-	{
-		"Clear effects from previous hole."
-		Call Subroutine(PLAYER_Clear_Hole_Effects);
-		"Create effects for new hole."
-		Create Effect(Event Player, Sphere, Green, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole], 0.250, None);
-		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Created Entity);
-		Create Effect(Event Player, Sphere, Red, Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole], 3, None);
-		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Created Entity);
-		Create In-World Text(Event Player, Event Player.INT_Current_Hole + 1, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole],
-			1, Do Not Clip, None, Green, Default Visibility);
-		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Text ID);
-		Create In-World Text(Event Player, Event Player.INT_Current_Hole + 1, Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole],
-			1, Do Not Clip, None, Red, Default Visibility);
-		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Text ID);
-	}
-}
-
-disabled rule("SUBR: PLAYER: Clear hole effects")
-{
-	event
-	{
-		Subroutine;
-		PLAYER_Clear_Hole_Effects;
-	}
-
-	actions
-	{
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Current_Hole), 1);
-			Destroy Effect(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
-			Destroy Icon(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
-			Destroy In-World Text(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
-		End;
+		Small Message(Event Player, Custom String("Color changed to: {0}", Event Player.INT_Color));
 	}
 }
 
@@ -992,7 +892,7 @@ rule("SUBR: PLAYER_Disc_Create_Effects")
 
 	actions
 	{
-		Event Player.ENTITY_Disc.EFFECTS_Disc = Empty Array;
+		Event Player.EFFECTS_Disc = Empty Array;
 		"Create disc visual effects."
 		If(Event Player.INT_Color == 0);
 			Play Effect(All Players(All Teams), Ring Explosion, White, Position Of(Event Player), 3);
@@ -1042,9 +942,9 @@ rule("SUBR: PLAYER_Disc_Create_Effects")
 			Create Effect(All Players(All Teams), Sphere, Lime Green, Position Of(Event Player.ENTITY_Disc), 0.750,
 				Visible To Position and Radius);
 		End;
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+		Modify Player Variable(Event Player, EFFECTS_Disc, Append To Array, Last Created Entity);
 		Create Effect(All Players(All Teams), Sphere, White, Position Of(Event Player.ENTITY_Disc), 0.300, Visible To Position and Radius);
-		Modify Player Variable(Event Player.ENTITY_Disc, EFFECTS_Disc, Append To Array, Last Created Entity);
+		Modify Player Variable(Event Player, EFFECTS_Disc, Append To Array, Last Created Entity);
 		"Create player name text on disc."
 		If(Event Player.INT_Color == 0);
 			Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.ENTITY_Disc), 0.750, Do Not Clip,
@@ -1090,6 +990,79 @@ rule("SUBR: PLAYER_Disc_Create_Effects")
 	}
 }
 
+rule("SUBR: PLAYER_Disc_Clear_Effects")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Disc_Clear_Effects;
+	}
+
+	actions
+	{
+		disabled Small Message(Event Player, Custom String("COUNT: {0}", Count Of(Event Player.EFFECTS_Disc)));
+		Global.INT_Loop_Index = 0;
+		"Destroy effects for player's disc."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
+			"NOTE: This 100ms delay seems to be required.  Without it, the loop index is inconsistent: sometimes it starts from the wrong value, even the value set by another rule before this one executed, and it may skip values.  THESE WORKSHOP BUGS MAN."
+			Wait(0.100, Ignore Condition);
+			disabled Small Message(Event Player, Custom String("Loop: index: {0}  value: {1}", Global.INT_Loop_Index,
+				Event Player.EFFECTS_Disc[Global.INT_Loop_Index]));
+			If(Entity Exists(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]));
+				disabled Small Message(Event Player, Custom String("Destroying effect: {0}", Event Player.EFFECTS_Disc[Global.INT_Loop_Index]));
+				Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			End;
+		End;
+		Event Player.EFFECTS_Disc = Empty Array;
+		Destroy In-World Text(Event Player.TEXT_Disc);
+		Global.BOOL_Disc_Spawned = 0;
+	}
+}
+
+disabled rule("SUBR: PLAYER: Activate hole")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Create_Hole_Effects;
+	}
+
+	actions
+	{
+		"Clear effects from previous hole."
+		Call Subroutine(PLAYER_Clear_Hole_Effects);
+		"Create effects for new hole."
+		Create Effect(Event Player, Sphere, Green, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole], 0.250, None);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Sphere, Red, Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole], 3, None);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Created Entity);
+		Create In-World Text(Event Player, Event Player.INT_Current_Hole + 1, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole],
+			1, Do Not Clip, None, Green, Default Visibility);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Text ID);
+		Create In-World Text(Event Player, Event Player.INT_Current_Hole + 1, Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole],
+			1, Do Not Clip, None, Red, Default Visibility);
+		Modify Player Variable(Event Player, EFFECTS_Current_Hole, Append To Array, Last Text ID);
+	}
+}
+
+disabled rule("SUBR: PLAYER: Clear hole effects")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Clear_Hole_Effects;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Current_Hole), 1);
+			Destroy Effect(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
+			Destroy Icon(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
+			Destroy In-World Text(Event Player.EFFECTS_Current_Hole[Global.INT_Loop_Index]);
+		End;
+	}
+}
+
 rule("DISC: Dies (duplicates actions from other subr, but since the disc owner is not the Event Player, they must be changed here)")
 {
 	event
@@ -1102,15 +1075,16 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 	actions
 	{
 		"Destroy effects for player's disc."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			disabled Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-		End;
-		Event Player.EFFECTS_Disc = Empty Array;
-		Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
-			"Spawn a disc"));
-		"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
-		Destroy Dummy Bot(All Teams, Slot Of(Event Player));
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc), 1);
+			If(Entity Exists(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc[Global.INT_Loop_Index]));
+				Destroy Effect(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc[Global.INT_Loop_Index]);
+			End;
+			Event Player.EFFECTS_Disc = Empty Array;
+			Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
+				"Spawn a disc"));
+			"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
+			Destroy Dummy Bot(All Teams, Slot Of(Event Player));
+			Event Player.PLAYER_Disc_Owner.BOOL_Disc_Visible = False;
 	}
 }
 
@@ -1148,8 +1122,9 @@ rule("SUBR: PLAYER_Clear_Self_Effects")
 	{
 		"Destroy effects for player."
 		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.EFFECTS_Disc), 1);
-			Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
-			disabled Destroy Icon(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			If(Entity Exists(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]));
+				Destroy Effect(Event Player.EFFECTS_Disc[Global.INT_Loop_Index]);
+			End;
 		End;
 		Event Player.EFFECTS_Disc = Empty Array;
 	}
@@ -1177,5 +1152,110 @@ rule("MAP: Eichenwalde (Halloween) (designed with help from BoiledEgg)")
 			-15.520), Vector(5.560, 10, -40.590), Vector(19, 5.330, -64.670), Vector(1.920, 4.760, -94.540), Vector(10.690, 11.010,
 			-85.040), Vector(56.010, 21, -68.060), Vector(37.680, 12.720, -105.740), Vector(104.530, 12.700, -76.180), Vector(68.130,
 			12.720, -70));
+	}
+}
+
+rule("SUBR: Create_Course_Effects")
+{
+	event
+	{
+		Subroutine;
+		Create_Course_Effects;
+	}
+
+	actions
+	{
+		Global.EFFECTS_Tees_Holes = Empty Array;
+		Global.TEXT_Tees_Holes = Empty Array;
+		"Create tee and hole effects and text."
+		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
+			"NOTE: Apparently mandatory 100ms delay in loop to work around THESE WORKSHOP BUGS MAN."
+			Wait(0.100, Ignore Condition);
+			Create Effect(All Players(Team 1), Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
+			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
+			Create Effect(All Players(Team 1), Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
+			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
+			"Labels"
+			Create In-World Text(All Players(Team 1), Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, None, Green, Visible Always);
+			Modify Global Variable(TEXT_Tees_Holes, Append To Array, Last Text ID);
+			Create In-World Text(All Players(Team 1), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, None, White, Visible Always);
+			Modify Global Variable(TEXT_Tees_Holes, Append To Array, Last Text ID);
+			"Do it again and then delete it to workaround insane bug?!  Seems to work but no idea why it's necessary or why it works around it."
+			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, None, White, Default Visibility);
+			Destroy In-World Text(Last Text ID);
+		End;
+	}
+}
+
+rule("SUBR: Clear_Course_Effects")
+{
+	event
+	{
+		Subroutine;
+		Clear_Course_Effects;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Index, 0, Count Of(Global.EFFECTS_Tees_Holes), 1);
+			"NOTE: Apparently mandatory 100ms delay in loop to work around THESE WORKSHOP BUGS MAN."
+			Wait(0.100, Ignore Condition);
+			Destroy Effect(Global.EFFECTS_Tees_Holes[Global.INT_Loop_Index]);
+		End;
+		For Global Variable(INT_Loop_Index, 0, Count Of(Global.TEXT_Tees_Holes), 1);
+			"NOTE: Apparently mandatory 100ms delay in loop to work around THESE WORKSHOP BUGS MAN."
+			Wait(0.100, Ignore Condition);
+			Destroy In-World Text(Global.TEXT_Tees_Holes[Global.INT_Loop_Index]);
+		End;
+		Global.EFFECTS_Tees_Holes = Empty Array;
+		Global.TEXT_Tees_Holes = Empty Array;
+	}
+}
+
+rule("DEBUG: Serverload HUD")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player == Host Player) == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("LOAD"), Custom String("Current / Average / Peak"), String("{0} : {1} : {2}",
+			Server Load, Server Load Average, Server Load Peak), Left, 99, White, White, White, String, Visible Never);
+	}
+}
+
+rule("DEBUG: Manually reset effects")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Ultimate) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Clear_Course_Effects);
+		Call Subroutine(Create_Course_Effects);
+		Small Message(Event Player, Custom String("Effects reset."));
 	}
 }
