@@ -1147,11 +1147,11 @@ rule("MAP: Eichenwalde (Halloween) (designed with help from BoiledEgg)")
 		Global.VECTORS_Tee_Positions = Array(False, Vector(-29.770, -1.780, -0.510), Vector(-11.870, 3.910, -32.150), Vector(8.420, 1.100,
 			-5.600), Vector(20.360, 9.180, -26.300), Vector(5.590, 6.180, -46.890), Vector(-8.970, 5.090, -54.800), Vector(10.530, 6.130,
 			-85.140), Vector(33.980, 6.300, -76.580), Vector(51.390, 18.280, -76.990), Vector(61.720, 18.810, -92.480), Vector(102.340,
-			9.750, -91.340));
+			9.750, -91.340), Vector(67.230, 4.813, -85.466));
 		Global.VECTORS_Hole_Positions = Array(False, Vector(-31.750, 1.940, -33.690), Vector(-0.840, 0.020, -9.170), Vector(23.700, 6,
 			-15.520), Vector(5.560, 10, -40.590), Vector(19, 5.330, -64.670), Vector(1.920, 4.760, -94.540), Vector(10.690, 11.010,
 			-85.040), Vector(56.010, 21, -68.060), Vector(37.680, 12.720, -105.740), Vector(104.530, 12.700, -76.180), Vector(68.130,
-			12.720, -70));
+			12.720, -70), Vector(91.263, 12.723, -56.092));
 	}
 }
 
