@@ -9,7 +9,6 @@ settings
 	{
 		Allow Players Who Are In Queue: Yes
 		Max Spectators: 12
-		Max Team 1 Players: 4
 		Max Team 2 Players: 0
 	}
 
@@ -194,6 +193,7 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 
 	actions
 	{
+		Global.INT_Disc_Outer_Orb_Width = 0.500;
 		Event Player.EFFECTS_Tees_Holes = Empty Array;
 		Event Player.TEXTS_Tees_Holes = Empty Array;
 		Event Player.EFFECTS_Disc = Empty Array;
@@ -215,7 +215,11 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 			Call Subroutine(Clear_Course_Effects);
 		End;
 		Call Subroutine(Create_Course_Effects);
-		Global.INT_Disc_Outer_Orb_Width = 0.500;
+		"Create reset HUD for host."
+		If(Event Player == Host Player);
+			Create HUD Text(Event Player, Custom String("RESET"), Custom String("If anything malfunctions"), Custom String(
+				"Interact + Ultimate"), Right, 99, Purple, Turquoise, White, None, Visible Never);
+		End;
 	}
 }
 
@@ -286,8 +290,13 @@ rule("PLAYER: Leaves match")
 			Wait(0.100, Ignore Condition);
 			Destroy Dummy Bot(All Teams, Slot Of(Global.ARRAY_Temp[Global.INT_Loop_Index]));
 		End;
-		Small Message(Host Player, Custom String("Destroying dummy bot in slot: {0} for owner: {1}", Slot Of(
+		disabled Small Message(Host Player, Custom String("Destroying dummy bot in slot: {0} for owner: {1}", Slot Of(
 			Global.ARRAY_Temp[Global.INT_Loop_Index]), Global.ARRAY_Temp[Global.INT_Loop_Index].PLAYER_Disc_Owner));
+		"Clear and recreate tee/hole effects.  Not sure why, but sometimes they disappear when a player leaves, so we recreate them to work around that."
+		If(Global.EFFECTS_Tees_Holes != 0 && Global.EFFECTS_Tees_Holes != Empty Array);
+			Call Subroutine(Clear_Course_Effects);
+		End;
+		Call Subroutine(Create_Course_Effects);
 	}
 }
 
@@ -499,7 +508,7 @@ rule("SUBR: Disc_Destroy (for Event Player)")
 	{
 		"Destroy disc effects."
 		Call Subroutine(PLAYER_Disc_Clear_Effects);
-		Small Message(Host Player, Custom String("Destroying disc dummy bot for player: {0}", Event Player));
+		disabled Small Message(Host Player, Custom String("Destroying disc dummy bot for player: {0}", Event Player));
 		"Destroy dummy bot for player's disc."
 		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
 	}
