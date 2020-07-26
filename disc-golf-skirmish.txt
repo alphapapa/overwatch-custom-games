@@ -14,14 +14,10 @@ settings
 
 	modes
 	{
-		Deathmatch
+		disabled Deathmatch
 		{
 			Game Length In Minutes: 15
 			Score To Win: 50
-
-			enabled maps
-			{
-			}
 		}
 
 		Skirmish
@@ -50,65 +46,21 @@ settings
 
 	heroes
 	{
-		Team 1
-		{
-			Health: 500%
-			Quick Melee: Off
-
-			Torbjörn
-			{
-				Movement Gravity: 50%
-			}
-		}
-
-		Team 2
-		{
-			Health: 500%
-			Quick Melee: Off
-
-			Torbjörn
-			{
-				Movement Gravity: 50%
-			}
-		}
-
-		Team FFA
-		{
-			Ana
-			{
-				Sleep Dart: Off
-			}
-
-			Genji
-			{
-				Secondary Fire: Off
-			}
-
-			Symmetra
-			{
-				Sentry Turret: Off
-			}
-
-			Torbjörn
-			{
-				Deploy Turret: Off
-				Movement Gravity: 50%
-			}
-
-			Zarya
-			{
-				Secondary Fire: Off
-			}
-		}
-
 		General
 		{
 			Damage Dealt: 10%
 			Damage Received: 10%
+			Health: 500%
 			Primary Fire: Off
+			Quick Melee: Off
 			Ultimate Generation: 10%
 			Ultimate Generation - Combat: 0%
 			Ultimate Generation - Passive: 0%
+
+			Torbjörn
+			{
+				Movement Gravity: 50%
+			}
 
 			disabled heroes
 			{
@@ -123,11 +75,16 @@ variables
 	global:
 		0: BOOL_Disc_Spawned
 		1: INT_Disc_Outer_Orb_Width
+		2: PLAYERS_All
 		6: HUD_Instructions
 		7: VECTORS_Tee_Positions
 		8: VECTORS_Hole_Positions
 		10: EFFECTS_Tees_Holes
 		11: TEXT_Tees_Holes
+		12: EFFECTS_Tees
+		13: EFFECTS_Holes
+		14: TEXTS_Tees
+		15: TEXTS_Holes
 		24: ARRAY_Temp
 		25: INT_Loop_Index
 
@@ -174,6 +131,63 @@ subroutines
 	6: PLAYER_Disc_Clear_Effects
 	10: Create_Course_Effects
 	11: Clear_Course_Effects
+	12: WATCHDOG_Course_Effects
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.EFFECTS_Tees_Holes == 0;
+	}
+
+	actions
+	{
+		Global.EFFECTS_Tees_Holes = Empty Array;
+		Global.TEXT_Tees_Holes = Empty Array;
+		Wait(2, Ignore Condition);
+		Call Subroutine(Create_Course_Effects);
+	}
+}
+
+rule("HUD: Instructions")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.HUD_Instructions == 0;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Custom String("Set Color"), Custom String(""), Custom String("Interact + Reload "), Right,
+			0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Place goal"), Custom String(""), Custom String("Interact + Crouch"), Right,
+			0, Red, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Place tee"), Custom String(""), Custom String("Interact + Jump     "),
+			Right, 0, Green, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Set Angle"), Custom String("Ultimate charge 0-24=left, 26-50=right"),
+			Custom String("Reload"), Right, 0, Orange, Orange, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Throw disc"), Custom String(" while turning (slowly!)"), Custom String(
+			"Hold and release Primary Fire"), Right, 0, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Pick up disc"), Custom String("While next to disc"), Custom String(
+			"Crouch                                           "), Right, 0, White, Turquoise, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Spawn disc"), Custom String("Can only interact with own disc"),
+			Custom String("Interact + Primary Fire              "), Right, 0, White, Turquoise, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/disc-golf"),
+			Custom String("V337X"), Left, 0, White, White, White, Visible To and String, Default Visibility);
+	}
 }
 
 rule("PLAYER: Joins (create tee/hole effects, etc.)")
@@ -185,14 +199,10 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 		All;
 	}
 
-	conditions
-	{
-		disabled Hero Of(Event Player) != Hero(Torbjörn);
-		disabled Team Of(Event Player) == Team 1;
-	}
-
 	actions
 	{
+		"Update variable used to make effects visible to all players."
+		Global.PLAYERS_All = All Players(All Teams);
 		Global.INT_Disc_Outer_Orb_Width = 0.500;
 		Event Player.EFFECTS_Tees_Holes = Empty Array;
 		Event Player.TEXTS_Tees_Holes = Empty Array;
@@ -210,11 +220,6 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
 			Default Visibility);
 		Event Player.ENTITY_Disc = False;
-		"Only call the clear subr if effects have already been created. (I've been told that attempting to delete non-existent effects causes bugs.)"
-		If(Global.EFFECTS_Tees_Holes != 0 && Global.EFFECTS_Tees_Holes != Empty Array);
-			Call Subroutine(Clear_Course_Effects);
-		End;
-		Call Subroutine(Create_Course_Effects);
 		"Create reset HUD for host."
 		If(Event Player == Host Player);
 			Create HUD Text(Event Player, Custom String("RESET"), Custom String("If anything malfunctions"), Custom String(
@@ -244,8 +249,8 @@ rule("PLAYER: Spawns")
 		Event Player.INT_Curve_Angle = 37.500;
 		Set Ultimate Charge(Event Player, 37.500);
 		Set Status(Event Player, Null, Phased Out, 9999);
-		"Move player to current tee."
-		Teleport(Event Player, Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole]);
+		"Move player to tee 0 (initial spawn point)."
+		Teleport(Event Player, Global.VECTORS_Tee_Positions[0]);
 		"No disc: spawn it."
 		If(Event Player.ENTITY_Disc == False);
 			"Create effects."
@@ -293,10 +298,10 @@ rule("PLAYER: Leaves match")
 		disabled Small Message(Host Player, Custom String("Destroying dummy bot in slot: {0} for owner: {1}", Slot Of(
 			Global.ARRAY_Temp[Global.INT_Loop_Index]), Global.ARRAY_Temp[Global.INT_Loop_Index].PLAYER_Disc_Owner));
 		"Clear and recreate tee/hole effects.  Not sure why, but sometimes they disappear when a player leaves, so we recreate them to work around that."
-		If(Global.EFFECTS_Tees_Holes != 0 && Global.EFFECTS_Tees_Holes != Empty Array);
-			Call Subroutine(Clear_Course_Effects);
-		End;
-		Call Subroutine(Create_Course_Effects);
+		disabled If(Global.EFFECTS_Tees_Holes != 0 && Global.EFFECTS_Tees_Holes != Empty Array);
+		disabled Call Subroutine(Clear_Course_Effects);
+		disabled End;
+		disabled Call Subroutine(Create_Course_Effects);
 	}
 }
 
@@ -328,6 +333,30 @@ rule("PLAYER: Pick up disc")
 		Event Player.EFFECT_Holding_Disc = Last Created Entity;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Holding disc"), Custom String("To throw"), Custom String(
 			"hold Primary Fire, rotate slowly, and release"));
+	}
+}
+
+rule("PLAYER: Record turn rate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		disabled Event Player.BOOL_Holding_Disc == True;
+		Event Player.BOOL_Throwing_Disc == True;
+	}
+
+	actions
+	{
+		Event Player.INT_Turn_Rate = Angle Difference(Event Player.INT_Last_Facing_Angle, Horizontal Facing Angle Of(Event Player));
+		Event Player.INT_Last_Facing_Angle = Horizontal Facing Angle Of(Event Player);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
 
@@ -390,41 +419,6 @@ rule("PLAYER: Throw disc")
 	}
 }
 
-rule("HUD: Instructions")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.HUD_Instructions == 0;
-	}
-
-	actions
-	{
-		Create HUD Text(All Players(All Teams), Custom String("Set Color"), Custom String(""), Custom String("Interact + Reload "), Right,
-			0, White, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Place goal"), Custom String(""), Custom String("Interact + Crouch"), Right,
-			0, Red, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Place tee"), Custom String(""), Custom String("Interact + Jump     "),
-			Right, 0, Green, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Set Angle"), Custom String("Ultimate charge 0-24=left, 26-50=right"),
-			Custom String("Reload"), Right, 0, Orange, Orange, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Throw disc"), Custom String(" while turning (slowly!)"), Custom String(
-			"Hold and release Primary Fire"), Right, 0, White, Turquoise, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Pick up disc"), Custom String("While next to disc"), Custom String(
-			"Crouch                                           "), Right, 0, White, Turquoise, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Spawn disc"), Custom String("Can only interact with own disc"),
-			Custom String("Interact + Primary Fire              "), Right, 0, White, Turquoise, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/disc-golf"),
-			Custom String("V337X"), Left, 0, White, White, White, Visible To and String, Default Visibility);
-	}
-}
-
 rule("PLAYER: Spawn disc / Begin hole")
 {
 	event
@@ -469,48 +463,6 @@ rule("PLAYER: Spawn disc / Begin hole")
 		End;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc spawned"), Custom String("Now you can"), Custom String(
 			"Pick it up or spawn a new one"));
-	}
-}
-
-rule("SUBR: Disc_Spawn (for Event Player)")
-{
-	event
-	{
-		Subroutine;
-		Disc_Spawn;
-	}
-
-	actions
-	{
-		"Create dummy bot for disc at player's position."
-		Create Dummy Bot(Hero(Torbjörn), Team 2, -1, Position Of(Event Player), Vector(0, 0, 0));
-		"Save bot to player's variable."
-		Event Player.ENTITY_Disc = Last Created Entity;
-		"Save player to bot variable."
-		Event Player.ENTITY_Disc.PLAYER_Disc_Owner = Event Player;
-		"Make bot invisible and phased out."
-		Set Invisible(Event Player.ENTITY_Disc, All);
-		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
-		"Move dummy bot to player's position."
-		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
-	}
-}
-
-rule("SUBR: Disc_Destroy (for Event Player)")
-{
-	event
-	{
-		Subroutine;
-		Disc_Destroy;
-	}
-
-	actions
-	{
-		"Destroy disc effects."
-		Call Subroutine(PLAYER_Disc_Clear_Effects);
-		disabled Small Message(Host Player, Custom String("Destroying disc dummy bot for player: {0}", Event Player));
-		"Destroy dummy bot for player's disc."
-		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
 	}
 }
 
@@ -569,30 +521,6 @@ rule("DISC: Apply sideways motion in air")
 	}
 }
 
-rule("PLAYER: Record turn rate")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		disabled Event Player.BOOL_Holding_Disc == True;
-		Event Player.BOOL_Throwing_Disc == True;
-	}
-
-	actions
-	{
-		Event Player.INT_Turn_Rate = Angle Difference(Event Player.INT_Last_Facing_Angle, Horizontal Facing Angle Of(Event Player));
-		Event Player.INT_Last_Facing_Angle = Horizontal Facing Angle Of(Event Player);
-		Wait(0.100, Ignore Condition);
-		Loop If Condition Is True;
-	}
-}
-
 rule("DISC: Came to rest")
 {
 	event
@@ -629,152 +557,28 @@ rule("DISC: Came to rest")
 	}
 }
 
-disabled rule("DEBUG: Destroy all bots")
+rule("DISC: Dies (duplicates actions from other subr, but since the disc owner is not the Event Player, they must be changed here)")
 {
 	event
 	{
-		Ongoing - Each Player;
+		Player Died;
+		Team 2;
 		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Host Player;
-		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Reload) == True;
 	}
 
 	actions
 	{
-		Destroy All Dummy Bots;
-		Destroy All Effects;
-		Destroy All Icons;
-	}
-}
-
-disabled rule("DEBUG: HUD")
-{
-	event
-	{
-		Player Joined Match;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Hero Of(Event Player) != Hero(Torbjörn);
-	}
-
-	actions
-	{
-		Create HUD Text(Event Player, Custom String("Turn rate: {0}  Disc vector: {1}  Curve impulse: {2}", Event Player.INT_Turn_Rate,
-			Event Player.ENTITY_Disc.VECTOR_Disc_Curve_Impulse, Event Player.ENTITY_Disc.INT_Disc_Curve_Speed), Null, Null, Left, 0, White,
-			White, White, Visible To and String, Default Visibility);
-	}
-}
-
-rule("DEBUG: Create goals")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Crouch) == True;
-	}
-
-	actions
-	{
-		If(Is True For Any(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Current Array Element, Position Of(
-			Event Player)) <= 5));
-			Small Message(Event Player, Custom String("Too close to a tee."));
-			Abort;
-		End;
-		If(Is True For Any(Global.VECTORS_Hole_Positions, Current Array Element != 0 && Distance Between(Current Array Element,
-			Position Of(Event Player)) <= 5));
-			Small Message(Event Player, Custom String("Too close to another hole."));
-			Abort;
-		End;
-		Destroy Effect(Event Player.EFFECT_Goal);
-		Event Player.POINT_Goal = Position Of(Event Player);
-		Create Effect(All Players(All Teams), Sphere, Red, Event Player.POINT_Goal, 2, Visible To Position and Radius);
-		Event Player.EFFECT_Goal = Last Created Entity;
-		Destroy In-World Text(Event Player.TEXT_Goal_Name);
-		Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.POINT_Goal), 0.750, Do Not Clip,
-			Visible To Position and String, Red, Default Visibility);
-		Event Player.TEXT_Goal_Name = Last Text ID;
-	}
-}
-
-disabled rule("SCORE (not working, will be easier with actual designed courses)")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Hero Of(Event Player) == Hero(Torbjörn);
-		Is In Air(Event Player) == False;
-		Speed Of(Event Player) == 0;
-		Is Alive(Event Player) == True;
-		Is True For Any(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element)),
-			Current Array Element.POINT_Goal != 0 && Distance Between(Current Array Element.EFFECT_Goal, Position Of(Event Player)) <= 2)
-			== True;
-	}
-
-	actions
-	{
-		Big Message(All Players(All Teams), Custom String("{0} Scored!", First Of(Filtered Array(All Players(All Teams),
-			Event Player == Current Array Element.ENTITY_Disc))));
-	}
-}
-
-rule("DEBUG: Create tees")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Button Held(Event Player, Jump) == True;
-		Is Button Held(Event Player, Interact) == True;
-	}
-
-	actions
-	{
-		If(Is True For Any(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Current Array Element, Position Of(
-			Event Player)) <= 5));
-			Small Message(Event Player, Custom String("Too close to another tee."));
-			Abort;
-		End;
-		If(Is True For Any(Global.VECTORS_Hole_Positions, Current Array Element != 0 && Distance Between(Current Array Element,
-			Position Of(Event Player)) <= 5));
-			Small Message(Event Player, Custom String("Too close to a hole."));
-			Abort;
-		End;
-		Destroy Effect(Event Player.EFFECT_Tee);
-		Event Player.POINT_Tee = Position Of(Event Player);
-		Create Effect(All Players(All Teams), Sphere, Green, Event Player.POINT_Tee, 0.250, Visible To Position and Radius);
-		Event Player.EFFECT_Tee = Last Created Entity;
-		Destroy In-World Text(Event Player.TEXT_Tee_Name);
-		Create In-World Text(All Players(All Teams), Event Player, Event Player.POINT_Tee, 0.750, Do Not Clip,
-			Visible To Position and String, Green, Default Visibility);
-		Event Player.TEXT_Tee_Name = Last Text ID;
+		"Destroy effects for player's disc."
+		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc), 1);
+			If(Entity Exists(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc[Global.INT_Loop_Index]));
+				Destroy Effect(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc[Global.INT_Loop_Index]);
+			End;
+			Event Player.EFFECTS_Disc = Empty Array;
+			Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
+				"Spawn a disc"));
+			"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
+			Destroy Dummy Bot(All Teams, Slot Of(Event Player));
+			Event Player.PLAYER_Disc_Owner.BOOL_Disc_Visible = False;
 	}
 }
 
@@ -834,51 +638,6 @@ rule("PLAYER: Change color")
 	}
 }
 
-rule("SUBR: PLAYER_Disc_Clear_Effects")
-{
-	event
-	{
-		Subroutine;
-		PLAYER_Disc_Clear_Effects;
-	}
-
-	actions
-	{
-		disabled Small Message(Host Player, Custom String("Destroying disc effects for player: {0}", Event Player));
-		disabled Small Message(Host Player, Custom String("Destroying disc effects: {0}, {1}, {2}", Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb,
-			Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb, Event Player.ENTITY_Disc.TEXT_Disc));
-		Global.BOOL_Disc_Spawned = 0;
-		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb);
-		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb);
-		Destroy In-World Text(Event Player.ENTITY_Disc.TEXT_Disc);
-	}
-}
-
-rule("DISC: Dies (duplicates actions from other subr, but since the disc owner is not the Event Player, they must be changed here)")
-{
-	event
-	{
-		Player Died;
-		Team 2;
-		All;
-	}
-
-	actions
-	{
-		"Destroy effects for player's disc."
-		For Global Variable(INT_Loop_Index, 0, Count Of(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc), 1);
-			If(Entity Exists(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc[Global.INT_Loop_Index]));
-				Destroy Effect(Event Player.PLAYER_Disc_Owner.EFFECTS_Disc[Global.INT_Loop_Index]);
-			End;
-			Event Player.EFFECTS_Disc = Empty Array;
-			Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
-				"Spawn a disc"));
-			"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
-			Destroy Dummy Bot(All Teams, Slot Of(Event Player));
-			Event Player.PLAYER_Disc_Owner.BOOL_Disc_Visible = False;
-	}
-}
-
 rule("SUBR: Create_Course_Effects")
 {
 	event
@@ -895,20 +654,20 @@ rule("SUBR: Create_Course_Effects")
 		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
 			"NOTE: Apparently mandatory 100ms delay in loop to work around THESE WORKSHOP BUGS MAN."
 			Wait(0.100, Ignore Condition);
-			Create Effect(All Players(Team 1), Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
+			Create Effect(Global.PLAYERS_All, Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, Visible To);
 			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
-			Create Effect(All Players(Team 1), Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
+			Create Effect(Global.PLAYERS_All, Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, Visible To);
 			Modify Global Variable(EFFECTS_Tees_Holes, Append To Array, Last Created Entity);
 			"Labels"
-			Create In-World Text(All Players(Team 1), Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
-				Do Not Clip, None, Green, Visible Always);
+			Create In-World Text(Global.PLAYERS_All, Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, Visible To, Green, Visible Always);
 			Modify Global Variable(TEXT_Tees_Holes, Append To Array, Last Text ID);
-			Create In-World Text(All Players(Team 1), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
-				Do Not Clip, None, White, Visible Always);
+			Create In-World Text(Global.PLAYERS_All, Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, Visible To, White, Visible Always);
 			Modify Global Variable(TEXT_Tees_Holes, Append To Array, Last Text ID);
 			"Do it again and then delete it to workaround insane bug?!  Seems to work but no idea why it's necessary or why it works around it."
-			Create In-World Text(All Players(All Teams), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
-				Do Not Clip, None, White, Default Visibility);
+			Create In-World Text(Global.PLAYERS_All, Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+				Do Not Clip, Visible To, White, Default Visibility);
 			Destroy In-World Text(Last Text ID);
 		End;
 	}
@@ -939,97 +698,65 @@ rule("SUBR: Clear_Course_Effects")
 	}
 }
 
-disabled rule("DEBUG: Serverload HUD")
+rule("SUBR: Disc_Spawn (for Event Player)")
 {
 	event
 	{
-		Player Joined Match;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		(Event Player == Host Player) == True;
+		Subroutine;
+		Disc_Spawn;
 	}
 
 	actions
 	{
-		Create HUD Text(Event Player, Custom String("LOAD"), Custom String("Current / Average / Peak"), String("{0} : {1} : {2}",
-			Server Load, Server Load Average, Server Load Peak), Left, 99, White, White, White, String, Visible Never);
+		"Create dummy bot for disc at player's position."
+		Create Dummy Bot(Hero(Torbjörn), Team 2, -1, Position Of(Event Player), Vector(0, 0, 0));
+		"Save bot to player's variable."
+		Event Player.ENTITY_Disc = Last Created Entity;
+		"Save player to bot variable."
+		Event Player.ENTITY_Disc.PLAYER_Disc_Owner = Event Player;
+		"Make bot invisible and phased out."
+		Set Invisible(Event Player.ENTITY_Disc, All);
+		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
+		"Move dummy bot to player's position."
+		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
 	}
 }
 
-rule("DEBUG: Manually reset effects and dummy bots")
+rule("SUBR: Disc_Destroy (for Event Player)")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Host Player;
-		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Ultimate) == True;
+		Subroutine;
+		Disc_Destroy;
 	}
 
 	actions
 	{
-		Call Subroutine(Clear_Course_Effects);
-		Call Subroutine(Create_Course_Effects);
-		Destroy All Dummy Bots;
-		Small Message(Event Player, Custom String("Effects and dummy bots reset."));
+		"Destroy disc effects."
+		Call Subroutine(PLAYER_Disc_Clear_Effects);
+		disabled Small Message(Host Player, Custom String("Destroying disc dummy bot for player: {0}", Event Player));
+		"Destroy dummy bot for player's disc."
+		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
 	}
 }
 
-rule("MAP: Eichenwalde (designed with help from BoiledEgg)")
+rule("SUBR: PLAYER_Disc_Clear_Effects")
 {
 	event
 	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		(Current Map == Map(Eichenwalde) || Current Map == Map(Eichenwalde Halloween)) == True;
+		Subroutine;
+		PLAYER_Disc_Clear_Effects;
 	}
 
 	actions
 	{
-		Global.VECTORS_Tee_Positions = Array(False, Vector(-29.770, -1.780, -0.510), Vector(-11.870, 3.910, -32.150), Vector(8.420, 1.100,
-			-5.600), Vector(20.360, 9.180, -26.300), Vector(5.590, 6.180, -46.890), Vector(-8.970, 5.090, -54.800), Vector(10.530, 6.130,
-			-85.140), Vector(33.980, 6.300, -76.580), Vector(51.390, 18.280, -76.990), Vector(61.720, 18.810, -92.480), Vector(102.340,
-			9.750, -91.340), Vector(67.230, 4.813, -85.466));
-		Global.VECTORS_Hole_Positions = Array(False, Vector(-31.750, 1.940, -33.690), Vector(-0.840, 0.020, -9.170), Vector(23.700, 6,
-			-15.520), Vector(5.560, 10, -40.590), Vector(19, 5.330, -64.670), Vector(1.920, 4.760, -94.540), Vector(10.690, 11.010,
-			-85.040), Vector(56.010, 21, -68.060), Vector(37.680, 12.720, -105.740), Vector(104.530, 12.700, -76.180), Vector(68.130,
-			12.720, -70), Vector(91.263, 12.723, -56.092));
-	}
-}
-
-rule("MAP: BIizzard World")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		(Current Map == Map(Blizzard World) || Current Map == Map(Blizzard World Winter)) == True;
-	}
-
-	actions
-	{
-		Global.VECTORS_Tee_Positions = Array(False, Vector(-70.980, 6.870, 111.910), Vector(-64.480, 0.690, 120.500), Vector(-42.520,
-			4.810, 90.680), Vector(-53.360, -0.160, 65.150), Vector(-62.705, 6.600, 80.572), Vector(-23.960, 6.090, 94.640), Vector(
-			-81.550, 6.860, 104.040), Vector(-73.530, 0.920, 138.400), Vector(-20.810, 2.160, 103.480));
-		Global.VECTORS_Hole_Positions = Array(False, Vector(-78.100, 0.600, 128.400), Vector(-55.220, 4.530, 98.820), Vector(-41.650,
-			-0.200, 62.210), Vector(-77.350, 4.880, 66.080), Vector(-31.650, 5.820, 100.370), Vector(-78.250, 6.570, 99.430), Vector(
-			-59.570, 0.750, 140.720), Vector(-33.460, -0.210, 100.300), Vector(-27.550, 0, 61.470));
+		disabled Small Message(Host Player, Custom String("Destroying disc effects for player: {0}", Event Player));
+		disabled Small Message(Host Player, Custom String("Destroying disc effects: {0}, {1}, {2}", Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb,
+			Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb, Event Player.ENTITY_Disc.TEXT_Disc));
+		Global.BOOL_Disc_Spawned = 0;
+		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb);
+		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb);
+		Destroy In-World Text(Event Player.ENTITY_Disc.TEXT_Disc);
 	}
 }
 
@@ -1142,5 +869,262 @@ rule("SUBR: PLAYER_Disc_Create_Effects")
 				Visible To Position and String, Lime Green, Default Visibility);
 		End;
 		Event Player.ENTITY_Disc.TEXT_Disc = Last Text ID;
+	}
+}
+
+disabled rule("SUBR: WATCHDOG_Course_Effects (was experimental, probably unnecessary)")
+{
+	event
+	{
+		Subroutine;
+		WATCHDOG_Course_Effects;
+	}
+
+	actions
+	{
+		Small Message(Host Player, Custom String("Watchdog checking."));
+		"(Re)create tee and hole effects and text for any that are missing.  For some reason, they tend to disappear when players leave or join.  So we need a kind of watchdog routine to monitor and recreate them."
+		For Global Variable(INT_Loop_Index, 1, Count Of(Global.VECTORS_Tee_Positions), 1);
+			"NOTE: Apparently mandatory 100ms delay in loop to work around THESE WORKSHOP BUGS MAN."
+			Wait(0.100, Ignore Condition);
+			"Ensure tee effect exists."
+			If(!Entity Exists(Global.EFFECTS_Tees[Global.INT_Loop_Index]));
+				Small Message(Host Player, Custom String("Recreating effect for tee {0}.", Global.INT_Loop_Index));
+				Create Effect(All Players(Team 1), Sphere, Green, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 0.250, None);
+				Global.EFFECTS_Tees[Global.INT_Loop_Index] = Last Created Entity;
+				"Create tee text (apparently there's no action to check whether text exists, so just recreate it every time the tee effect is created, and hope this works)."
+				Create In-World Text(All Players(Team 1), Global.INT_Loop_Index, Global.VECTORS_Tee_Positions[Global.INT_Loop_Index], 1,
+					Do Not Clip, None, Green, Visible Always);
+				Global.TEXTS_Tees[Global.INT_Loop_Index] = Last Text ID;
+			End;
+			"Ensure hole effect exists."
+			If(!Entity Exists(Global.EFFECTS_Holes[Global.INT_Loop_Index]));
+				Small Message(Host Player, Custom String("Recreating effect for hole {0}.", Global.INT_Loop_Index));
+				Create Effect(All Players(Team 1), Sphere, Red, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 2, None);
+				Global.EFFECTS_Holes[Global.INT_Loop_Index] = Last Created Entity;
+				"Create hole text (apparently there's no action to check whether text exists, so just recreate it every time the effect is created, and hope this works)"
+				Create In-World Text(All Players(Team 1), Global.INT_Loop_Index, Global.VECTORS_Hole_Positions[Global.INT_Loop_Index], 1,
+					Do Not Clip, None, White, Visible Always);
+				Global.TEXTS_Holes[Global.INT_Loop_Index] = Last Text ID;
+			End;
+		End;
+		Wait(30, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("DEBUG: Create goals")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		If(Is True For Any(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Current Array Element, Position Of(
+			Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to a tee."));
+			Abort;
+		End;
+		If(Is True For Any(Global.VECTORS_Hole_Positions, Current Array Element != 0 && Distance Between(Current Array Element,
+			Position Of(Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to another hole."));
+			Abort;
+		End;
+		Destroy Effect(Event Player.EFFECT_Goal);
+		Event Player.POINT_Goal = Position Of(Event Player);
+		Create Effect(All Players(All Teams), Sphere, Red, Event Player.POINT_Goal, 2, Visible To Position and Radius);
+		Event Player.EFFECT_Goal = Last Created Entity;
+		Destroy In-World Text(Event Player.TEXT_Goal_Name);
+		Create In-World Text(All Players(All Teams), Event Player, Position Of(Event Player.POINT_Goal), 0.750, Do Not Clip,
+			Visible To Position and String, Red, Default Visibility);
+		Event Player.TEXT_Goal_Name = Last Text ID;
+	}
+}
+
+rule("DEBUG: Create tees")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		If(Is True For Any(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Current Array Element, Position Of(
+			Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to another tee."));
+			Abort;
+		End;
+		If(Is True For Any(Global.VECTORS_Hole_Positions, Current Array Element != 0 && Distance Between(Current Array Element,
+			Position Of(Event Player)) <= 5));
+			Small Message(Event Player, Custom String("Too close to a hole."));
+			Abort;
+		End;
+		Destroy Effect(Event Player.EFFECT_Tee);
+		Event Player.POINT_Tee = Position Of(Event Player);
+		Create Effect(All Players(All Teams), Sphere, Green, Event Player.POINT_Tee, 0.250, Visible To Position and Radius);
+		Event Player.EFFECT_Tee = Last Created Entity;
+		Destroy In-World Text(Event Player.TEXT_Tee_Name);
+		Create In-World Text(All Players(All Teams), Event Player, Event Player.POINT_Tee, 0.750, Do Not Clip,
+			Visible To Position and String, Green, Default Visibility);
+		Event Player.TEXT_Tee_Name = Last Text ID;
+	}
+}
+
+rule("DEBUG: Manually reset effects and dummy bots")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Ultimate) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Clear_Course_Effects);
+		Call Subroutine(Create_Course_Effects);
+		Destroy All Dummy Bots;
+		Small Message(Event Player, Custom String("Effects and dummy bots reset."));
+	}
+}
+
+disabled rule("DEBUG: Destroy all bots")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Destroy All Dummy Bots;
+		Destroy All Effects;
+		Destroy All Icons;
+	}
+}
+
+disabled rule("DEBUG: HUD")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Torbjörn);
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("Turn rate: {0}  Disc vector: {1}  Curve impulse: {2}", Event Player.INT_Turn_Rate,
+			Event Player.ENTITY_Disc.VECTOR_Disc_Curve_Impulse, Event Player.ENTITY_Disc.INT_Disc_Curve_Speed), Null, Null, Left, 0, White,
+			White, White, Visible To and String, Default Visibility);
+	}
+}
+
+disabled rule("DEBUG: Serverload HUD")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player == Host Player) == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("LOAD"), Custom String("Current / Average / Peak"), String("{0} : {1} : {2}",
+			Server Load, Server Load Average, Server Load Peak), Left, 99, White, White, White, String, Visible Never);
+	}
+}
+
+rule("MAP: Eichenwalde (designed with help from BoiledEgg)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Current Map == Map(Eichenwalde) || Current Map == Map(Eichenwalde Halloween)) == True;
+	}
+
+	actions
+	{
+		Global.VECTORS_Tee_Positions = Array(Vector(-28.102, -0.211, -6.662), Vector(-29.770, -1.780, -0.510), Vector(-11.870, 3.910,
+			-32.150), Vector(8.420, 1.100, -5.600), Vector(20.360, 9.180, -26.300), Vector(5.590, 6.180, -46.890), Vector(-8.970, 5.090,
+			-54.800), Vector(10.530, 6.130, -85.140), Vector(33.980, 6.300, -76.580), Vector(51.390, 18.280, -76.990), Vector(61.720,
+			18.810, -92.480), Vector(102.340, 9.750, -91.340), Vector(67.230, 4.813, -85.466));
+		Global.VECTORS_Hole_Positions = Array(False, Vector(-31.750, 1.940, -33.690), Vector(-0.840, 0.020, -9.170), Vector(23.700, 6,
+			-15.520), Vector(5.560, 10, -40.590), Vector(19, 5.330, -64.670), Vector(1.920, 4.760, -94.540), Vector(10.690, 11.010,
+			-85.040), Vector(56.010, 21, -68.060), Vector(37.680, 12.720, -105.740), Vector(104.530, 12.700, -76.180), Vector(68.130,
+			12.720, -70), Vector(91.263, 12.723, -56.092));
+	}
+}
+
+rule("MAP: BIizzard World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Current Map == Map(Blizzard World) || Current Map == Map(Blizzard World Winter)) == True;
+	}
+
+	actions
+	{
+		Global.VECTORS_Tee_Positions = Array(Vector(3.075, -0.551, -6.880), Vector(-70.980, 6.870, 111.910), Vector(-64.480, 0.690,
+			120.500), Vector(-42.520, 4.810, 90.680), Vector(-53.360, -0.160, 65.150), Vector(-62.705, 6.600, 80.572), Vector(-23.960,
+			6.090, 94.640), Vector(-81.550, 6.860, 104.040), Vector(-73.530, 0.920, 138.400), Vector(-20.810, 2.160, 103.480));
+		Global.VECTORS_Hole_Positions = Array(False, Vector(-78.100, 0.600, 128.400), Vector(-55.220, 4.530, 98.820), Vector(-41.650,
+			-0.200, 62.210), Vector(-77.350, 4.880, 66.080), Vector(-31.650, 5.820, 100.370), Vector(-78.250, 6.570, 99.430), Vector(
+			-59.570, 0.750, 140.720), Vector(-33.460, -0.210, 100.300), Vector(-27.550, 0, 61.470));
 	}
 }
