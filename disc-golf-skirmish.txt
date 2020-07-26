@@ -225,6 +225,16 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 			Create HUD Text(Event Player, Custom String("RESET"), Custom String("If anything malfunctions"), Custom String(
 				"Interact + Ultimate"), Right, 99, Purple, Turquoise, White, None, Visible Never);
 		End;
+		"Create dummy bot for player."
+		Create Dummy Bot(Hero(Torbjörn), Team 2, Slot Of(Event Player), Vector(0, 0, 0), Vector(0, 0, 0));
+		Event Player.ENTITY_Disc = Last Created Entity;
+		"Save player to bot variable."
+		Event Player.ENTITY_Disc.PLAYER_Disc_Owner = Event Player;
+		"Make bot invisible and phased out."
+		Set Invisible(Event Player.ENTITY_Disc, All);
+		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
+		"Move dummy bot to player's position."
+		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
 	}
 }
 
@@ -251,57 +261,73 @@ rule("PLAYER: Spawns")
 		Set Status(Event Player, Null, Phased Out, 9999);
 		"Move player to tee 0 (initial spawn point)."
 		Teleport(Event Player, Global.VECTORS_Tee_Positions[0]);
-		"No disc: spawn it."
-		If(Event Player.ENTITY_Disc == False);
-			"Create effects."
-			Call Subroutine(Disc_Spawn);
-		End;
-		Disallow Button(Event Player, Ultimate);
 	}
 }
 
-rule("PLAYER: Leaves match")
+rule("DISC: Owner leaves")
 {
 	event
 	{
-		Player Left Match;
-		Team 1;
+		Ongoing - Each Player;
+		Team 2;
 		All;
 	}
 
 	conditions
 	{
-		disabled Team Of(Event Player) == Team 1;
+		Entity Exists(Event Player.PLAYER_Disc_Owner) == False;
 	}
 
 	actions
 	{
-		Small Message(Host Player, Custom String("Player left: {0}", Event Player));
-		Call Subroutine(Disc_Destroy);
-		If(Entity Exists(Event Player.EFFECT_Holding_Disc));
-			Destroy Effect(Event Player.EFFECT_Holding_Disc);
-		End;
-		If(Entity Exists(Event Player.EFFECT_Tee));
-			Destroy Effect(Event Player.EFFECT_Tee);
-		End;
-		If(Entity Exists(Event Player.EFFECT_Goal));
-			Destroy Effect(Event Player.EFFECT_Goal);
-		End;
-		"Destroy any dummy bots whose owner has left."
-		Global.ARRAY_Temp = Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element) && !Entity Exists(
-			Current Array Element.PLAYER_Disc_Owner));
-		For Global Variable(INT_Loop_Index, 0, Count Of(Global.ARRAY_Temp), 1);
-			"NOTE: Work around THESE WORKSHOP BUGS MAN."
-			Wait(0.100, Ignore Condition);
-			Destroy Dummy Bot(All Teams, Slot Of(Global.ARRAY_Temp[Global.INT_Loop_Index]));
-		End;
-		disabled Small Message(Host Player, Custom String("Destroying dummy bot in slot: {0} for owner: {1}", Slot Of(
-			Global.ARRAY_Temp[Global.INT_Loop_Index]), Global.ARRAY_Temp[Global.INT_Loop_Index].PLAYER_Disc_Owner));
-		"Clear and recreate tee/hole effects.  Not sure why, but sometimes they disappear when a player leaves, so we recreate them to work around that."
-		disabled If(Global.EFFECTS_Tees_Holes != 0 && Global.EFFECTS_Tees_Holes != Empty Array);
-		disabled Call Subroutine(Clear_Course_Effects);
+		Destroy Dummy Bot(Team 2, Slot Of(Event Player));
+	}
+}
+
+rule("PLAYER: Spawn disc / Begin hole")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		"Respawn disc if necessary (e.g. after game mode start; weird workshop bugs)"
+		disabled If(!Entity Exists(Event Player.ENTITY_Disc));
+		disabled Call Subroutine(Disc_Destroy);
+		disabled Call Subroutine(Disc_Spawn);
 		disabled End;
-		disabled Call Subroutine(Create_Course_Effects);
+		"Move dummy bot to player's position."
+		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
+		If(!Entity Exists(Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb));
+			Call Subroutine(PLAYER_Disc_Create_Effects);
+		End;
+		"Find any tee the player is next to."
+		Global.ARRAY_Temp = Filtered Array(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Position Of(
+			Event Player), Current Array Element) <= 1);
+		"Player is on a tee: set his current hole to that number."
+		If(First Of(Global.ARRAY_Temp) != 0);
+			Event Player.INT_Current_Hole = Index Of Array Value(Global.VECTORS_Tee_Positions, Global.ARRAY_Temp);
+			Event Player.INT_Current_Strokes = 0;
+			Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
+			Small Message(All Players(All Teams), Custom String("{0} is playing hole #{1}", Event Player, Event Player.STRING_Playing_Hole));
+		"Not at a tee: Stop playing hole and spawn \"free\" disc."
+		Else;
+			Event Player.STRING_Playing_Hole = Custom String("None");
+			Event Player.INT_Current_Strokes = 0;
+			Small Message(Event Player, Custom String("Spawned free disc, not playing a hole"));
+		End;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc spawned"), Custom String("Now you can"), Custom String(
+			"Pick it up or spawn a new one"));
 	}
 }
 
@@ -419,53 +445,6 @@ rule("PLAYER: Throw disc")
 	}
 }
 
-rule("PLAYER: Spawn disc / Begin hole")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Primary Fire) == True;
-	}
-
-	actions
-	{
-		"Respawn disc if necessary (e.g. after game mode start; weird workshop bugs)"
-		If(!Entity Exists(Event Player.ENTITY_Disc));
-			Call Subroutine(Disc_Destroy);
-			Call Subroutine(Disc_Spawn);
-		End;
-		"Move dummy bot to player's position."
-		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
-		If(!Entity Exists(Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb));
-			Call Subroutine(PLAYER_Disc_Create_Effects);
-		End;
-		"Find any tee the player is next to."
-		Global.ARRAY_Temp = Filtered Array(Global.VECTORS_Tee_Positions, Current Array Element != 0 && Distance Between(Position Of(
-			Event Player), Current Array Element) <= 1);
-		"Player is on a tee: set his current hole to that number."
-		If(First Of(Global.ARRAY_Temp) != 0);
-			Event Player.INT_Current_Hole = Index Of Array Value(Global.VECTORS_Tee_Positions, Global.ARRAY_Temp);
-			Event Player.INT_Current_Strokes = 0;
-			Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
-			Small Message(All Players(All Teams), Custom String("{0} is playing hole #{1}", Event Player, Event Player.STRING_Playing_Hole));
-		"Not at a tee: Stop playing hole and spawn \"free\" disc."
-		Else;
-			Event Player.STRING_Playing_Hole = Custom String("None");
-			Event Player.INT_Current_Strokes = 0;
-			Small Message(Event Player, Custom String("Spawned free disc, not playing a hole"));
-		End;
-		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc spawned"), Custom String("Now you can"), Custom String(
-			"Pick it up or spawn a new one"));
-	}
-}
-
 rule("PLAYER: Set throw charge (reload)")
 {
 	event
@@ -577,7 +556,7 @@ rule("DISC: Dies (duplicates actions from other subr, but since the disc owner i
 			Event Player.PLAYER_Disc_Owner.STRINGS_Disc_Status = Array(Custom String("Oops"), Custom String("Now you can"), Custom String(
 				"Spawn a disc"));
 			"Destroy the disc (otherwise ball may go into ball form and roll around, which we don't want)."
-			Destroy Dummy Bot(All Teams, Slot Of(Event Player));
+			disabled Destroy Dummy Bot(All Teams, Slot Of(Event Player));
 			Event Player.PLAYER_Disc_Owner.BOOL_Disc_Visible = False;
 	}
 }
@@ -698,68 +677,6 @@ rule("SUBR: Clear_Course_Effects")
 	}
 }
 
-rule("SUBR: Disc_Spawn (for Event Player)")
-{
-	event
-	{
-		Subroutine;
-		Disc_Spawn;
-	}
-
-	actions
-	{
-		"Create dummy bot for disc at player's position."
-		Create Dummy Bot(Hero(Torbjörn), Team 2, -1, Position Of(Event Player), Vector(0, 0, 0));
-		"Save bot to player's variable."
-		Event Player.ENTITY_Disc = Last Created Entity;
-		"Save player to bot variable."
-		Event Player.ENTITY_Disc.PLAYER_Disc_Owner = Event Player;
-		"Make bot invisible and phased out."
-		Set Invisible(Event Player.ENTITY_Disc, All);
-		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
-		"Move dummy bot to player's position."
-		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
-	}
-}
-
-rule("SUBR: Disc_Destroy (for Event Player)")
-{
-	event
-	{
-		Subroutine;
-		Disc_Destroy;
-	}
-
-	actions
-	{
-		"Destroy disc effects."
-		Call Subroutine(PLAYER_Disc_Clear_Effects);
-		disabled Small Message(Host Player, Custom String("Destroying disc dummy bot for player: {0}", Event Player));
-		"Destroy dummy bot for player's disc."
-		Destroy Dummy Bot(All Teams, Slot Of(Event Player.ENTITY_Disc));
-	}
-}
-
-rule("SUBR: PLAYER_Disc_Clear_Effects")
-{
-	event
-	{
-		Subroutine;
-		PLAYER_Disc_Clear_Effects;
-	}
-
-	actions
-	{
-		disabled Small Message(Host Player, Custom String("Destroying disc effects for player: {0}", Event Player));
-		disabled Small Message(Host Player, Custom String("Destroying disc effects: {0}, {1}, {2}", Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb,
-			Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb, Event Player.ENTITY_Disc.TEXT_Disc));
-		Global.BOOL_Disc_Spawned = 0;
-		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb);
-		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb);
-		Destroy In-World Text(Event Player.ENTITY_Disc.TEXT_Disc);
-	}
-}
-
 rule("SUBR: PLAYER_Disc_Create_Effects")
 {
 	event
@@ -869,6 +786,26 @@ rule("SUBR: PLAYER_Disc_Create_Effects")
 				Visible To Position and String, Lime Green, Default Visibility);
 		End;
 		Event Player.ENTITY_Disc.TEXT_Disc = Last Text ID;
+	}
+}
+
+rule("SUBR: PLAYER_Disc_Clear_Effects")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Disc_Clear_Effects;
+	}
+
+	actions
+	{
+		disabled Small Message(Host Player, Custom String("Destroying disc effects for player: {0}", Event Player));
+		disabled Small Message(Host Player, Custom String("Destroying disc effects: {0}, {1}, {2}", Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb,
+			Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb, Event Player.ENTITY_Disc.TEXT_Disc));
+		Global.BOOL_Disc_Spawned = 0;
+		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Inner_Orb);
+		Destroy Effect(Event Player.ENTITY_Disc.EFFECT_Disc_Outer_Orb);
+		Destroy In-World Text(Event Player.ENTITY_Disc.TEXT_Disc);
 	}
 }
 
