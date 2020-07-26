@@ -1007,10 +1007,12 @@ rule("DEBUG: Manually reset effects and dummy bots")
 
 	actions
 	{
-		Call Subroutine(Clear_Course_Effects);
-		Call Subroutine(Create_Course_Effects);
+		Small Message(All Players(All Teams), Custom String("Resetting..."));
 		Destroy All Dummy Bots;
-		Small Message(Event Player, Custom String("Effects and dummy bots reset."));
+		Destroy All Effects;
+		disabled Call Subroutine(Clear_Course_Effects);
+		Call Subroutine(Create_Course_Effects);
+		Small Message(All Players(All Teams), Custom String("Effects and dummy bots reset."));
 	}
 }
 
