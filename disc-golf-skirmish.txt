@@ -8,8 +8,10 @@ settings
 	lobby
 	{
 		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
 		Max Spectators: 12
 		Max Team 2 Players: 0
+		Return To Lobby: Never
 	}
 
 	modes
