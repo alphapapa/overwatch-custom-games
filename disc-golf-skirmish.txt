@@ -1074,3 +1074,22 @@ rule("MAP: BIizzard World")
 			-1.253, 133.073), Vector(-141.309, 0.747, 137.218), Vector(-110.575, -4.250, 113.798), Vector(-122.107, -0.152, 110.486));
 	}
 }
+
+rule("MAP: Dorado")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Dorado);
+	}
+
+	actions
+	{
+		Global.VECTORS_Tee_Positions = Array(Vector(2.050, 1.861, 15.402), Vector(-1.443, -1.890, 23.922));
+		Global.VECTORS_Hole_Positions = Array(Null, Vector(24.026, -1.979, 24.271));
+	}
+}
