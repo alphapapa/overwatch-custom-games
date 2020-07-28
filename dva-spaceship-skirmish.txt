@@ -849,3 +849,45 @@ disabled rule("SUBR: Unclaimed_Cargo")
 		Call Subroutine(New_Cargo);
 	}
 }
+
+rule("REACTOR: Destroyed (team 1)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.INT_Reactor_HP_Team_1 <= 0;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Ring Explosion, Turquoise, Global.VECTOR_Reactor_Team_1, 200);
+		Big Message(Global.PLAYERS_Team_1, Custom String("Enemy destroyed our reactor!"));
+		Big Message(Global.PLAYERS_Team_2, Custom String("Enemy reactor destroyed!"));
+		Declare Team Victory(Team 2);
+	}
+}
+
+rule("REACTOR: Destroyed (team 2)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.INT_Reactor_HP_Team_2 <= 0;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Ring Explosion, Turquoise, Global.VECTOR_Reactor_Team_2, 200);
+		Big Message(Global.PLAYERS_Team_2, Custom String("Enemy destroyed our reactor!"));
+		Big Message(Global.PLAYERS_Team_1, Custom String("Enemy reactor destroyed!"));
+		Declare Team Victory(Team 1);
+	}
+}
