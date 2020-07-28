@@ -1,0 +1,284 @@
+settings
+{
+	main
+	{
+		Description: "Size Sandbox - Modified By Sqib"
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+		Team Balancing: After A Mirror Match
+		Use Experimental Update If Available: Yes
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 50
+
+			enabled maps
+			{
+				Black Forest
+				Black Forest Winter
+				Castillo
+				Ecopoint: Antarctica
+				Ecopoint: Antarctica Winter
+				Hollywood
+				Ilios Ruins
+				Necropolis
+				Nepal Sanctum
+				Oasis City Center
+				Oasis Gardens
+				Paris
+				Petra
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Manual
+			Hero Limit: Off
+			Respawn Time Scalar: 75%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Genji
+			{
+				Swift Strike: Off
+			}
+
+			Mercy
+			{
+				Damage Dealt: 50%
+				Healing Dealt: 500%
+				Healing Received: 500%
+				Health: 250%
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: Settings
+
+	player:
+		0: body_size
+		1: isUsingCamera
+}
+
+subroutines
+{
+	0: ResetScale
+}
+
+rule("Modified By Sqib")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(All Players(All Teams), Is Button Held(Current Array Element, Interact)), Null, Custom String(
+			"Modified By Sqib"), Null, Right, 1, White, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("HUD Global")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(All Players(All Teams), Is Button Held(Current Array Element, Interact)), Custom String("Controls"),
+			Null, Null, Left, 0, Orange, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Is Button Held(Current Array Element, Interact)), Null, Custom String(
+			"{0} to grow\n{1} to shrink\n{2} to reset size", Input Binding String(Button(Primary Fire)), Input Binding String(Button(
+			Secondary Fire)), Input Binding String(Button(Jump))), Null, Left, 1, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Is Button Held(Current Array Element, Interact)), Null, Custom String(
+			"{0} to 3rd person\r\n{1} to die", Input Binding String(Button(Crouch)), Input Binding String(Button(Melee))), Null, Left, 1,
+			White, White, White, Visible To and String, Default Visibility);
+		"Default Size, Min Size, Max Size, Fly Enabled"
+		Global.Settings = Array(Workshop Setting Real(Custom String("Scaling Settings"), Custom String("Default Scale%"), 100, 10, 2000),
+			Workshop Setting Real(Custom String("Scaling Settings"), Custom String("Min Scale%"), 10, 10, 2000), Workshop Setting Real(
+			Custom String("Scaling Settings"), Custom String("Max Scale%"), 2000, 10, 2000), Workshop Setting Toggle(Custom String(
+			"Flight Settings"), Custom String("Fly Enabled"), True));
+	}
+}
+
+rule("HUD Player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.body_size = Global.Settings[0];
+		Create HUD Text(Is Button Held(Event Player, Interact) ? Null : Event Player, Custom String("Current Size {0}%",
+			Event Player.body_size), Custom String("Hold {0} To Change", Input Binding String(Button(Interact))), Null, Left, 0, Aqua,
+			White, White, Visible To and String, Default Visibility);
+		Call Subroutine(ResetScale);
+	}
+}
+
+rule("Rescale Player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		(Is Button Held(Event Player, Primary Fire) || Is Button Held(Event Player, Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.isUsingCamera += 1;
+		Event Player.body_size += Is Button Held(Event Player, Primary Fire)
+			? Event Player.isUsingCamera : Event Player.isUsingCamera * -1;
+		If(Event Player.body_size < Global.Settings[1]);
+			Stop Holding Button(Event Player, Secondary Fire);
+			Event Player.body_size = Global.Settings[1];
+			Small Message(Event Player, Custom String("The minimum size is {0}%", Global.Settings[1]));
+		Else If(Event Player.body_size > Global.Settings[2]);
+			Stop Holding Button(Event Player, Primary Fire);
+			Event Player.body_size = Global.Settings[2];
+			Small Message(Event Player, Custom String("The maximum size is {0}%", Global.Settings[2]));
+		End;
+		Call Subroutine(ResetScale);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Event Player.isUsingCamera = 0;
+	}
+}
+
+rule("Reset Player Scale")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Event Player.body_size = Global.Settings[0];
+		Call Subroutine(ResetScale);
+	}
+}
+
+rule("Reset Scale - Sub")
+{
+	event
+	{
+		Subroutine;
+		ResetScale;
+	}
+
+	actions
+	{
+		Start Scaling Player(Event Player, Event Player.body_size / 100, True);
+		If(Event Player.body_size < 50);
+			Start Modifying Hero Voice Lines(Event Player, 1.500, True);
+		Else;
+			Start Modifying Hero Voice Lines(Event Player, 1, True);
+		End;
+		If(Event Player.body_size > 240);
+			Disable Movement Collision With Environment(Event Player, False);
+			Set Ability 1 Enabled(Players On Hero(Hero(Genji), All Teams), False);
+			Set Secondary Fire Enabled(Players On Hero(Hero(Wrecking Ball), All Teams), False);
+		Else If(Event Player.body_size < 240);
+			Enable Movement Collision With Environment(Event Player);
+			Set Ability 1 Enabled(Players On Hero(Hero(Genji), All Teams), True);
+			Set Secondary Fire Enabled(Players On Hero(Hero(Wrecking Ball), All Teams), True);
+		End;
+		Set Move Speed(Event Player, Max(65, Min(225, Event Player.body_size)));
+		Set Jump Vertical Speed(Event Player, Max(75, Min(225, Event Player.body_size)));
+		Start Heal Over Time(Event Player, Event Player, 1, 51.500);
+		Set Max Health(Event Player, Event Player.body_size);
+		Set Damage Dealt(Event Player, Event Player.body_size);
+	}
+}
+
+rule("Kill Player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Melee) == True;
+	}
+
+	actions
+	{
+		Kill(Event Player, Null);
+	}
+}
+
+rule("3rd Person")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		If(Event Player.isUsingCamera == False);
+			Start Camera(Event Player, Eye Position(Event Player) + -0.018 * Event Player.body_size * Facing Direction Of(Event Player),
+				Eye Position(Event Player) + 100 * Facing Direction Of(Event Player), 20);
+		Else;
+			Stop Camera(Event Player);
+		End;
+		Event Player.isUsingCamera = !Event Player.isUsingCamera;
+	}
+}
