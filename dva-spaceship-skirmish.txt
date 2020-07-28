@@ -772,8 +772,6 @@ rule("PLAYER: Bailed out!")
 
 	actions
 	{
-		"Reset status strings."
-		Event Player.STRING_HUD_Status = Custom String("Bailed out!  Need rescue!");
 		Event Player.STRING_HUD_Status_Subheader = Custom String("It's very cold");
 		Event Player.STRING_Team_Status = Custom String("Downed pilot: Rescue!");
 		Event Player.STRING_Cargo_Status = Custom String("");
