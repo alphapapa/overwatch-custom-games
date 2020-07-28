@@ -775,6 +775,7 @@ rule("PLAYER: Bailed out!")
 		Event Player.STRING_HUD_Status_Subheader = Custom String("It's very cold");
 		Event Player.STRING_Team_Status = Custom String("Downed pilot: Rescue!");
 		Event Player.STRING_Cargo_Status = Custom String("");
+		Set Primary Fire Enabled(Event Player, True);
 		"Start freezing, and adjust damage dealt and received."
 		Start Damage Over Time(Event Player, Null, 9999, 2);
 		Event Player.DOT_Cold = Last Damage Over Time ID;
