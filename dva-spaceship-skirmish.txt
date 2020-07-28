@@ -247,6 +247,7 @@ rule("PLAYER: Forward")
 	{
 		Apply Impulse(Event Player, Facing Direction Of(Event Player), 0.500 * Event Player.FLOAT_Accel_Factor, To World,
 			Incorporate Contrary Motion);
+		Play Effect(All Players(All Teams), Good Explosion, Orange, Event Player, 0.500);
 		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, 5);
 		Wait(0.250, Ignore Condition);
 		Loop If Condition Is True;
