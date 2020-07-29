@@ -52,6 +52,8 @@ variables
 		16: TEXT_Cargo
 		17: INT_Cargo_Drop_Quantity
 		18: PLAYERS_Cargo_Drop_Visible_To
+		19: REAL_Jump_Drive_Charge_Rate
+		20: REAL_Jump_Drive_Countdown
 
 	player:
 		0: STRING_Team_Status
@@ -65,6 +67,14 @@ variables
 		9: DOT_Cold
 		10: FLOAT_Accel_Factor
 		12: VECTOR_Last_Position
+		15: BOOL_Warp_Targeting
+		16: EFFECT_Warp_Target
+		17: VECTOR_Warp_Target
+		18: INT_Jump_Drive_Charge_Percent
+		19: EFFECT_Jumping
+		20: INT_Jump_Target_Percent
+		21: BOOL_Jump_Drive_Activated
+		22: REAL_Jump_Drive_Countdown
 }
 
 subroutines
@@ -114,6 +124,8 @@ rule("INIT (after map rules)")
 	actions
 	{
 		Global.BOOL_Initialized = True;
+		Global.REAL_Jump_Drive_Countdown = 3;
+		Global.REAL_Jump_Drive_Charge_Rate = 0.500;
 		Set Objective Description(Global.PLAYERS_All, Custom String("Attack enemy reactor.  Deliver cargo to your depot."),
 			Visible To and String);
 		Create Effect(Global.PLAYERS_All, Sphere, Team 1, Global.VECTOR_Depot_Team_1, 3, Visible To Position and Radius);
@@ -162,6 +174,11 @@ rule("PLAYER: Joins")
 		Global.PLAYERS_Team_2 = Filtered Array(All Players(Team 2), True);
 		Event Player.STRING_Team_Status = Custom String("");
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
+		Create HUD Text(Event Player, Custom String("Jump Drive"), Custom String("Max distance increases with charge"), Custom String(
+			"Charge: {0}%", Event Player.INT_Jump_Drive_Charge_Percent), Left, 0, White, Turquoise, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Event Player, Custom String("Jump drive"), Custom String("Activate targeting"), Custom String("Ultimate"), Right,
+			1, White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Fly"), Custom String("Down: Hold Crouch                               "),
 			Custom String("Up: Hold Jump"), Right, 0, White, White, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Fly"), Custom String("Backward: Hold Interact + Boosters"), Custom String(
@@ -334,7 +351,7 @@ rule("PLAYER: Descend")
 	}
 }
 
-rule("PLAYER: Left")
+disabled rule("PLAYER: Left")
 {
 	event
 	{
@@ -358,7 +375,7 @@ rule("PLAYER: Left")
 	}
 }
 
-rule("PLAYER: Right")
+disabled rule("PLAYER: Right")
 {
 	event
 	{
@@ -924,5 +941,180 @@ rule("PLAYER: Emergency Brake")
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 		Event Player.VECTOR_Last_Position = Vector(0, 0, 0);
+	}
+}
+
+rule("PLAYER: Jump drive: Start targeting")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Jump_Drive_Charge_Percent > 0;
+		Is Button Held(Event Player, Ultimate) == True;
+		Event Player.BOOL_Warp_Targeting == False;
+		Event Player.BOOL_Jump_Drive_Activated == False;
+		Is In Alternate Form(Event Player) == False;
+	}
+
+	actions
+	{
+		disabled Stop Holding Button(Event Player, Ultimate);
+		Event Player.BOOL_Warp_Targeting = True;
+		Event Player.INT_Jump_Target_Percent = 0;
+		Event Player.EFFECT_Warp_Target = Position Of(Event Player);
+		Create Effect(Event Player, Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, 0.500, Position and Radius);
+		Event Player.EFFECT_Warp_Target = Last Created Entity;
+		Small Message(Event Player, Custom String("Targeting warp drive: Primary Fire to warp, Secondary Fire to cancel."));
+	}
+}
+
+rule("PLAYER: Jump Drive: Move target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BOOL_Warp_Targeting == True;
+		Is Button Held(Event Player, Ultimate) == True;
+		Event Player.BOOL_Jump_Drive_Activated == False;
+		Is In Alternate Form(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.INT_Jump_Target_Percent = Min(Event Player.INT_Jump_Drive_Charge_Percent, Event Player.INT_Jump_Target_Percent + 1);
+		Event Player.VECTOR_Warp_Target = Position Of(Event Player) + Facing Direction Of(Event Player)
+			* Event Player.INT_Jump_Target_Percent;
+		Wait(0.100, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Jump drive: Canceling")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BOOL_Warp_Targeting == True;
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Is In Alternate Form(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Warp_Targeting = False;
+		Destroy Effect(Event Player.EFFECT_Warp_Target);
+		Event Player.EFFECT_Warp_Target = Null;
+		Event Player.VECTOR_Warp_Target = Null;
+		Small Message(Event Player, Custom String("Warp canceled."));
+	}
+}
+
+rule("PLAYER: Jump drive: Activated.")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BOOL_Warp_Targeting == True;
+		Is Button Held(Event Player, Primary Fire) == True;
+		Is In Alternate Form(Event Player) == False;
+		Event Player.VECTOR_Warp_Target != Null;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Primary Fire);
+		If(!Is In Line of Sight(Position Of(Event Player), Event Player.VECTOR_Warp_Target, Barriers Do Not Block LOS));
+			Small Message(Event Player, Custom String("Jump target requires line of sight."));
+			Abort;
+		End;
+		Event Player.BOOL_Jump_Drive_Activated = True;
+		Event Player.BOOL_Warp_Targeting = False;
+		Small Message(Event Player, Custom String("Jumping..."));
+		Create Effect(All Players(All Teams), Bad Aura, Sky Blue, Event Player, 0.500, Visible To Position and Radius);
+		Event Player.EFFECT_Jumping = Last Created Entity;
+		Destroy Effect(Event Player.EFFECT_Warp_Target);
+		"Create jump portal effect at target."
+		Event Player.REAL_Jump_Drive_Countdown = 0;
+		Create Effect(All Players(All Teams), Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, Event Player.REAL_Jump_Drive_Countdown,
+			Visible To Position and Radius);
+		Event Player.EFFECT_Warp_Target = Last Created Entity;
+		"Animate the opening of the jump portal."
+		While(Event Player.REAL_Jump_Drive_Countdown < Global.REAL_Jump_Drive_Countdown / 4);
+			Event Player.REAL_Jump_Drive_Countdown += 0.050;
+			Wait(0.050, Ignore Condition);
+		End;
+		"Play jump effects."
+		Play Effect(Event Player, Buff Explosion Sound, Sky Blue, Event Player, 20);
+		Play Effect(All Players(All Teams), Good Explosion, Sky Blue, Event Player, 0.500);
+		"Teleport the player and stop its momentum."
+		Teleport(Event Player, Event Player.VECTOR_Warp_Target);
+		Start Forcing Player Position(Event Player, Position Of(Event Player), False);
+		Wait(0.025, Ignore Condition);
+		Stop Forcing Player Position(Event Player);
+		Play Effect(All Players(All Teams), Good Explosion, Sky Blue, Event Player, 0.500);
+		"Animate the closing of the jump portal."
+		While(Event Player.REAL_Jump_Drive_Countdown > 0);
+			Event Player.REAL_Jump_Drive_Countdown -= 0.300;
+			Wait(0.050, Ignore Condition);
+		End;
+		Destroy Effect(Event Player.EFFECT_Warp_Target);
+		Destroy Effect(Event Player.EFFECT_Jumping);
+		Event Player.INT_Jump_Drive_Charge_Percent = 0;
+		Event Player.EFFECT_Warp_Target = Null;
+		Event Player.VECTOR_Warp_Target = Null;
+		Event Player.EFFECT_Jumping = Null;
+		Event Player.BOOL_Jump_Drive_Activated = False;
+	}
+}
+
+rule("PLAYER: Jump drive: Charging.")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is In Alternate Form(Event Player) == False;
+		Event Player.BOOL_Jump_Drive_Activated == False;
+		Is In Alternate Form(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.INT_Jump_Drive_Charge_Percent += Global.REAL_Jump_Drive_Charge_Rate;
+		If(Event Player.INT_Jump_Drive_Charge_Percent > 100);
+			Event Player.INT_Jump_Drive_Charge_Percent = 100;
+		End;
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
