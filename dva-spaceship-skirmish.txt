@@ -177,8 +177,8 @@ rule("PLAYER: Joins")
 		Create HUD Text(Event Player, Custom String("Jump Drive"), Custom String("Max distance increases with charge"), Custom String(
 			"Charge: {0}%", Event Player.INT_Jump_Drive_Charge_Percent), Left, 0, White, Turquoise, White, Visible To and String,
 			Default Visibility);
-		Create HUD Text(Event Player, Custom String("Jump drive"), Custom String("Activate targeting"), Custom String("Ultimate"), Right,
-			1, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Jump drive"), Custom String("Set target"), Custom String("Hold Ultimate"), Right, 1,
+			White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Fly"), Custom String("Down: Hold Crouch                               "),
 			Custom String("Up: Hold Jump"), Right, 0, White, White, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Fly"), Custom String("Backward: Hold Interact + Boosters"), Custom String(
