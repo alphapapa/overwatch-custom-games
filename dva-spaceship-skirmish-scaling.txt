@@ -93,6 +93,9 @@ variables
 		21: BOOL_Jump_Drive_Activated
 		22: REAL_Jump_Drive_Countdown
 		23: INT_Camera_Type
+		24: EFFECTS_Jumping
+		25: INT_Loop_Control
+		26: STRING_HUD_Jump_Target
 }
 
 subroutines
@@ -283,8 +286,9 @@ rule("PLAYER: Joins")
 			Event Player, Facing Direction Of(Event Player))), Custom String("Total: {0}", Speed Of(Event Player)), Left, 9, White,
 			Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Jump Drive"), Custom String("Max distance increases with charge"), Custom String(
-			"Charge: {0}%", Event Player.INT_Jump_Drive_Charge_Percent), Left, 0, White, Turquoise, White, Visible To and String,
-			Default Visibility);
+			"Charge: {0}%  Target: {1}", Event Player.INT_Jump_Drive_Charge_Percent, Event Player.STRING_HUD_Jump_Target), Left, 0, White,
+			Turquoise, White, Visible To and String, Default Visibility);
+		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 	}
 }
 
@@ -1452,7 +1456,7 @@ rule("PLAYER: Jump drive: Start targeting")
 		Event Player.BOOL_Warp_Targeting = True;
 		Event Player.INT_Jump_Target_Percent = 0;
 		Event Player.EFFECT_Warp_Target = Position Of(Event Player);
-		Create Effect(Event Player, Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, 0.500, Position and Radius);
+		Create Effect(Event Player, Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, 0.250, Position and Radius);
 		Event Player.EFFECT_Warp_Target = Last Created Entity;
 		Small Message(Event Player, Custom String("Targeting warp drive:  {0} to warp, {1} to cancel.", Input Binding String(Button(
 			Primary Fire)), Input Binding String(Button(Secondary Fire))));
@@ -1481,7 +1485,9 @@ rule("PLAYER: Jump Drive: Move target")
 		Event Player.INT_Jump_Target_Percent = Min(Event Player.INT_Jump_Drive_Charge_Percent, Event Player.INT_Jump_Target_Percent + 1);
 		Event Player.VECTOR_Warp_Target = Position Of(Event Player) + Facing Direction Of(Event Player)
 			* Event Player.INT_Jump_Target_Percent;
-		Wait(0.100, Abort When False);
+		Event Player.STRING_HUD_Jump_Target = Custom String("{0} m", Distance Between(Position Of(Event Player),
+			Event Player.VECTOR_Warp_Target));
+		Wait(0.050, Abort When False);
 		Loop If Condition Is True;
 	}
 }
@@ -1508,6 +1514,7 @@ rule("PLAYER: Jump drive: Canceling")
 		Destroy Effect(Event Player.EFFECT_Warp_Target);
 		Event Player.EFFECT_Warp_Target = Null;
 		Event Player.VECTOR_Warp_Target = Null;
+		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 		Small Message(Event Player, Custom String("Warp canceled."));
 	}
 }
@@ -1532,16 +1539,26 @@ rule("PLAYER: Jump drive: Activated.")
 	actions
 	{
 		Stop Holding Button(Event Player, Primary Fire);
-		If(!Is In Line of Sight(Position Of(Event Player), Event Player.VECTOR_Warp_Target, Barriers Do Not Block LOS));
+		If(!Is In Line of Sight(Eye Position(Event Player), Event Player.VECTOR_Warp_Target, Barriers Do Not Block LOS));
 			Small Message(Event Player, Custom String("Jump target requires line of sight."));
 			Abort;
 		End;
 		Event Player.BOOL_Jump_Drive_Activated = True;
 		Event Player.BOOL_Warp_Targeting = False;
+		Event Player.EFFECTS_Jumping = Empty Array;
 		Small Message(Event Player, Custom String("Jumping..."));
+		Destroy Effect(Event Player.EFFECT_Warp_Target);
+		"Create jumping effects around the jumping player."
+		Create Effect(Event Player, Good Aura, Yellow, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Good Aura, Green, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Good Aura, Sky Blue, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Good Aura, Red, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
 		Create Effect(All Players(All Teams), Bad Aura, Sky Blue, Event Player, 0.500, Visible To Position and Radius);
 		Event Player.EFFECT_Jumping = Last Created Entity;
-		Destroy Effect(Event Player.EFFECT_Warp_Target);
 		"Create jump portal effect at target."
 		Event Player.REAL_Jump_Drive_Countdown = 0;
 		Create Effect(All Players(All Teams), Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, Event Player.REAL_Jump_Drive_Countdown,
@@ -1561,6 +1578,10 @@ rule("PLAYER: Jump drive: Activated.")
 		Wait(0.025, Ignore Condition);
 		Stop Forcing Player Position(Event Player);
 		Play Effect(All Players(All Teams), Good Explosion, Sky Blue, Event Player, 0.500);
+		For Player Variable(Event Player, INT_Loop_Control, 0, Count Of(Event Player.EFFECTS_Jumping), 1);
+			Destroy Effect(Event Player.EFFECTS_Jumping[Event Player.INT_Loop_Control]);
+		End;
+		Event Player.EFFECTS_Jumping = Null;
 		"Animate the closing of the jump portal."
 		While(Event Player.REAL_Jump_Drive_Countdown > 0);
 			Event Player.REAL_Jump_Drive_Countdown -= 0.300;
@@ -1573,6 +1594,8 @@ rule("PLAYER: Jump drive: Activated.")
 		Event Player.VECTOR_Warp_Target = Null;
 		Event Player.EFFECT_Jumping = Null;
 		Event Player.BOOL_Jump_Drive_Activated = False;
+		Event Player.EFFECTS_Jumping = Empty Array;
+		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 	}
 }
 
