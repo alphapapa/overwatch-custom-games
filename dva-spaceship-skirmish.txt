@@ -201,8 +201,8 @@ rule("PLAYER: Joins")
 			== Team 1 ? Global.INT_Reactor_HP_Team_2 : Global.INT_Reactor_HP_Team_1), Custom String("Friendly: {0}", Team Of(Event Player)
 			== Team 1 ? Global.INT_Reactor_HP_Team_1 : Global.INT_Reactor_HP_Team_2), Top, 0, Yellow, Red, Blue, Visible To and String,
 			Default Visibility);
-		If(Global.PLAYERS_Cargo_Drop_Visible_To != Empty Array);
-			Global.PLAYERS_Cargo_Drop_Visible_To = All Players(All Teams);
+		If(Global.PLAYERS_Cargo_Drop_Visible_To != Null);
+			Global.PLAYERS_Cargo_Drop_Visible_To = Global.PLAYERS_All;
 		End;
 	}
 }
@@ -534,7 +534,7 @@ rule("PLAYER: Pick up cargo drop")
 		Global.INT_Cargo_Drop_Quantity -= 1;
 		If(Global.INT_Cargo_Drop_Quantity <= 0);
 			Big Message(All Players(All Teams), Custom String("Cargo drop loaded!"));
-			Global.PLAYERS_Cargo_Drop_Visible_To = Empty Array;
+			Global.PLAYERS_Cargo_Drop_Visible_To = Null;
 			Wait(30, Ignore Condition);
 			Call Subroutine(New_Cargo);
 		End;
@@ -756,7 +756,7 @@ rule("SUBR: New Cargo")
 	{
 		Big Message(All Players(All Teams), Custom String("Cargo drop available!"));
 		Global.VECTOR_Current_Cargo = Random Value In Array(Global.VECTORS_Cargo);
-		Global.PLAYERS_Cargo_Drop_Visible_To = All Players(All Teams);
+		Global.PLAYERS_Cargo_Drop_Visible_To = Global.PLAYERS_All;
 		Global.INT_Cargo_Drop_Quantity = 2;
 	}
 }
