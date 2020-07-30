@@ -825,7 +825,7 @@ rule("DEBUG: Damage self")
 	conditions
 	{
 		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Primary Fire) == True;
+		Is Button Held(Event Player, Ultimate) == True;
 	}
 
 	actions
