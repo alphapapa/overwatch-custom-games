@@ -1,0 +1,862 @@
+settings
+{
+	main
+	{
+		Description: "Ultimate Frisbee in Overwatch!  Pick up the disc and throw it to your teammates in the end zone to score!  Jump or crouch to catch a thrown disc!  Use angles to make it curve like a real disc!  (Early alpha version by nobody#1774.  Latest version at: https://workshop.codes/ultimate-frisbee)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Max Spectators: 12
+		Max Team 1 Players: 3
+		Max Team 2 Players: 3
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		disabled Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 50
+		}
+
+		Team Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 10
+
+			enabled maps
+			{
+				Workshop Expanse Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Manual
+			Hero Limit: Off
+			Respawn Time Scalar: 0%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 10%
+			Damage Received: 10%
+			Health: 500%
+			Primary Fire: Off
+			Quick Melee: Off
+			Ultimate Generation: 10%
+			Ultimate Generation - Combat: 0%
+			Ultimate Generation - Passive: 0%
+
+			Ashe
+			{
+				Primary Fire: Off
+			}
+
+			Echo
+			{
+				Sticky Bombs: Off
+			}
+
+			Genji
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+			}
+
+			McCree
+			{
+				Secondary Fire: Off
+			}
+
+			Mei
+			{
+				Secondary Fire: Off
+			}
+
+			Symmetra
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+			}
+
+			Torbjörn
+			{
+				Movement Gravity: 50%
+			}
+
+			Zenyatta
+			{
+				Secondary Fire: Off
+			}
+
+			disabled heroes
+			{
+				Doomfist
+				Torbjörn
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: INT_Num_Throws
+		1: INT_Disc_Outer_Orb_Width
+		2: PLAYERS_All
+		3: BOOL_Disc_Thrown
+		4: ENTITY_Disc
+		5: PLAYERS_Disc_Visibility
+		6: EFFECT_Disc_Outer_Sphere
+		9: VECTOR_Disc_Spawn
+		10: VECTOR_Player_Spawn
+		11: PLAYER_Holding_Disc
+		12: EFFECT_Holding_Disc
+		13: BOOL_Initialized
+		14: VECTOR_Disc_Curve_Impulse
+		15: VECTOR_Last_Throw_From
+		16: INT_Disc_Curve_Speed
+		17: PLAYER_Disc_Last_Thrown_By
+		18: TEAM_Possession
+		19: TEAM_Not_Possession
+		20: VECTORS_Field_Boundaries
+
+	player:
+		0: INT_Curve_Angle
+		1: INT_Last_Facing_Angle
+		2: INT_Turn_Rate
+		4: INT_Last_Num_Throws
+		7: BOOL_Holding_Disc
+		11: BOOL_Throwing_Disc
+		15: INT_Last_Throw_Distance
+		28: STRINGS_Disc_Status
+}
+
+subroutines
+{
+	0: PLAYER_Holding_Disc
+	1: Check_for_Scoring
+	2: Swap_Possession
+	3: Announce_Possession
+	6: DISC_Clear_Effects
+	10: Create_Field_Effects
+}
+
+rule("MAP: Workshop Island/Expanse")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Current Map == Map(Workshop Expanse) || Current Map == Map(Workshop Expanse Night) || Current Map == Map(Workshop Island)
+			|| Current Map == Map(Workshop Island Night)) == True;
+	}
+
+	actions
+	{
+		Global.VECTOR_Disc_Spawn = Vector(-0.015, 1.248, 0.071);
+		Global.VECTORS_Field_Boundaries = Array(Array(Vector(-25, 0, 50), Vector(25, 0, 50)), Array(Vector(-25, 0, 40), Vector(25, 0, 40)),
+			Array(Vector(-25, 0, -40), Vector(25, 0, -40)), Array(Vector(-25, 0, -50), Vector(25, 0, -50)), Array(Vector(-25, 0, 50),
+			Vector(-25, 0, -50)), Array(Vector(25, 0, 50), Vector(25, 0, -50)));
+	}
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Initialized == Null;
+	}
+
+	actions
+	{
+		Global.BOOL_Initialized = True;
+		Global.INT_Disc_Outer_Orb_Width = 0.500;
+		Wait(5, Ignore Condition);
+		Call Subroutine(Create_Field_Effects);
+		"Create dummy bot for player."
+		Create Dummy Bot(Hero(Torbjörn), Team 2, 5, Global.VECTOR_Disc_Spawn, Vector(0, 0, 0));
+		Global.ENTITY_Disc = Last Created Entity;
+		"Make bot invisible and phased out."
+		Set Invisible(Global.ENTITY_Disc, All);
+		Set Status(Global.ENTITY_Disc, Null, Phased Out, 9999);
+		"Move dummy bot to player's position."
+		Teleport(Global.ENTITY_Disc, Global.VECTOR_Disc_Spawn);
+		"Create disc visual effects."
+		Create Effect(Global.PLAYERS_Disc_Visibility, Sphere, Orange, Position Of(Global.ENTITY_Disc), Global.INT_Disc_Outer_Orb_Width,
+			Visible To Position and Radius);
+		Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+		Create Effect(Global.PLAYERS_All, Sphere, White, Position Of(Global.ENTITY_Disc), 0.300, Position and Radius);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Set Angle"), Custom String("Ultimate charge 0-24=left, 26-50=right"),
+			Custom String("Reload"), Right, 0, Orange, Orange, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("CATCH DISC"), Custom String(
+			"While near disc in midair                           "), Custom String("Hold Jump or Crouch"), Right, 0, White, Turquoise,
+			White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Throw disc"), Custom String(" while turning (slowly!)"), Custom String(
+			"Hold and release Primary Fire"), Right, 0, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Pick up disc"), Custom String("While next to disc"), Custom String(
+			"Crouch                                           "), Right, 0, White, Turquoise, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Share code"), Custom String("https://workshop.codes/ultimate-frisbee"),
+			Custom String(""), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.TEAM_Possession, Custom String(""), Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(Global.TEAM_Possession), Custom String("POSSESSION"), Null, Custom String("Our team"), Top, 0, White,
+			White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(Global.TEAM_Not_Possession), Custom String("POSSESSION"), Null, Custom String("Other team"), Top, 0,
+			White, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("PLAYER: Joins (create tee/hole effects, etc.)")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		"Update variable used to make effects visible to all players."
+		Global.PLAYERS_All = All Players(All Teams);
+		Create HUD Text(Event Player, Event Player.STRINGS_Disc_Status[0], Event Player.STRINGS_Disc_Status[1],
+			Event Player.STRINGS_Disc_Status[2], Top, 0, White, Turquoise, White, String, Default Visibility);
+		Event Player.STRINGS_Disc_Status = Array(Custom String("No disc"), Custom String("Now you can"), Custom String("Spawn a disc"));
+		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
+			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
+			Default Visibility);
+		"Create reset HUD for host."
+		If(Event Player == Host Player);
+			Create HUD Text(Event Player, Custom String("RESET"), Custom String("If anything malfunctions"), Custom String(
+				"Interact + Ultimate"), Right, 99, Purple, Turquoise, White, None, Visible Never);
+		End;
+		If(Global.PLAYERS_Disc_Visibility != Empty Array);
+			Global.PLAYERS_Disc_Visibility = All Players(All Teams);
+		End;
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		disabled Hero Of(Event Player) != Hero(Torbjörn);
+		disabled Team Of(Event Player) == Team 1;
+	}
+
+	actions
+	{
+		Event Player.INT_Curve_Angle = 25;
+		Set Ultimate Charge(Event Player, 25);
+		Teleport(Event Player, Global.VECTOR_Player_Spawn);
+	}
+}
+
+rule("PLAYER: Pick up disc")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Global.ENTITY_Disc, Event Player) <= 1.500;
+		Is Button Held(Event Player, Crouch) == True;
+		Event Player.BOOL_Holding_Disc != True;
+		Is On Ground(Global.ENTITY_Disc) == True;
+		Global.BOOL_Disc_Thrown == False;
+		Global.PLAYER_Holding_Disc == Null;
+		(Is Game In Progress == False || Team Of(Event Player) == Global.TEAM_Possession) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Crouch);
+		Call Subroutine(PLAYER_Holding_Disc);
+	}
+}
+
+rule("PLAYER: Record turn rate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BOOL_Throwing_Disc == True;
+	}
+
+	actions
+	{
+		Event Player.INT_Turn_Rate = Angle Difference(Event Player.INT_Last_Facing_Angle, Horizontal Facing Angle Of(Event Player));
+		Event Player.INT_Last_Facing_Angle = Horizontal Facing Angle Of(Event Player);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Throw disc")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Torbjörn);
+		Event Player.BOOL_Holding_Disc == True;
+		Event Player.BOOL_Throwing_Disc == True;
+		Is Button Held(Event Player, Primary Fire) == False;
+	}
+
+	actions
+	{
+		"Destroy holding-disc effect."
+		Destroy Effect(Global.EFFECT_Holding_Disc);
+		Global.EFFECT_Holding_Disc = Null;
+		"Record position of throw."
+		Global.VECTOR_Last_Throw_From = Position Of(Event Player);
+		"Calcuate and set disc curve vector and speed."
+		Global.VECTOR_Disc_Curve_Impulse = Event Player.INT_Curve_Angle - 25 < 0 ? Vector(1, 0, 0) : Vector(-1, 0, 0);
+		If(Event Player.INT_Curve_Angle <= 25);
+			Global.INT_Disc_Curve_Speed = Absolute Value(Event Player.INT_Curve_Angle - 25) / 25;
+		Else If(Event Player.INT_Curve_Angle == 25);
+			Global.INT_Disc_Curve_Speed = 0;
+		Else;
+			Global.INT_Disc_Curve_Speed = (Event Player.INT_Curve_Angle - 25) / 25;
+		End;
+		"Set dummy bot to facing direction of player."
+		Set Facing(Global.ENTITY_Disc, Facing Direction Of(Event Player), To World);
+		Stop Forcing Player Position(Global.ENTITY_Disc);
+		"Apply impulse to disc (capped to 40)."
+		Apply Impulse(Global.ENTITY_Disc, Facing Direction Of(Event Player), Min(40, Absolute Value(Event Player.INT_Turn_Rate) * 2),
+			To World, Incorporate Contrary Motion);
+		"Without the wait, the disc is immediately detected as on the ground again and is turned over."
+		Wait(0.032, Ignore Condition);
+		Clear Status(Event Player, Rooted);
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc thrown"), Custom String("Now you can"), Custom String(
+			"Go pick it up or catch a thrown one"));
+		Global.PLAYERS_Disc_Visibility = Global.PLAYERS_All;
+		Global.PLAYER_Holding_Disc = Null;
+		Global.BOOL_Disc_Thrown = True;
+		Global.PLAYER_Disc_Last_Thrown_By = Event Player;
+		Global.INT_Num_Throws += 1;
+		Event Player.BOOL_Throwing_Disc = False;
+		Event Player.BOOL_Holding_Disc = False;
+	}
+}
+
+rule("PLAYER: Set throw charge (reload)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Reload) == True;
+		Is Button Held(Event Player, Interact) == False;
+	}
+
+	actions
+	{
+		If(Event Player.INT_Curve_Angle < 50);
+			Event Player.INT_Curve_Angle += 1;
+		Else;
+			Event Player.INT_Curve_Angle = 0;
+		End;
+		Set Ultimate Charge(Event Player, Event Player.INT_Curve_Angle);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("DISC: Apply sideways motion in air")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Torbjörn);
+		Is In Air(Event Player) == True;
+		Global.BOOL_Disc_Thrown == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Global.VECTOR_Disc_Curve_Impulse, Global.INT_Disc_Curve_Speed, To Player, Incorporate Contrary Motion);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("DISC: Landed on ground")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Torbjörn);
+		Is On Ground(Event Player) == True;
+		Speed Of(Event Player) == 0;
+		Global.PLAYER_Holding_Disc == Null;
+	}
+
+	actions
+	{
+		Global.BOOL_Disc_Thrown = False;
+		Call Subroutine(Swap_Possession);
+	}
+}
+
+disabled rule("DISC: Dies (duplicates actions from other subr, but since the disc owner is not the Event Player, they must be changed here)")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Torbjörn);
+	}
+}
+
+rule("PLAYER: Begin throwing (holding disc and pressing primary fire)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BOOL_Holding_Disc == True;
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Throwing_Disc = True;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Throwing disc"), Custom String("Now you can"), Custom String(
+			"Aim up slightly, and release the disc while turning slowly"));
+	}
+}
+
+rule("SUBR: DISC_Clear_Effects")
+{
+	event
+	{
+		Subroutine;
+		DISC_Clear_Effects;
+	}
+
+	actions
+	{
+		Global.PLAYERS_Disc_Visibility = Null;
+	}
+}
+
+disabled rule("DEBUG: Serverload HUD")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player == Host Player) == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("LOAD"), Custom String("Current / Average / Peak"), String("{0} : {1} : {2}",
+			Server Load, Server Load Average, Server Load Peak), Left, 99, White, White, White, String, Visible Never);
+	}
+}
+
+rule("DISC: Dies")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Slot 5;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Global.VECTOR_Disc_Spawn);
+	}
+}
+
+rule("PLAYER: Catches disc")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Torbjörn);
+		(Is Button Held(Event Player, Jump) || Is Button Held(Event Player, Crouch)) == True;
+		Distance Between(Global.ENTITY_Disc, Event Player) <= 1.500;
+		Event Player.BOOL_Holding_Disc != True;
+		Global.BOOL_Disc_Thrown == True;
+		Event Player.BOOL_Throwing_Disc == False;
+	}
+
+	actions
+	{
+		If(Count Of(Filtered Array(All Players(Team Of(Event Player)), !Is Dummy Bot(Current Array Element)))
+			> 1 && Global.PLAYER_Disc_Last_Thrown_By == Event Player);
+			Small Message(All Players(All Teams), Custom String("{0} caught own throw.  Turnover!", Event Player));
+			Call Subroutine(Swap_Possession);
+		Else;
+			disabled Small Message(All Players(All Teams), Custom String("{0} caught the disc", Event Player));
+			If(Team Of(Event Player) == Team Of(Global.PLAYER_Disc_Last_Thrown_By));
+				Small Message(All Players(All Teams), Custom String("{0} passed disc to {1}", Global.PLAYER_Disc_Last_Thrown_By, Event Player));
+				"Stop disc's movement."
+				Start Forcing Player Position(Global.ENTITY_Disc, Position Of(Event Player), True);
+				Event Player.STRINGS_Disc_Status = Array(Custom String("DISC CAUGHT", Null, Custom String(""), Custom String("")), Custom String(
+					"To throw"), Custom String("hold Primary Fire, rotate slowly, and release"));
+				Call Subroutine(PLAYER_Holding_Disc);
+				Call Subroutine(Check_for_Scoring);
+			Else;
+				Small Message(All Players(All Teams), Custom String("{0} intercepted {1}'s throw!", Event Player,
+					Global.PLAYER_Disc_Last_Thrown_By));
+				Call Subroutine(Swap_Possession);
+			End;
+		End;
+	}
+}
+
+rule("SUBR: PLAYER_Holding_Disc")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Holding_Disc;
+	}
+
+	actions
+	{
+		Global.PLAYERS_Disc_Visibility = Empty Array;
+		Global.PLAYER_Holding_Disc = Event Player;
+		Global.BOOL_Disc_Thrown = False;
+		Event Player.BOOL_Holding_Disc = True;
+		Event Player.BOOL_Throwing_Disc = False;
+		Event Player.INT_Last_Num_Throws = Global.INT_Num_Throws;
+		Create Effect(All Players(All Teams), Ring, Green, Event Player, 1.500, Visible To Position and Radius);
+		Global.EFFECT_Holding_Disc = Last Created Entity;
+		Event Player.STRINGS_Disc_Status = Array(Custom String("Holding disc"), Custom String("To throw"), Custom String(
+			"hold Primary Fire, rotate slowly, and release"));
+		Set Status(Event Player, Null, Rooted, 9999);
+		disabled Wait(5, Ignore Condition);
+		disabled If(Count Of(Filtered Array(All Players(Team Of(Event Player)), !Is Dummy Bot(Current Array Element)))
+			> 1 && Event Player.BOOL_Holding_Disc == True && Global.INT_Num_Throws == Event Player.INT_Last_Num_Throws);
+		disabled Small Message(All Players(All Teams), Custom String("{0} held disc for 5 seconds", Event Player));
+		disabled Event Player.BOOL_Holding_Disc = False;
+		disabled Global.PLAYER_Holding_Disc = Null;
+		disabled Global.INT_Num_Throws += 1;
+		disabled Global.PLAYERS_Disc_Visibility = Global.PLAYERS_All;
+		disabled Global.PLAYER_Disc_Last_Thrown_By = Event Player;
+		disabled Destroy Effect(Global.EFFECT_Holding_Disc);
+		disabled Global.EFFECT_Holding_Disc = Null;
+		disabled Stop Forcing Player Position(Global.ENTITY_Disc);
+		disabled Clear Status(Event Player, Rooted);
+		disabled Call Subroutine(Swap_Possession);
+		disabled End;
+	}
+}
+
+rule("PLAYER: Leaves while holding disc")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Holding_Disc != Null;
+	}
+
+	actions
+	{
+		If(!Entity Exists(Global.PLAYER_Holding_Disc));
+			Teleport(Global.ENTITY_Disc, Global.VECTOR_Disc_Spawn);
+		End;
+		"Create disc visual effects."
+		Create Effect(Global.PLAYERS_Disc_Visibility, Sphere, Orange, Position Of(Global.ENTITY_Disc), Global.INT_Disc_Outer_Orb_Width,
+			Visible To Position and Radius);
+		Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+	}
+}
+
+rule("SUBR: Create_Field")
+{
+	event
+	{
+		Subroutine;
+		Create_Field_Effects;
+	}
+
+	actions
+	{
+		"Line A"
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[0][0], Global.VECTORS_Field_Boundaries[0][1],
+			Team 1, Visible To Position and Radius);
+		"Line B"
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[1][0], Global.VECTORS_Field_Boundaries[1][1],
+			Team 1, Visible To Position and Radius);
+		"Line C"
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[2][0], Global.VECTORS_Field_Boundaries[2][1],
+			Team 2, Visible To Position and Radius);
+		"Line D"
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[3][0], Global.VECTORS_Field_Boundaries[3][1],
+			Team 2, Visible To Position and Radius);
+		"Line E"
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[4][0], Global.VECTORS_Field_Boundaries[4][1],
+			White, Visible To Position and Radius);
+		"Line F"
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[5][0], Global.VECTORS_Field_Boundaries[5][1],
+			White, Visible To Position and Radius);
+	}
+}
+
+rule("GAME: Possession = null")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.TEAM_Possession == Null;
+	}
+
+	actions
+	{
+		Global.TEAM_Possession = Random Value In Array(Array(Team 1, Team 2));
+		Call Subroutine(Announce_Possession);
+	}
+}
+
+rule("SUBR: Swap possession")
+{
+	event
+	{
+		Subroutine;
+		Swap_Possession;
+	}
+
+	actions
+	{
+		Destroy Effect(Global.EFFECT_Disc_Outer_Sphere);
+		If(Global.TEAM_Possession == Team 1);
+			Global.TEAM_Possession = Team 2;
+			Global.TEAM_Not_Possession = Team 1;
+			"Create disc visual effects."
+			Create Effect(Global.PLAYERS_Disc_Visibility, Sphere, Team 2, Position Of(Global.ENTITY_Disc), Global.INT_Disc_Outer_Orb_Width,
+				Visible To Position and Radius);
+			Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+		Else;
+			Global.TEAM_Possession = Team 1;
+			Global.TEAM_Not_Possession = Team 2;
+			"Create disc visual effects."
+			Create Effect(Global.PLAYERS_Disc_Visibility, Sphere, Team 1, Position Of(Global.ENTITY_Disc), Global.INT_Disc_Outer_Orb_Width,
+				Visible To Position and Radius);
+			Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+		End;
+		Call Subroutine(Announce_Possession);
+		Global.BOOL_Disc_Thrown = False;
+	}
+}
+
+rule("SUBR: Announce_Possession")
+{
+	event
+	{
+		Subroutine;
+		Announce_Possession;
+	}
+
+	actions
+	{
+		If(Global.TEAM_Possession == Team 1);
+			disabled Big Message(All Players(Team 1), Custom String("Our team has possession of the disc."));
+			disabled Big Message(All Players(Team 2), Custom String("Other team has possession of the disc."));
+		Else;
+			disabled Big Message(All Players(Team 2), Custom String("Our team has possession of the disc."));
+			disabled Big Message(All Players(Team 1), Custom String("Other team has possession of the disc."));
+		End;
+		Small Message(All Players(All Teams), Custom String("Turnover"));
+	}
+}
+
+rule("SUBR: Check_for_Scoring")
+{
+	event
+	{
+		Subroutine;
+		Check_for_Scoring;
+	}
+
+	actions
+	{
+		"Disc holder within team 1 end zone"
+		If(Global.TEAM_Possession == Team 1 && X Component Of(Position Of(Global.PLAYER_Holding_Disc)) >= X Component Of(
+			Global.VECTORS_Field_Boundaries[0][0]) && X Component Of(Position Of(Global.PLAYER_Holding_Disc)) <= X Component Of(
+			Global.VECTORS_Field_Boundaries[0][1]) && Z Component Of(Position Of(Global.PLAYER_Holding_Disc)) <= Z Component Of(
+			Global.VECTORS_Field_Boundaries[0][0]) && Z Component Of(Position Of(Global.PLAYER_Holding_Disc)) >= Z Component Of(
+			Global.VECTORS_Field_Boundaries[1][0]));
+			Modify Team Score(Team 1, 1);
+			Big Message(All Players(All Teams), Custom String("{0} scored on a pass from {1}!", Global.PLAYER_Holding_Disc,
+				Global.PLAYER_Disc_Last_Thrown_By));
+			Teleport(Global.ENTITY_Disc, Global.VECTOR_Disc_Spawn);
+			Call Subroutine(Swap_Possession);
+		"Disc holder within team 2 end zone"
+		Else If(Global.TEAM_Possession == Team 2 && X Component Of(Position Of(Global.PLAYER_Holding_Disc)) >= X Component Of(
+				Global.VECTORS_Field_Boundaries[2][0]) && X Component Of(Position Of(Global.PLAYER_Holding_Disc)) <= X Component Of(
+				Global.VECTORS_Field_Boundaries[2][1]) && Z Component Of(Position Of(Global.PLAYER_Holding_Disc)) <= Z Component Of(
+				Global.VECTORS_Field_Boundaries[2][0]) && Z Component Of(Position Of(Global.PLAYER_Holding_Disc)) >= Z Component Of(
+				Global.VECTORS_Field_Boundaries[3][0]));
+			Modify Team Score(Team 2, 1);
+			Big Message(All Players(All Teams), Custom String("{0} scored on a pass from {1}!", Global.PLAYER_Holding_Disc,
+				Global.PLAYER_Disc_Last_Thrown_By));
+			Teleport(Global.ENTITY_Disc, Global.VECTOR_Disc_Spawn);
+			Call Subroutine(Swap_Possession);
+		End;
+	}
+}
+
+rule("DEBUG: Call check for scoring")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		"Disc holder within team 1 end zone"
+		If(Global.TEAM_Possession == Team 1 && X Component Of(Position Of(Event Player)) >= X Component Of(
+			Global.VECTORS_Field_Boundaries[0][0]) && X Component Of(Position Of(Event Player)) <= X Component Of(
+			Global.VECTORS_Field_Boundaries[0][1]) && Z Component Of(Position Of(Event Player)) <= Z Component Of(
+			Global.VECTORS_Field_Boundaries[0][0]) && Z Component Of(Position Of(Event Player)) >= Z Component Of(
+			Global.VECTORS_Field_Boundaries[1][0]));
+			Small Message(Host Player, Custom String("In team 1 end zone"));
+		"Disc holder within team 2 end zone"
+		Else If(Global.TEAM_Possession == Team 2 && X Component Of(Position Of(Event Player)) >= X Component Of(
+				Global.VECTORS_Field_Boundaries[2][0]) && X Component Of(Position Of(Event Player)) <= X Component Of(
+				Global.VECTORS_Field_Boundaries[2][1]) && Z Component Of(Position Of(Event Player)) <= Z Component Of(
+				Global.VECTORS_Field_Boundaries[2][0]) && Z Component Of(Position Of(Event Player)) >= Z Component Of(
+				Global.VECTORS_Field_Boundaries[3][0]));
+			Small Message(Host Player, Custom String("In team 2 end zone"));
+		Else;
+			Small Message(Host Player, Custom String("Not in an end zone."));
+		End;
+	}
+}
+
+rule("START: Recreate disc dummy bot when game mode starts")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		"Create dummy bot for player."
+		Create Dummy Bot(Hero(Torbjörn), Team 2, 5, Global.VECTOR_Disc_Spawn, Vector(0, 0, 0));
+		Global.ENTITY_Disc = Last Created Entity;
+		"Make bot invisible and phased out."
+		Set Invisible(Global.ENTITY_Disc, All);
+		Set Status(Global.ENTITY_Disc, Null, Phased Out, 9999);
+		"Move dummy bot to player's position."
+		Teleport(Global.ENTITY_Disc, Global.VECTOR_Disc_Spawn);
+	}
+}
