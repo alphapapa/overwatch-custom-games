@@ -132,6 +132,8 @@ variables
 		26: STRING_HUD_Possession_Enforced
 		27: REAL_Disc_Holder_Ring_Radius
 		28: REAL_Disc_Catch_Radius
+		29: REAL_Disc_Lift_Max_Accel
+		30: VECTOR_Disc_Initial_Throw
 
 	player:
 		0: BOOL_Throwing_Disc
@@ -195,6 +197,7 @@ rule("INIT")
 		Global.REAL_Disc_Catch_Radius = 2;
 		Global.REAL_Disc_Pickup_Radius = 1.500;
 		Global.REAL_Disc_Holder_Ring_Radius = 2;
+		Global.REAL_Disc_Lift_Max_Accel = 0.450;
 		Global.INT_Disc_Outer_Orb_Width = 0.500;
 		Wait(5, Ignore Condition);
 		Call Subroutine(EFFECTS_Field_Create);
@@ -446,6 +449,7 @@ rule("PLAYER: Throws disc")
 		Global.EFFECT_Holding_Disc = Null;
 		"Record position of throw."
 		Global.VECTOR_Disc_Thrown_From = Position Of(Event Player);
+		Global.VECTOR_Disc_Initial_Throw = Facing Direction Of(Event Player);
 		"Calcuate and set disc curve vector and speed."
 		Global.VECTOR_Disc_Curve_Impulse = Event Player.INT_Curve_Angle - 25 < 0 ? Vector(1, 0, 0) : Vector(-1, 0, 0);
 		If(Event Player.INT_Curve_Angle <= 25);
@@ -548,6 +552,9 @@ rule("DISC: Apply sideways motion in air")
 	actions
 	{
 		Apply Impulse(Event Player, Global.VECTOR_Disc_Curve_Impulse, Global.INT_Disc_Curve_Speed, To Player, Incorporate Contrary Motion);
+		"WIP: simulate disc lift"
+		Apply Impulse(Event Player, Vector(0, 1, 0), Min(Global.REAL_Disc_Lift_Max_Accel, Absolute Value(Speed Of In Direction(
+			Event Player, Global.VECTOR_Disc_Initial_Throw) / 2)), To World, Incorporate Contrary Motion);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
