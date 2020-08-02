@@ -621,6 +621,8 @@ rule("SUBR: HUD_Init")
 		Create HUD Text(Global.PLAYERS_All, Custom String("Pick up disc"), Custom String("While next to disc"), Custom String(
 			"Crouch                                           "), Right, 0, White, Turquoise, White, Visible To and String,
 			Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("SCORE BY"), Custom String("Having team possession"), Custom String(
+			"Catching disc in your team's goal"), Right, 0, White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("CHANGE HERO"), Null, Custom String("Interact + Ultimate"), Right, 0, White,
 			Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("Share code"), Custom String("https://workshop.codes/ultimate-frisbee"),
