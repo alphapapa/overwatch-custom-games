@@ -1,5 +1,10 @@
 settings
 {
+	main
+	{
+		Description: "Ultimate Frisbee in Overwatch! Throw passes to teammates, and catch them in your end zone to score! Intercept enemy passes! Keep the disc in bounds or it will reset to midfield. (By nobody#1774.  Beta.  More to come!)"
+	}
+
 	lobby
 	{
 		Allow Players Who Are In Queue: Yes
@@ -588,7 +593,7 @@ rule("SUBR: HUD_Init")
 		Create HUD Text(Global.PLAYERS_All, Custom String("CHANGE HERO"), Null, Custom String("Interact + Ultimate"), Right, 0, White,
 			Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("Share code"), Custom String("https://workshop.codes/ultimate-frisbee"),
-			Custom String(""), Left, 0, White, White, White, Visible To and String, Default Visibility);
+			Custom String("6AW6H"), Left, 0, White, White, White, Visible To and String, Default Visibility);
 		"Create status HUDs."
 		Create HUD Text(Global.TEAM_Possession, Custom String(""), Null, Null, Left, 0, White, White, White, Visible To and String,
 			Default Visibility);
