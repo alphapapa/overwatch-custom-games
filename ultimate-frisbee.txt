@@ -700,8 +700,9 @@ rule("SUBR: DISC_Reset")
 		Global.PLAYERS_Disc_Visible = All Players(All Teams);
 		Destroy Effect(Global.EFFECT_Holding_Disc);
 		Global.EFFECT_Holding_Disc = Null;
+		Start Forcing Player Position(Global.ENTITY_Disc1, Position Of(Global.VECTOR_Disc_Spawn), False);
+		Wait(0.100, Ignore Condition);
 		Stop Forcing Player Position(Global.ENTITY_Disc1);
-		Teleport(Global.ENTITY_Disc1, Global.VECTOR_Disc_Spawn);
 	}
 }
 
