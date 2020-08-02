@@ -201,7 +201,7 @@ rule("INIT")
 		Global.BOOL_Initialized = True;
 		Global.REAL_Disc_Catch_Radius = 2;
 		Global.REAL_Disc_Pickup_Radius = 1.500;
-		Global.REAL_Disc_Holder_Ring_Radius = 2;
+		Global.REAL_Disc_Holder_Ring_Radius = 3;
 		Global.REAL_Disc_Lift_Max_Accel = 0.450;
 		Global.INT_Disc_Outer_Orb_Width = 0.500;
 		Wait(5, Ignore Condition);
@@ -492,6 +492,8 @@ rule("PLAYER: Catches disc")
 		Global.PLAYER_Holding_Disc == Null;
 		Is On Ground(Global.ENTITY_Disc1) == False;
 		Distance Between(Eye Position(Event Player), Position Of(Global.ENTITY_Disc1)) <= Global.REAL_Disc_Catch_Radius;
+		"Safe zone for passer equal to the radius of the visible ring."
+		Distance Between(Position Of(Event Player), Global.VECTOR_Disc_Thrown_From) >= Global.REAL_Disc_Holder_Ring_Radius;
 	}
 
 	actions
