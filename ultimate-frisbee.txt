@@ -71,6 +71,11 @@ settings
 				Storm Arrows: Off
 			}
 
+			Lúcio
+			{
+				Soundwave Cooldown Time: 500%
+			}
+
 			Mei
 			{
 				Primary Fire: Off
