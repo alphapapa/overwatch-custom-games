@@ -637,7 +637,7 @@ rule("SUBR: DISC_Create")
 		Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Orange, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
 			Visible To Position and Radius);
 		Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
-		Create Effect(Global.PLAYERS_All, Sphere, White, Position Of(Global.ENTITY_Disc1), 0.300, Position and Radius);
+		Create Effect(Global.PLAYERS_All, Sphere, White, Position Of(Global.ENTITY_Disc1), 0.300, Visible To Position and Radius);
 	}
 }
 
