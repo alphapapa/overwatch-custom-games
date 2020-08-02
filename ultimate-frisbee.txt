@@ -47,6 +47,18 @@ settings
 			Ultimate Generation - Combat: 0%
 			Ultimate Generation - Passive: 0%
 
+			Ana
+			{
+				Biotic Grenade: Off
+				Sleep Dart Cooldown Time: 400%
+			}
+
+			Echo
+			{
+				Focusing Beam: Off
+				Sticky Bombs: Off
+			}
+
 			Genji
 			{
 				Primary Fire: Off
