@@ -588,7 +588,7 @@ rule("DISC: Comes to rest on ground")
 		Global.BOOL_Disc_Thrown = False;
 		Call Subroutine(PLAYER_Check_Out_Of_Bounds);
 		Small Message(All Players(All Teams), Custom String("Pass not caught"));
-		Call Subroutine(POSSESSION_Swap);
+		disabled Call Subroutine(POSSESSION_Swap);
 	}
 }
 
