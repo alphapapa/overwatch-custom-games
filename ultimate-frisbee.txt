@@ -454,7 +454,7 @@ rule("PLAYER: Throws disc")
 		Global.EFFECT_Holding_Disc = Null;
 		"Record position of throw."
 		Global.VECTOR_Disc_Thrown_From = Position Of(Event Player);
-		Global.VECTOR_Disc_Initial_Throw = Facing Direction Of(Event Player);
+		Global.VECTOR_Disc_Initial_Throw = Facing Direction Of(Event Player) * Vector(1, 0, 1);
 		"Calcuate and set disc curve vector and speed."
 		Global.VECTOR_Disc_Curve_Impulse = Event Player.INT_Curve_Angle - 25 < 0 ? Vector(1, 0, 0) : Vector(-1, 0, 0);
 		If(Event Player.INT_Curve_Angle <= 25);
