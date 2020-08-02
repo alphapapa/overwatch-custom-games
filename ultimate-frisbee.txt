@@ -88,6 +88,11 @@ settings
 				Primary Fire: Off
 			}
 
+			Roadhog
+			{
+				Chain Hook Cooldown Time: 500%
+			}
+
 			Symmetra
 			{
 				Primary Fire: Off
