@@ -706,7 +706,7 @@ rule("SUBR: DISC_Create")
 		Global.ENTITY_Disc1 = Last Created Entity;
 		Set Gravity(Global.ENTITY_Disc1, 50);
 		Set Invisible(Global.ENTITY_Disc1, All);
-		Set Status(Global.ENTITY_Disc1, Null, Phased Out, 9999);
+		disabled Set Status(Global.ENTITY_Disc1, Null, Phased Out, 9999);
 		Teleport(Global.ENTITY_Disc1, Global.VECTOR_Disc_Spawn);
 		"Create disc visual effects."
 		Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Orange, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
