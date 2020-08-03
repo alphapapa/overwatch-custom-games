@@ -397,7 +397,7 @@ rule("PLAYER: Set throw angle")
 	actions
 	{
 		If(Event Player.INT_Curve_Angle < 50);
-			Event Player.INT_Curve_Angle += 1;
+			Event Player.INT_Curve_Angle += 5;
 		Else;
 			Event Player.INT_Curve_Angle = 0;
 		End;
