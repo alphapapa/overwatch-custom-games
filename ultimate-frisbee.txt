@@ -607,6 +607,7 @@ rule("PLAYER: Lands on ground with disc")
 			Else;
 				Call Subroutine(PLAYER_Check_for_Scoring);
 				If(Global.BOOL_Scored == True);
+					Wait(1, Ignore Condition);
 					Call Subroutine(POSSESSION_Swap);
 					Call Subroutine(DISC_Reset);
 					Call Subroutine(PLAYERS_Reset);
