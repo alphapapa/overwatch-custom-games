@@ -23,7 +23,10 @@ settings
 		{
 			enabled maps
 			{
+				Workshop Expanse
 				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
 			}
 		}
 
@@ -200,6 +203,7 @@ variables
 		31: BOOL_Out_Of_Bounds
 		32: BOOL_Scored
 		33: BOOL_Possession_Changing
+		34: BOOL_80s
 
 	player:
 		0: BOOL_Throwing_Disc
@@ -242,6 +246,30 @@ rule("MAP: Workshop Expanse")
 			Vector(-25, 0, -50)), Array(Vector(25, 0, 50), Vector(25, 0, -50)));
 		Global.VECTORS_Player_Spawns_Team1 = Array(Vector(0, 0, -10), Vector(-10, 0, -10), Vector(10, 0, -10));
 		Global.VECTORS_Player_Spawns_Team2 = Array(Vector(0, 0, 10), Vector(10, 0, 10), Vector(-10, 0, 10));
+	}
+}
+
+rule("MAP: Workshop Island")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Current Map == Map(Workshop Island) || Current Map == Map(Workshop Island Night)) == True;
+	}
+
+	actions
+	{
+		Global.BOOL_80s = True;
+		Global.VECTOR_Disc_Spawn = Vector(0, 0, 0);
+		Global.VECTORS_Field_Boundaries = Array(Array(Vector(-20, 0, 20), Vector(20, 0, 20)), Array(Vector(-20, 0, 12), Vector(20, 0, 12)),
+			Array(Vector(-20, 0, -12), Vector(20, 0, -12)), Array(Vector(-20, 0, -20), Vector(20, 0, -20)), Array(Vector(-20, 0, 20),
+			Vector(-20, 0, -20)), Array(Vector(20, 0, 20), Vector(20, 0, -20)));
+		Global.VECTORS_Player_Spawns_Team1 = Array(Vector(0, 0, -20), Vector(-20, 0, -20), Vector(20, 0, -20));
+		Global.VECTORS_Player_Spawns_Team2 = Array(Vector(0, 0, 20), Vector(20, 0, 20), Vector(-20, 0, 20));
 	}
 }
 
@@ -683,6 +711,34 @@ rule("DISC: Comes to rest on ground")
 	}
 }
 
+rule("DISC: (Workshop Island) Move back toward island")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.ENTITY_Disc1;
+		Is In Air(Event Player) == True;
+		Global.BOOL_Disc_Thrown == True;
+		(X Component Of(Position Of(Event Player)) > 20 || Z Component Of(Position Of(Event Player)) > 20 || X Component Of(Position Of(
+			Event Player)) < -20 || Z Component Of(Position Of(Event Player)) < -20) == True;
+		(Current Map == Map(Workshop Island) || Current Map == Map(Workshop Island Night)) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Vector(1, 0, 1) * Direction Towards(Position Of(Event Player), Vector(0, 0, 0)), 2, To World,
+			Incorporate Contrary Motion);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
 rule("SUBR: HUD_Init")
 {
 	event
@@ -756,24 +812,45 @@ rule("SUBR: EFFECTS_Field_Create (Creates a football-like field, with lines A-D 
 
 	actions
 	{
-		"Line A"
-		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[0][0], Global.VECTORS_Field_Boundaries[0][1],
-			Team 1, Visible To Position and Radius);
-		"Line B"
-		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[1][0], Global.VECTORS_Field_Boundaries[1][1],
-			Team 1, Visible To Position and Radius);
-		"Line C"
-		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[2][0], Global.VECTORS_Field_Boundaries[2][1],
-			Team 2, Visible To Position and Radius);
-		"Line D"
-		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[3][0], Global.VECTORS_Field_Boundaries[3][1],
-			Team 2, Visible To Position and Radius);
-		"Line E"
-		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[4][0], Global.VECTORS_Field_Boundaries[4][1],
-			White, Visible To Position and Radius);
-		"Line F"
-		Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[5][0], Global.VECTORS_Field_Boundaries[5][1],
-			White, Visible To Position and Radius);
+		If(Global.BOOL_80s == True);
+			"Line A"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[0][0], Global.VECTORS_Field_Boundaries[0][1],
+				Sky Blue, Visible To Position and Radius);
+			"Line B"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[1][0], Global.VECTORS_Field_Boundaries[1][1],
+				Sky Blue, Visible To Position and Radius);
+			"Line C"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[2][0], Global.VECTORS_Field_Boundaries[2][1],
+				Purple, Visible To Position and Radius);
+			"Line D"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[3][0], Global.VECTORS_Field_Boundaries[3][1],
+				Purple, Visible To Position and Radius);
+			"Line E"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[4][0], Global.VECTORS_Field_Boundaries[4][1],
+				White, Visible To Position and Radius);
+			"Line F"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[5][0], Global.VECTORS_Field_Boundaries[5][1],
+				White, Visible To Position and Radius);
+		Else;
+			"Line A"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[0][0], Global.VECTORS_Field_Boundaries[0][1],
+				Team 1, Visible To Position and Radius);
+			"Line B"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[1][0], Global.VECTORS_Field_Boundaries[1][1],
+				Team 1, Visible To Position and Radius);
+			"Line C"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[2][0], Global.VECTORS_Field_Boundaries[2][1],
+				Team 2, Visible To Position and Radius);
+			"Line D"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[3][0], Global.VECTORS_Field_Boundaries[3][1],
+				Team 2, Visible To Position and Radius);
+			"Line E"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[4][0], Global.VECTORS_Field_Boundaries[4][1],
+				White, Visible To Position and Radius);
+			"Line F"
+			Create Beam Effect(Global.PLAYERS_All, Good Beam, Global.VECTORS_Field_Boundaries[5][0], Global.VECTORS_Field_Boundaries[5][1],
+				White, Visible To Position and Radius);
+		End;
 	}
 }
 
@@ -859,17 +936,26 @@ rule("SUBR: POSSESSION_Swap")
 			Global.TEAM_Possession = Team 2;
 			Global.TEAM_Not_Possession = Team 1;
 			"Create disc visual effects."
-			Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Team 2, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
-				Visible To Position and Radius);
-			Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+			If(Global.BOOL_80s == True);
+				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Purple, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
+					Visible To Position and Radius);
+			Else;
+				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Team 2, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
+					Visible To Position and Radius);
+			End;
 		Else;
 			Global.TEAM_Possession = Team 1;
 			Global.TEAM_Not_Possession = Team 2;
 			"Create disc visual effects."
-			Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Team 1, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
-				Visible To Position and Radius);
-			Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+			If(Global.BOOL_80s == True);
+				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Sky Blue, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
+					Visible To Position and Radius);
+			Else;
+				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Team 1, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
+					Visible To Position and Radius);
+			End;
 		End;
+		Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
 	}
 }
 
@@ -886,12 +972,33 @@ rule("SUBR: PLAYER_Takes_Disc")
 		Global.PLAYER_Holding_Disc = Event Player;
 		Global.PLAYERS_Disc_Visible = Empty Array;
 		Set Crouch Enabled(Event Player, False);
-		Play Effect(All Players(All Teams), Good Pickup Effect, Turquoise, Event Player, 0.500);
-		"Create team-colored holding-disc ring effect."
-		If(Team Of(Event Player) == Team 1);
-			Create Effect(Global.PLAYERS_All, Ring, Team 1, Event Player, Global.REAL_Disc_Holder_Ring_Radius, Visible To Position and Radius);
+		If(Global.BOOL_80s == True);
+			If(Team Of(Event Player) == Team 1);
+				Play Effect(All Players(All Teams), Good Pickup Effect, Sky Blue, Event Player, 0.500);
+			Else;
+				Play Effect(All Players(All Teams), Good Pickup Effect, Purple, Event Player, 0.500);
+			End;
 		Else;
-			Create Effect(Global.PLAYERS_All, Ring, Team 2, Event Player, Global.REAL_Disc_Holder_Ring_Radius, Visible To Position and Radius);
+			If(Team Of(Event Player) == Team 1);
+				Play Effect(All Players(All Teams), Good Pickup Effect, Team 1, Event Player, 0.500);
+			Else;
+				Play Effect(All Players(All Teams), Good Pickup Effect, Team 2, Event Player, 0.500);
+			End;
+		End;
+		"Create team-colored holding-disc ring effect."
+		If(Global.BOOL_80s == True);
+			If(Team Of(Event Player) == Team 1);
+				Create Effect(Global.PLAYERS_All, Ring, Sky Blue, Event Player, Global.REAL_Disc_Holder_Ring_Radius,
+					Visible To Position and Radius);
+			Else;
+				Create Effect(Global.PLAYERS_All, Ring, Purple, Event Player, Global.REAL_Disc_Holder_Ring_Radius, Visible To Position and Radius);
+			End;
+		Else;
+			If(Team Of(Event Player) == Team 1);
+				Create Effect(Global.PLAYERS_All, Ring, Team 1, Event Player, Global.REAL_Disc_Holder_Ring_Radius, Visible To Position and Radius);
+			Else;
+				Create Effect(Global.PLAYERS_All, Ring, Team 2, Event Player, Global.REAL_Disc_Holder_Ring_Radius, Visible To Position and Radius);
+			End;
 		End;
 		Global.EFFECT_Holding_Disc = Last Created Entity;
 		"Update player's status HUD."
