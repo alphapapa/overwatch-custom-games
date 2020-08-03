@@ -53,6 +53,21 @@ settings
 				Sleep Dart Cooldown Time: 400%
 			}
 
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 50%
+				Infinite Ultimate Duration: On
+				Movement Speed: 200%
+				Projectile Speed: 50%
+				Spawn With Ultimate Ready: On
+			}
+
+			Brigitte
+			{
+				Shield Bash Cooldown Time: 500%
+				Whip Shot Cooldown Time: 500%
+			}
+
 			Echo
 			{
 				Focusing Beam: Off
@@ -71,15 +86,33 @@ settings
 				Storm Arrows: Off
 			}
 
+			Junkrat
+			{
+				Concussion Mine Cooldown Time: 500%
+				Steel Trap Cooldown Time: 500%
+			}
+
 			Lúcio
 			{
 				Soundwave Cooldown Time: 500%
+			}
+
+			McCree
+			{
+				Combat Roll Cooldown Time: 50%
+				Flashbang Cooldown Time: 300%
+				Secondary Fire: Off
 			}
 
 			Mei
 			{
 				Primary Fire: Off
 				Secondary Fire: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast Cooldown Time: 500%
 			}
 
 			Reinhardt
@@ -91,6 +124,11 @@ settings
 			Roadhog
 			{
 				Chain Hook Cooldown Time: 500%
+			}
+
+			Sombra
+			{
+				Hack Cooldown Time: 500%
 			}
 
 			Symmetra
@@ -106,8 +144,24 @@ settings
 				Weapons Enabled: Forge Hammer Only
 			}
 
+			Zarya
+			{
+				Ammunition Clip Size Scalar: 25%
+				Movement Speed: 120%
+			}
+
+			Zenyatta
+			{
+				Jump Vertical Speed: 125%
+				Movement Gravity: 50%
+				Movement Speed: 125%
+				Orb of Discord: Off
+				Orb of Harmony: Off
+			}
+
 			disabled heroes
 			{
+				Bastion
 				Doomfist
 			}
 		}
@@ -873,5 +927,27 @@ rule("SUBR: PLAYER_Check_for_Scoring")
 			Call Subroutine(DISC_Reset);
 			Call Subroutine(PLAYERS_Reset);
 		End;
+	}
+}
+
+rule("BASTION: Activate tank config")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Bastion;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Ultimate Ability Enabled(Event Player, True);
+		Set Ultimate Charge(Event Player, 100);
+		Press Button(Event Player, Ultimate);
 	}
 }
