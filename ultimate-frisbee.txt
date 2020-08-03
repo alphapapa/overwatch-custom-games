@@ -374,6 +374,7 @@ rule("START: Game mode starts")
 	actions
 	{
 		Global.STRING_HUD_Possession_Enforced = Custom String("Enforced: can only pick up disc with possession");
+		Wait(1, Ignore Condition);
 		Call Subroutine(DISC_Reset);
 		Call Subroutine(PLAYERS_Reset);
 	}
