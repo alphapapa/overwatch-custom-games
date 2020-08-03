@@ -235,8 +235,8 @@ rule("MAP: Workshop Expanse")
 	actions
 	{
 		Global.VECTOR_Disc_Spawn = Vector(-0.015, 1.248, 0.071);
-		Global.VECTORS_Field_Boundaries = Array(Array(Vector(-25, 0, 50), Vector(25, 0, 50)), Array(Vector(-25, 0, 40), Vector(25, 0, 40)),
-			Array(Vector(-25, 0, -40), Vector(25, 0, -40)), Array(Vector(-25, 0, -50), Vector(25, 0, -50)), Array(Vector(-25, 0, 50),
+		Global.VECTORS_Field_Boundaries = Array(Array(Vector(-25, 0, 50), Vector(25, 0, 50)), Array(Vector(-25, 0, 30), Vector(25, 0, 30)),
+			Array(Vector(-25, 0, -30), Vector(25, 0, -30)), Array(Vector(-25, 0, -50), Vector(25, 0, -50)), Array(Vector(-25, 0, 50),
 			Vector(-25, 0, -50)), Array(Vector(25, 0, 50), Vector(25, 0, -50)));
 		Global.VECTORS_Player_Spawns_Team1 = Array(Vector(0, 0, -10), Vector(-10, 0, -10), Vector(10, 0, -10));
 		Global.VECTORS_Player_Spawns_Team2 = Array(Vector(0, 0, 10), Vector(10, 0, 10), Vector(-10, 0, 10));
