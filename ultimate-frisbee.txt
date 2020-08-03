@@ -884,6 +884,7 @@ rule("SUBR: PLAYER_Takes_Disc")
 		Global.PLAYER_Holding_Disc = Event Player;
 		Global.PLAYERS_Disc_Visible = Empty Array;
 		Set Crouch Enabled(Event Player, False);
+		Play Effect(All Players(All Teams), Good Pickup Effect, Turquoise, Event Player, 0.500);
 		"Create team-colored holding-disc ring effect."
 		If(Team Of(Event Player) == Team 1);
 			Create Effect(Global.PLAYERS_All, Ring, Team 1, Event Player, Global.REAL_Disc_Holder_Ring_Radius, Visible To Position and Radius);
