@@ -21,8 +21,6 @@ settings
 	{
 		Team Deathmatch
 		{
-			Game Length In Minutes: 15
-
 			enabled maps
 			{
 				Workshop Expanse Night
@@ -32,6 +30,7 @@ settings
 		General
 		{
 			Enemy Health Bars: Off
+			Game Length In Minutes: 15
 			Game Mode Start: Manual
 			Hero Limit: Off
 			Kill Feed: Off
