@@ -197,6 +197,8 @@ variables
 		28: REAL_Disc_Catch_Radius
 		29: REAL_Disc_Lift_Max_Accel
 		30: VECTOR_Disc_Initial_Throw
+		31: BOOL_Out_Of_Bounds
+		32: BOOL_Scored
 
 	player:
 		0: BOOL_Throwing_Disc
@@ -595,7 +597,18 @@ rule("PLAYER: Lands on ground with disc")
 	{
 		Global.BOOL_Disc_Thrown = False;
 		Call Subroutine(PLAYER_Check_Out_Of_Bounds);
-		Call Subroutine(PLAYER_Check_for_Scoring);
+		If(Global.BOOL_Out_Of_Bounds == True);
+			Small Message(All Players(All Teams), Custom String("Catching player landed out of bounds"));
+			Call Subroutine(DISC_Reset);
+			Call Subroutine(PLAYERS_Reset);
+		Else;
+			Call Subroutine(PLAYER_Check_for_Scoring);
+			If(Global.BOOL_Scored == True);
+				Call Subroutine(POSSESSION_Swap);
+				Call Subroutine(DISC_Reset);
+				Call Subroutine(PLAYERS_Reset);
+			End;
+		End;
 	}
 }
 
@@ -647,9 +660,15 @@ rule("DISC: Comes to rest on ground")
 	actions
 	{
 		Global.BOOL_Disc_Thrown = False;
+		Call Subroutine(POSSESSION_Swap);
 		Call Subroutine(PLAYER_Check_Out_Of_Bounds);
-		Small Message(All Players(All Teams), Custom String("Pass not caught"));
-		disabled Call Subroutine(POSSESSION_Swap);
+		If(Global.BOOL_Out_Of_Bounds == True);
+			Small Message(All Players(All Teams), Custom String("Disc landed out of bounds"));
+			Call Subroutine(DISC_Reset);
+			Call Subroutine(PLAYERS_Reset);
+		Else;
+			Small Message(All Players(All Teams), Custom String("Pass not caught"));
+		End;
 	}
 }
 
@@ -760,6 +779,8 @@ rule("SUBR: DISC_Reset")
 		Global.PLAYER_Holding_Disc = Null;
 		Global.PLAYER_Threw_Disc = Null;
 		Global.BOOL_Disc_Thrown = False;
+		Global.BOOL_Scored = False;
+		Global.BOOL_Out_Of_Bounds = False;
 		Global.PLAYERS_Disc_Visible = All Players(All Teams);
 		Destroy Effect(Global.EFFECT_Holding_Disc);
 		Global.EFFECT_Holding_Disc = Null;
@@ -882,12 +903,7 @@ rule("SUBR: PLAYER_Check_Out_Of_Bounds (checks Event Player, which may be disc o
 			Event Player)) > X Component Of(Global.VECTORS_Field_Boundaries[0][1]) || Z Component Of(Position Of(Event Player))
 			< Z Component Of(Global.VECTORS_Field_Boundaries[3][0]) || X Component Of(Position Of(Event Player)) < X Component Of(
 			Global.VECTORS_Field_Boundaries[0][0]));
-			Small Message(All Players(All Teams), Custom String("Disc landed out of bounds"));
-			Call Subroutine(DISC_Reset);
-			Call Subroutine(PLAYERS_Reset);
-			Call Subroutine(POSSESSION_Swap);
-			"Does this also abort the calling rule?"
-			Abort;
+			Global.BOOL_Out_Of_Bounds = True;
 		End;
 	}
 }
@@ -911,9 +927,7 @@ rule("SUBR: PLAYER_Check_for_Scoring")
 			Modify Team Score(Team 1, 1);
 			Big Message(All Players(All Teams), Custom String("{0} scored on a pass from {1}!", Global.PLAYER_Holding_Disc,
 				Global.PLAYER_Threw_Disc));
-			Call Subroutine(POSSESSION_Swap);
-			Call Subroutine(DISC_Reset);
-			Call Subroutine(PLAYERS_Reset);
+			Global.BOOL_Scored = True;
 		"Disc holder within team 2 end zone"
 		Else If(Global.TEAM_Possession == Team 2 && X Component Of(Position Of(Global.PLAYER_Holding_Disc)) >= X Component Of(
 				Global.VECTORS_Field_Boundaries[2][0]) && X Component Of(Position Of(Global.PLAYER_Holding_Disc)) <= X Component Of(
@@ -923,9 +937,7 @@ rule("SUBR: PLAYER_Check_for_Scoring")
 			Modify Team Score(Team 2, 1);
 			Big Message(All Players(All Teams), Custom String("{0} scored on a pass from {1}!", Global.PLAYER_Holding_Disc,
 				Global.PLAYER_Threw_Disc));
-			Call Subroutine(POSSESSION_Swap);
-			Call Subroutine(DISC_Reset);
-			Call Subroutine(PLAYERS_Reset);
+			Global.BOOL_Scored = True;
 		End;
 	}
 }
