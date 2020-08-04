@@ -19,6 +19,36 @@
 	   do (search-forward ")")
 	   repeat n))
 
+(defun disc-golf-add-vectors-from-clipboard ()
+  "Add tee and hole vectors from clipboard to current rule.
+Expects the clipboard to have the player's variables copied from
+the inspector as rules."
+  (interactive)
+  (let* ((initial-buffer (current-buffer))
+	 (buf (generate-new-buffer "overwatch-variables"))
+	 tee hole)
+    (with-current-buffer buf
+      (yank)
+      (goto-char (point-min))
+      (search-forward "Event Player.POINT_Tee = ")
+      (set-mark (point))
+      (goto-char (1- (point-at-eol)))
+      (setf tee (buffer-substring (region-beginning) (region-end)))
+      (search-forward "Event Player.POINT_Goal = ")
+      (set-mark (point))
+      (goto-char (1- (point-at-eol)))
+      (setf hole (buffer-substring (region-beginning) (region-end)))
+      (erase-buffer)
+      (insert tee "\n\n" hole))
+    (search-backward "Global.VECTORS_Tee_Positions = Array(")
+    (search-forward ");")
+    (backward-char 2)
+    (insert "," tee)
+    (search-forward "Global.VECTORS_Hole_Positions = Array(")
+    (search-forward ");")
+    (backward-char 2)
+    (insert "," hole)))
+
 ;; Settings I use when not using my main config.
 
 (electric-pair-mode 1)
