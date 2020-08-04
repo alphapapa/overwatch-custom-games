@@ -757,6 +757,7 @@ rule("DISC: Dies")
 	actions
 	{
 		Small Message(All Players(All Teams), Custom String("Disc fell out of bounds"));
+		Modify Team Score(Team Of(Global.ENTITY_Disc1), 1);
 		Respawn(Event Player);
 		Call Subroutine(DISC_Reset);
 		Call Subroutine(PLAYERS_Reset);
