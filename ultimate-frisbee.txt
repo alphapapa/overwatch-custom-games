@@ -634,18 +634,16 @@ rule("PLAYER: Lands on ground with disc")
 					Call Subroutine(POSSESSION_Swap);
 					Abort;
 				End;
-			Else;
-				Call Subroutine(PLAYER_Check_for_Scoring);
-				If(Global.BOOL_Scored == True);
-					Wait(1, Ignore Condition);
-					Call Subroutine(POSSESSION_Swap);
-					Call Subroutine(DISC_Reset);
-					Call Subroutine(PLAYERS_Reset);
-				End;
-				"e.g. interception"
-				If(Global.BOOL_Possession_Changing == True);
-					Call Subroutine(POSSESSION_Swap);
-				End;
+			End;
+			Call Subroutine(PLAYER_Check_for_Scoring);
+			If(Global.BOOL_Scored == True);
+				Wait(1, Ignore Condition);
+				Call Subroutine(POSSESSION_Swap);
+				Call Subroutine(DISC_Reset);
+				Call Subroutine(PLAYERS_Reset);
+			"e.g. interception"
+			Else If(Global.BOOL_Possession_Changing == True);
+				Call Subroutine(POSSESSION_Swap);
 			End;
 		End;
 	}
