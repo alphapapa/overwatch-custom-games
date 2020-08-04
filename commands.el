@@ -24,10 +24,8 @@
 Expects the clipboard to have the player's variables copied from
 the inspector as rules."
   (interactive)
-  (let* ((initial-buffer (current-buffer))
-	 (buf (generate-new-buffer "overwatch-variables"))
-	 tee hole)
-    (with-current-buffer buf
+  (let* (tee hole)
+    (with-temp-buffer
       (yank)
       (goto-char (point-min))
       (search-forward "Event Player.POINT_Tee = ")
@@ -37,9 +35,7 @@ the inspector as rules."
       (search-forward "Event Player.POINT_Goal = ")
       (set-mark (point))
       (goto-char (1- (point-at-eol)))
-      (setf hole (buffer-substring (region-beginning) (region-end)))
-      (erase-buffer)
-      (insert tee "\n\n" hole))
+      (setf hole (buffer-substring (region-beginning) (region-end))))
     (search-backward "Global.VECTORS_Tee_Positions = Array(")
     (search-forward ");")
     (backward-char 2)
