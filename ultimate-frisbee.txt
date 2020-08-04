@@ -728,6 +728,7 @@ rule("DISC: (Workshop Island) Move back toward island")
 		(X Component Of(Position Of(Event Player)) > 20 || Z Component Of(Position Of(Event Player)) > 20 || X Component Of(Position Of(
 			Event Player)) < -20 || Z Component Of(Position Of(Event Player)) < -20) == True;
 		(Current Map == Map(Workshop Island) || Current Map == Map(Workshop Island Night)) == True;
+		Y Component Of(Position Of(Event Player)) > 0;
 	}
 
 	actions
@@ -736,6 +737,30 @@ rule("DISC: (Workshop Island) Move back toward island")
 			Incorporate Contrary Motion);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
+	}
+}
+
+rule("DISC: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.ENTITY_Disc1 == Event Player;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Disc fell out of bounds"));
+		Respawn(Event Player);
+		Call Subroutine(DISC_Reset);
+		Call Subroutine(PLAYERS_Reset);
+		Call Subroutine(POSSESSION_Swap);
 	}
 }
 
