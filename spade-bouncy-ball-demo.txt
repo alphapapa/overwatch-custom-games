@@ -1,0 +1,1017 @@
+settings
+{
+	main
+	{
+		Description: "boing boing.  By Spade: https://workshop.codes/1JDKE"
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Manual
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ability Cooldown Time: 25%
+			Jump Vertical Speed: 400%
+			Movement Gravity: 90%
+			Movement Speed: 160%
+			Ultimate Ability: Off
+
+			Ana
+			{
+				Sleep Dart Cooldown Time: 400%
+			}
+
+			Brigitte
+			{
+				Barrier Shield: Off
+				Shield Bash: Off
+				Whip Shot: Off
+			}
+
+			McCree
+			{
+				Flashbang Cooldown Time: 400%
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: ballPositions
+		1: ballVelocities
+		2: ballLaunchedTimes
+		3: ballRadii
+		4: tempVelocity1
+		5: tempVelocity2
+		6: collideCounterA
+		7: collideCounterB
+		8: anotherCounter
+		9: indexPosition
+
+	player:
+		0: ballRadius
+		1: phaseThru
+		2: collidingBall
+		3: appliedImpulse
+}
+
+subroutines
+{
+	0: stall
+}
+
+rule("init")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		disabled Set Max Health(All Players(All Teams), Absolute Value(9999999.000));
+		Global.ballPositions = Array(Null);
+		Global.ballVelocities = Array(Null);
+		Global.ballLaunchedTimes = Array(Null);
+		Global.ballRadii = Array(Null);
+		Disable Inspector Recording;
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Respawning(All Players(All Teams));
+		Disable Built-In Game Mode Scoring;
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+disabled rule("reset on game start")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Wait(0.033, Ignore Condition);
+		disabled Set Max Health(All Players(All Teams), Absolute Value(9999999.000));
+		Global.ballPositions = Array(Null);
+		Global.ballVelocities = Array(Null);
+		Global.ballLaunchedTimes = Array(Null);
+		Global.ballRadii = Array(Null);
+		Disable Inspector Recording;
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Respawning(All Players(All Teams));
+		Disable Built-In Game Mode Scoring;
+		Disable Built-In Game Mode Completion;
+		Wait(1, Ignore Condition);
+		Big Message(All Players(All Teams), Custom String("A"));
+	}
+}
+
+rule("init player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, Absolute Value(9999999.000));
+		Start Heal Over Time(Event Player, Null, Absolute Value(9999999.000), Absolute Value(9999999.000));
+		Event Player.ballRadius = 1.600;
+		Set Primary Fire Enabled(Event Player, False);
+		disabled Set Secondary Fire Enabled(Event Player, False);
+		disabled Create Effect(Event Player, Sphere, Green, World Vector Of(Vector(0, 0.500, 0), Event Player, Rotation And Translation), 0.500,
+			Visible To Position and Radius);
+		disabled Create Effect(Remove From Array(All Players(All Teams), Event Player), Sphere, Yellow, World Vector Of(Vector(0, 0.500, 0),
+			Event Player, Rotation And Translation), 0.500, Visible To Position and Radius);
+		disabled Create In-World Text(All Players(All Teams), Custom String("{0}", Event Player), World Vector Of(Vector(0, 2.500, 0), Event Player,
+			Rotation And Translation), 2, Clip Against Surfaces, Visible To Position and String, White, Default Visibility);
+		Event Player.phaseThru = False;
+		Create HUD Text(All Players(All Teams), Custom String("Player Bounce {0}", Event Player.phaseThru), Null, Null, Left, 0, White,
+			White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("match time reset")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Match Time < 3550;
+	}
+
+	actions
+	{
+		Set Match Time(3500);
+	}
+}
+
+disabled rule("win condition")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		disabled Is True For Any(All Players(All Teams), Score Of(Current Array Element) >= 10) == True;
+		Count Of(All Players(All Teams)) == True;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Wait(0.033, Ignore Condition);
+		Declare Player Victory(First Of(Filtered Array(All Players(All Teams), Score Of(Current Array Element) >= 10)));
+	}
+}
+
+disabled rule("point condition")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Living Players(All Teams), Has Spawned(Current Array Element))) < 2;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Modify Player Score(First Of(Filtered Array(All Living Players(All Teams), Has Spawned(Current Array Element))), 1);
+		Respawn(All Players(All Teams));
+		Set Match Time(3599);
+		Global.ballPositions = Array(Null);
+		Global.ballVelocities = Array(Null);
+		Global.ballLaunchedTimes = Array(Null);
+		Global.ballRadii = Array(Null);
+	}
+}
+
+rule("respawn player if not gaming")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == False;
+	}
+
+	actions
+	{
+		Respawn(Event Player);
+	}
+}
+
+disabled rule("raised death floor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Y Component Of(World Vector Of(Vector(0, 0, 0), Event Player, Rotation And Translation)) <= -5;
+	}
+
+	actions
+	{
+		Kill(Event Player, Null);
+	}
+}
+
+rule("disable player schist")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+		disabled Set Secondary Fire Enabled(Event Player, False);
+		disabled Set Crouch Enabled(Event Player, False);
+		disabled Set Ability 2 Enabled(Event Player, False);
+		disabled Set Ability 1 Enabled(Event Player, False);
+		disabled Set Melee Enabled(Event Player, False);
+	}
+}
+
+rule("spawned and is alive")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == Has Spawned(Event Player);
+	}
+
+	actions
+	{
+		disabled Set Invisible(Event Player, All);
+		disabled Set Status(Event Player, Null, Phased Out, 9999);
+		disabled Start Camera(Event Player, Ray Cast Hit Position(World Vector Of(Vector(0, 1, 0), Event Player, Rotation And Translation),
+			World Vector Of(Vector(0, 2, 0), Event Player, Rotation And Translation) + -6 * Facing Direction Of(Event Player), Empty Array,
+			All Players(All Teams), True), World Vector Of(Vector(0, 1, 0), Event Player, Rotation And Translation), 0);
+		Small Message(Event Player, Custom String("tip: try lmb"));
+		Wait(1, Ignore Condition);
+		Small Message(Event Player, Custom String("try holding jump instead of pressing it"));
+		Wait(2, Ignore Condition);
+		Small Message(Event Player, Custom String("use reload and interact to change ball size"));
+	}
+}
+
+rule("size")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, ballRadius, (!Is Button Held(Event Player, Reload) && !Is Button Held(Event Player,
+			Interact)) || (Is Button Held(Event Player, Reload) && Is Button Held(Event Player, Interact)) ? Max(0.500, Min(5,
+			Event Player.ballRadius)) : (Is Button Held(Event Player, Reload) ? 5 : 0.500), 2, Destination and Rate);
+		Create HUD Text(All Players(All Teams), Custom String("ball size: {0}", Event Player.ballRadius), Null, Null, Left, 0, White,
+			White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("toggle phaseThru")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Melee) == True;
+	}
+
+	actions
+	{
+		Event Player.phaseThru = !Event Player.phaseThru;
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("launch ball > item 0")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		(Match Time <= 3598 || !Is Game In Progress) == True;
+	}
+
+	actions
+	{
+		Enable Inspector Recording;
+		"open up a spot if 10 shells already exit on the field"
+		If(Count Of(Filtered Array(Global.ballPositions, Current Array Element != Null && True)) >= 36);
+			Global.ballPositions[Index Of Array Value(Global.ballPositions, First Of(Filtered Array(Sorted Array(Global.ballPositions,
+				Global.ballLaunchedTimes[Index Of Array Value(Global.ballPositions, Current Array Element)]), Current Array Element != Null)))
+				] = Null;
+		End;
+		If(Filtered Array(Global.ballPositions, Current Array Element == Null) != Empty Array);
+			Global.indexPosition = Index Of Array Value(Global.ballPositions, Null);
+			Global.ballPositions[Global.indexPosition] = World Vector Of(Vector(0, 1, 0), Event Player, Rotation And Translation)
+				+ 3 * Facing Direction Of(Event Player);
+			Global.ballVelocities[Global.indexPosition] = 30 * Facing Direction Of(Event Player);
+			Global.ballLaunchedTimes[Global.indexPosition] = Total Time Elapsed;
+			Global.ballRadii[Global.indexPosition] = Event Player.ballRadius;
+		Else;
+			disabled Small Message(Event Player, Custom String("aEEEEEEE"));
+			Modify Global Variable(ballPositions, Append To Array, World Vector Of(Vector(0, 1, 0), Event Player, Rotation And Translation)
+				+ 3 * Facing Direction Of(Event Player));
+			Modify Global Variable(ballVelocities, Append To Array, 30 * Facing Direction Of(Event Player));
+			Modify Global Variable(ballLaunchedTimes, Append To Array, Total Time Elapsed);
+			Modify Global Variable(ballRadii, Append To Array, Event Player.ballRadius);
+		End;
+		Disable Inspector Recording;
+		Wait(0.500, Ignore Condition);
+		disabled Wait(0.050, Ignore Condition);
+		disabled Loop If Condition Is True;
+	}
+}
+
+rule("ball collision for")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.collideCounterA = 0;
+		Global.collideCounterB = 0;
+		For Global Variable(collideCounterA, 0, Count Of(Global.ballPositions) - 1, 1);
+			For Global Variable(collideCounterB, Global.collideCounterA + 1, Count Of(Global.ballPositions), 1);
+				If(
+					Global.ballPositions[Global.collideCounterA] != Null && Global.ballPositions[Global.collideCounterB] != Null && Distance Between(
+					Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB])
+					<= Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]);
+					Global.ballPositions[Global.collideCounterA] = Global.ballPositions[Global.collideCounterB] + (
+						Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]);
+					Global.ballPositions[Global.collideCounterB] = Global.ballPositions[Global.collideCounterA] + (
+						Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]);
+					Enable Inspector Recording;
+					Global.tempVelocity1 = Dot Product(Global.ballVelocities[Global.collideCounterA], Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]));
+					Global.tempVelocity2 = Dot Product(Global.ballVelocities[Global.collideCounterB], Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]));
+					Global.ballVelocities[Global.collideCounterA] = (Global.tempVelocity1 * (
+						Global.ballRadii[Global.collideCounterB] - Global.ballRadii[Global.collideCounterA])
+						+ 2 * Global.ballRadii[Global.collideCounterB] * Global.tempVelocity2) / (
+						Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]) + Dot Product(
+						Global.ballVelocities[Global.collideCounterA], Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]),
+						Global.ballVelocities[Global.collideCounterA]), Direction Towards(Global.ballPositions[Global.collideCounterA],
+						Global.ballPositions[Global.collideCounterB])))) * Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]),
+						Global.ballVelocities[Global.collideCounterA]), Direction Towards(Global.ballPositions[Global.collideCounterA],
+						Global.ballPositions[Global.collideCounterB])));
+					Global.ballVelocities[Global.collideCounterB] = (Global.tempVelocity2 * (
+						Global.ballRadii[Global.collideCounterA] - Global.ballRadii[Global.collideCounterB])
+						+ 2 * Global.ballRadii[Global.collideCounterA] * Global.tempVelocity1) / (
+						Global.ballRadii[Global.collideCounterB] + Global.ballRadii[Global.collideCounterA]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]) + Dot Product(
+						Global.ballVelocities[Global.collideCounterB], Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]),
+						Global.ballVelocities[Global.collideCounterB]), Direction Towards(Global.ballPositions[Global.collideCounterB],
+						Global.ballPositions[Global.collideCounterA])))) * Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]),
+						Global.ballVelocities[Global.collideCounterB]), Direction Towards(Global.ballPositions[Global.collideCounterB],
+						Global.ballPositions[Global.collideCounterA])));
+					Disable Inspector Recording;
+				End;
+			End;
+		End;
+		Wait(0.016, Ignore Condition);
+		disabled Call Subroutine(stall);
+		Loop;
+	}
+}
+
+disabled rule("ball collision whiles")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.collideCounterA = 0;
+		Global.collideCounterB = 0;
+		While(Global.collideCounterA < Count Of(Global.ballPositions));
+			Global.collideCounterB = Global.collideCounterA + 1;
+			While(Global.collideCounterB < Count Of(Global.ballPositions));
+				If(
+					Global.ballPositions[Global.collideCounterA] != Null && Global.ballPositions[Global.collideCounterB] != Null && Distance Between(
+					Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB])
+					<= Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]);
+					Global.ballPositions[Global.collideCounterA] = Global.ballPositions[Global.collideCounterB] + (
+						Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]);
+					Global.ballPositions[Global.collideCounterB] = Global.ballPositions[Global.collideCounterA] + (
+						Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]);
+					Enable Inspector Recording;
+					Global.tempVelocity1 = Dot Product(Global.ballVelocities[Global.collideCounterA], Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]));
+					Global.tempVelocity2 = Dot Product(Global.ballVelocities[Global.collideCounterB], Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]));
+					Global.ballVelocities[Global.collideCounterA] = (Global.tempVelocity1 * (
+						Global.ballRadii[Global.collideCounterB] - Global.ballRadii[Global.collideCounterA])
+						+ 2 * Global.ballRadii[Global.collideCounterB] * Global.tempVelocity2) / (
+						Global.ballRadii[Global.collideCounterA] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]) + Dot Product(
+						Global.ballVelocities[Global.collideCounterA], Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]),
+						Global.ballVelocities[Global.collideCounterA]), Direction Towards(Global.ballPositions[Global.collideCounterA],
+						Global.ballPositions[Global.collideCounterB])))) * Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]),
+						Global.ballVelocities[Global.collideCounterA]), Direction Towards(Global.ballPositions[Global.collideCounterA],
+						Global.ballPositions[Global.collideCounterB])));
+					Global.ballVelocities[Global.collideCounterB] = (Global.tempVelocity2 * (
+						Global.ballRadii[Global.collideCounterA] - Global.ballRadii[Global.collideCounterB])
+						+ 2 * Global.ballRadii[Global.collideCounterA] * Global.tempVelocity1) / (
+						Global.ballRadii[Global.collideCounterB] + Global.ballRadii[Global.collideCounterA]) * Direction Towards(
+						Global.ballPositions[Global.collideCounterA], Global.ballPositions[Global.collideCounterB]) + Dot Product(
+						Global.ballVelocities[Global.collideCounterB], Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]),
+						Global.ballVelocities[Global.collideCounterB]), Direction Towards(Global.ballPositions[Global.collideCounterB],
+						Global.ballPositions[Global.collideCounterA])))) * Normalize(Cross Product(Cross Product(Direction Towards(
+						Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.collideCounterA]),
+						Global.ballVelocities[Global.collideCounterB]), Direction Towards(Global.ballPositions[Global.collideCounterB],
+						Global.ballPositions[Global.collideCounterA])));
+					Disable Inspector Recording;
+				End;
+				Global.collideCounterB += 1;
+			End;
+			Global.collideCounterA += 1;
+		End;
+		Wait(0.016, Ignore Condition);
+		Call Subroutine(stall);
+		Loop;
+	}
+}
+
+rule("ball behaviour")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		"for every missile"
+		For Global Variable(anotherCounter, 0, Count Of(Global.ballPositions), 1);
+			"if the missile exists"
+			If(Global.ballPositions[Global.anotherCounter] != Null);
+				If(Absolute Value(X Component Of(Global.ballPositions[Global.anotherCounter])) > 20 - Global.ballRadii[Global.anotherCounter]);
+					Global.ballVelocities[Global.anotherCounter] *= Vector(-1, 1, 1);
+					Global.ballPositions[Global.anotherCounter] = Vector(Max(-20 + Global.ballRadii[Global.anotherCounter], Min(
+						20 - Global.ballRadii[Global.anotherCounter], X Component Of(Global.ballPositions[Global.anotherCounter]))), Y Component Of(
+						Global.ballPositions[Global.anotherCounter]), Z Component Of(Global.ballPositions[Global.anotherCounter]));
+					disabled If(Distance Between(Vector(0, 0, 0), Global.ballVelocities[Global.anotherCounter]) <= 0.010);
+					disabled Global.ballVelocities[Global.anotherCounter] = 0;
+					disabled End;
+				End;
+				If(Absolute Value(Y Component Of(Global.ballPositions[Global.anotherCounter]) - 20)
+					> 20 - Global.ballRadii[Global.anotherCounter]);
+					Global.ballVelocities[Global.anotherCounter] *= Vector(1, -1, 1);
+					Global.ballPositions[Global.anotherCounter] = Vector(X Component Of(Global.ballPositions[Global.anotherCounter]), Max(
+						Global.ballRadii[Global.anotherCounter], Min(40 - Global.ballRadii[Global.anotherCounter], Y Component Of(
+						Global.ballPositions[Global.anotherCounter]))), Z Component Of(Global.ballPositions[Global.anotherCounter]));
+					disabled If(Distance Between(Vector(0, 0, 0), Global.ballVelocities[Global.anotherCounter]) <= 0.010);
+					disabled Global.ballVelocities[Global.anotherCounter] = 0;
+					disabled End;
+				End;
+				If(Absolute Value(Z Component Of(Global.ballPositions[Global.anotherCounter])) > 20 - Global.ballRadii[Global.anotherCounter]);
+					Global.ballVelocities[Global.anotherCounter] *= Vector(1, 1, -1);
+					Global.ballPositions[Global.anotherCounter] = Vector(X Component Of(Global.ballPositions[Global.anotherCounter]), Y Component Of(
+						Global.ballPositions[Global.anotherCounter]), Max(-20 + Global.ballRadii[Global.anotherCounter], Min(
+						20 - Global.ballRadii[Global.anotherCounter], Z Component Of(Global.ballPositions[Global.anotherCounter]))));
+					disabled If(Distance Between(Vector(0, 0, 0), Global.ballVelocities[Global.anotherCounter]) <= 0.010);
+					disabled Global.ballVelocities[Global.anotherCounter] = 0;
+					disabled End;
+				End;
+				"the position translates the distance in velocity variable/time"
+				Global.ballPositions[Global.anotherCounter] += 0.031 * Global.ballVelocities[Global.anotherCounter];
+				Global.ballVelocities[Global.anotherCounter] += 0.031 * Vector(0, -12.500, 0);
+			End;
+		End;
+		Wait(0.016, Ignore Condition);
+		Loop;
+	}
+}
+
+disabled rule("ball behaviour combined")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		"for every missile"
+		For Global Variable(anotherCounter, 0, Count Of(Global.ballPositions), 1);
+			"if the missile exists"
+			If(Global.ballPositions[Global.anotherCounter] != Null);
+				For Global Variable(collideCounterB, Global.anotherCounter + 1, Count Of(Global.ballPositions), 1);
+					If(Global.ballPositions[Global.collideCounterB] != Null && Distance Between(Global.ballPositions[Global.anotherCounter],
+						Global.ballPositions[Global.collideCounterB])
+						<= Global.ballRadii[Global.anotherCounter] + Global.ballRadii[Global.collideCounterB]);
+						Global.ballPositions[Global.anotherCounter] = Global.ballPositions[Global.collideCounterB] + (
+							Global.ballRadii[Global.anotherCounter] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+							Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.anotherCounter]);
+						Global.ballPositions[Global.collideCounterB] = Global.ballPositions[Global.anotherCounter] + (
+							Global.ballRadii[Global.anotherCounter] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+							Global.ballPositions[Global.anotherCounter], Global.ballPositions[Global.collideCounterB]);
+						disabled Enable Inspector Recording;
+						Global.tempVelocity1 = Dot Product(Global.ballVelocities[Global.anotherCounter], Direction Towards(
+							Global.ballPositions[Global.anotherCounter], Global.ballPositions[Global.collideCounterB]));
+						Global.tempVelocity2 = Dot Product(Global.ballVelocities[Global.collideCounterB], Direction Towards(
+							Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.anotherCounter]));
+						Global.ballVelocities[Global.anotherCounter] = (Global.tempVelocity1 * (
+							Global.ballRadii[Global.collideCounterB] - Global.ballRadii[Global.anotherCounter])
+							+ 2 * Global.ballRadii[Global.collideCounterB] * Global.tempVelocity2) / (
+							Global.ballRadii[Global.anotherCounter] + Global.ballRadii[Global.collideCounterB]) * Direction Towards(
+							Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.anotherCounter]) + Dot Product(
+							Global.ballVelocities[Global.anotherCounter], Normalize(Cross Product(Cross Product(Direction Towards(
+							Global.ballPositions[Global.anotherCounter], Global.ballPositions[Global.collideCounterB]),
+							Global.ballVelocities[Global.anotherCounter]), Direction Towards(Global.ballPositions[Global.anotherCounter],
+							Global.ballPositions[Global.collideCounterB])))) * Normalize(Cross Product(Cross Product(Direction Towards(
+							Global.ballPositions[Global.anotherCounter], Global.ballPositions[Global.collideCounterB]),
+							Global.ballVelocities[Global.anotherCounter]), Direction Towards(Global.ballPositions[Global.anotherCounter],
+							Global.ballPositions[Global.collideCounterB])));
+						Global.ballVelocities[Global.collideCounterB] = (Global.tempVelocity2 * (
+							Global.ballRadii[Global.anotherCounter] - Global.ballRadii[Global.collideCounterB])
+							+ 2 * Global.ballRadii[Global.anotherCounter] * Global.tempVelocity1) / (
+							Global.ballRadii[Global.collideCounterB] + Global.ballRadii[Global.anotherCounter]) * Direction Towards(
+							Global.ballPositions[Global.anotherCounter], Global.ballPositions[Global.collideCounterB]) + Dot Product(
+							Global.ballVelocities[Global.collideCounterB], Normalize(Cross Product(Cross Product(Direction Towards(
+							Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.anotherCounter]),
+							Global.ballVelocities[Global.collideCounterB]), Direction Towards(Global.ballPositions[Global.collideCounterB],
+							Global.ballPositions[Global.anotherCounter])))) * Normalize(Cross Product(Cross Product(Direction Towards(
+							Global.ballPositions[Global.collideCounterB], Global.ballPositions[Global.anotherCounter]),
+							Global.ballVelocities[Global.collideCounterB]), Direction Towards(Global.ballPositions[Global.collideCounterB],
+							Global.ballPositions[Global.anotherCounter])));
+						Disable Inspector Recording;
+					End;
+				End;
+				If(Absolute Value(X Component Of(Global.ballPositions[Global.anotherCounter])) > 20 - Global.ballRadii[Global.anotherCounter]);
+					Global.ballVelocities[Global.anotherCounter] *= Vector(-0.800, 0.800, 0.800);
+					Global.ballPositions[Global.anotherCounter] = Vector(Max(-20 + Global.ballRadii[Global.anotherCounter], Min(
+						20 - Global.ballRadii[Global.anotherCounter], X Component Of(Global.ballPositions[Global.anotherCounter]))), Y Component Of(
+						Global.ballPositions[Global.anotherCounter]), Z Component Of(Global.ballPositions[Global.anotherCounter]));
+					disabled If(Distance Between(Vector(0, 0, 0), Global.ballVelocities[Global.anotherCounter]) <= 0.010);
+					disabled Global.ballVelocities[Global.anotherCounter] = 0;
+					disabled End;
+				End;
+				If(Absolute Value(Y Component Of(Global.ballPositions[Global.anotherCounter]) - 20)
+					> 20 - Global.ballRadii[Global.anotherCounter]);
+					Global.ballVelocities[Global.anotherCounter] *= Vector(0.800, -0.800, 0.800);
+					Global.ballPositions[Global.anotherCounter] = Vector(X Component Of(Global.ballPositions[Global.anotherCounter]), Max(
+						Global.ballRadii[Global.anotherCounter], Min(40 - Global.ballRadii[Global.anotherCounter], Y Component Of(
+						Global.ballPositions[Global.anotherCounter]))), Z Component Of(Global.ballPositions[Global.anotherCounter]));
+					disabled If(Distance Between(Vector(0, 0, 0), Global.ballVelocities[Global.anotherCounter]) <= 0.010);
+					disabled Global.ballVelocities[Global.anotherCounter] = 0;
+					disabled End;
+				End;
+				If(Absolute Value(Z Component Of(Global.ballPositions[Global.anotherCounter])) > 20 - Global.ballRadii[Global.anotherCounter]);
+					Global.ballVelocities[Global.anotherCounter] *= Vector(0.800, 0.800, -0.800);
+					Global.ballPositions[Global.anotherCounter] = Vector(X Component Of(Global.ballPositions[Global.anotherCounter]), Y Component Of(
+						Global.ballPositions[Global.anotherCounter]), Max(-20 + Global.ballRadii[Global.anotherCounter], Min(
+						20 - Global.ballRadii[Global.anotherCounter], Z Component Of(Global.ballPositions[Global.anotherCounter]))));
+					disabled If(Distance Between(Vector(0, 0, 0), Global.ballVelocities[Global.anotherCounter]) <= 0.010);
+					disabled Global.ballVelocities[Global.anotherCounter] = 0;
+					disabled End;
+				End;
+				"the position translates the distance in velocity variable/time"
+				Global.ballPositions[Global.anotherCounter] += 0.031 * Global.ballVelocities[Global.anotherCounter];
+				Global.ballVelocities[Global.anotherCounter] += 0.031 * Vector(0, -17.500, 0);
+			End;
+		End;
+		Wait(0.016, Ignore Condition);
+		Call Subroutine(stall);
+		Loop;
+	}
+}
+
+rule("player collision")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Global.ballPositions, Distance Between(Current Array Element, World Vector Of(Vector(0, 0.500, 0), Event Player,
+			Rotation And Translation)) <= 0.500 + Global.ballRadii[Index Of Array Value(Global.ballPositions, Current Array Element)])
+			== True;
+		Event Player.phaseThru == True;
+	}
+
+	actions
+	{
+		Event Player.collidingBall = Index Of Array Value(Global.ballPositions, First Of(Sorted Array(Global.ballPositions,
+			Distance Between(Current Array Element, World Vector Of(Vector(0, 0.500, 0), Event Player, Rotation And Translation)))));
+		Global.ballVelocities[Event Player.collidingBall] = (Global.tempVelocity1 * (0.500 - Global.ballRadii[Event Player.collidingBall])
+			+ 2 * 0.500 * Global.tempVelocity2) / (Global.ballRadii[Event Player.collidingBall] + 0.500) * Direction Towards(
+			World Vector Of(Vector(0, 0.500, 0), Event Player, Rotation And Translation), Global.ballPositions[Event Player.collidingBall])
+			+ Dot Product(Global.ballVelocities[Event Player.collidingBall], Normalize(Cross Product(Cross Product(Direction Towards(
+			Global.ballPositions[Event Player.collidingBall], World Vector Of(Vector(0, 0.500, 0), Event Player,
+			Rotation And Translation)), Global.ballVelocities[Event Player.collidingBall]), Direction Towards(
+			Global.ballPositions[Event Player.collidingBall], World Vector Of(Vector(0, 0.500, 0), Event Player,
+			Rotation And Translation))))) * Normalize(Cross Product(Cross Product(Direction Towards(
+			Global.ballPositions[Event Player.collidingBall], World Vector Of(Vector(0, 0.500, 0), Event Player,
+			Rotation And Translation)), Global.ballVelocities[Event Player.collidingBall]), Direction Towards(
+			Global.ballPositions[Event Player.collidingBall], World Vector Of(Vector(0, 0.500, 0), Event Player,
+			Rotation And Translation))));
+		Event Player.appliedImpulse = (Global.tempVelocity2 * (Global.ballRadii[Event Player.collidingBall] - 0.500)
+			+ 2 * Global.ballRadii[Event Player.collidingBall] * Global.tempVelocity1) / (
+			0.500 + Global.ballRadii[Event Player.collidingBall]) * Direction Towards(Global.ballPositions[Event Player.collidingBall],
+			World Vector Of(Vector(0, 0.500, 0), Event Player, Rotation And Translation)) + Dot Product(Velocity Of(Event Player),
+			Normalize(Cross Product(Cross Product(Direction Towards(World Vector Of(Vector(0, 0.500, 0), Event Player,
+			Rotation And Translation), Global.ballPositions[Event Player.collidingBall]), Velocity Of(Event Player)), Direction Towards(
+			World Vector Of(Vector(0, 0.500, 0), Event Player, Rotation And Translation),
+			Global.ballPositions[Event Player.collidingBall])))) * Normalize(Cross Product(Cross Product(Direction Towards(World Vector Of(
+			Vector(0, 0.500, 0), Event Player, Rotation And Translation), Global.ballPositions[Event Player.collidingBall]), Velocity Of(
+			Event Player)), Direction Towards(World Vector Of(Vector(0, 0.500, 0), Event Player, Rotation And Translation),
+			Global.ballPositions[Event Player.collidingBall])));
+		Apply Impulse(Event Player, Event Player.appliedImpulse, Distance Between(Vector(0, 0, 0), Event Player.appliedImpulse), To World,
+			Cancel Contrary Motion);
+		disabled While(True);
+		disabled Small Message(Event Player, Custom String("AAA"));
+		Clear Status(Event Player, Phased Out);
+		Set Status(Event Player, Null, Stunned, 0.050);
+		Wait(0.033, Ignore Condition);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		disabled End;
+	}
+}
+
+rule("fx")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[0], Global.ballRadii[0], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[1], Global.ballRadii[1], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[2], Global.ballRadii[2], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[3], Global.ballRadii[3], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[4], Global.ballRadii[4], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[5], Global.ballRadii[5], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[6], Global.ballRadii[6], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[7], Global.ballRadii[7], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[8], Global.ballRadii[8], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[9], Global.ballRadii[9], Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[10], Global.ballRadii[10],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[11], Global.ballRadii[11],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[12], Global.ballRadii[12],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[13], Global.ballRadii[13],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[14], Global.ballRadii[14],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[15], Global.ballRadii[15],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[16], Global.ballRadii[16],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[17], Global.ballRadii[17],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[18], Global.ballRadii[18],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[19], Global.ballRadii[19],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[20], Global.ballRadii[20],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[21], Global.ballRadii[21],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[22], Global.ballRadii[22],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[23], Global.ballRadii[23],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[24], Global.ballRadii[24],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[25], Global.ballRadii[25],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[26], Global.ballRadii[26],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[27], Global.ballRadii[27],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[28], Global.ballRadii[28],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[29], Global.ballRadii[29],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[30], Global.ballRadii[30],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[31], Global.ballRadii[31],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[32], Global.ballRadii[32],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[33], Global.ballRadii[33],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[34], Global.ballRadii[34],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[35], Global.ballRadii[35],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[36], Global.ballRadii[36],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[37], Global.ballRadii[37],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[38], Global.ballRadii[38],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[39], Global.ballRadii[39],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[40], Global.ballRadii[40],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[41], Global.ballRadii[41],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[42], Global.ballRadii[42],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[43], Global.ballRadii[43],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[44], Global.ballRadii[44],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[45], Global.ballRadii[45],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[46], Global.ballRadii[46],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[47], Global.ballRadii[47],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[48], Global.ballRadii[48],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[49], Global.ballRadii[49],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[50], Global.ballRadii[50],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[51], Global.ballRadii[51],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[52], Global.ballRadii[52],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[53], Global.ballRadii[53],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[54], Global.ballRadii[54],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[55], Global.ballRadii[55],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[56], Global.ballRadii[56],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[57], Global.ballRadii[57],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[58], Global.ballRadii[58],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[59], Global.ballRadii[59],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[60], Global.ballRadii[60],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[61], Global.ballRadii[61],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[62], Global.ballRadii[62],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[63], Global.ballRadii[63],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[64], Global.ballRadii[64],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[65], Global.ballRadii[65],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[66], Global.ballRadii[66],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[67], Global.ballRadii[67],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[68], Global.ballRadii[68],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[69], Global.ballRadii[69],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[70], Global.ballRadii[70],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[71], Global.ballRadii[71],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[72], Global.ballRadii[72],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[73], Global.ballRadii[73],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[74], Global.ballRadii[74],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[75], Global.ballRadii[75],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[76], Global.ballRadii[76],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[77], Global.ballRadii[77],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[78], Global.ballRadii[78],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[79], Global.ballRadii[79],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[80], Global.ballRadii[80],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[81], Global.ballRadii[81],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[82], Global.ballRadii[82],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[83], Global.ballRadii[83],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[84], Global.ballRadii[84],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[85], Global.ballRadii[85],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[86], Global.ballRadii[86],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[87], Global.ballRadii[87],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[88], Global.ballRadii[88],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[89], Global.ballRadii[89],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[90], Global.ballRadii[90],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[91], Global.ballRadii[91],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[92], Global.ballRadii[92],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[93], Global.ballRadii[93],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[94], Global.ballRadii[94],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[95], Global.ballRadii[95],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[96], Global.ballRadii[96],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[97], Global.ballRadii[97],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[98], Global.ballRadii[98],
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Global.ballPositions[99], Global.ballRadii[99],
+			Visible To Position and Radius);
+	}
+}
+
+disabled rule("ballz count")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Custom String("ballz: {0}", Count Of(Global.ballPositions)), Null, Null, Left, 0, White,
+			White, White, Visible To and String, Default Visibility);
+	}
+}
+
+disabled rule("disable standing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) <= 0.020;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 0);
+		Apply Impulse(Event Player, Vector(0, 1, 0), Max(0.100, 0.500 * Absolute Value(Y Component Of(Velocity Of(Event Player)))),
+			To World, Cancel Contrary Motion);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("reenable gravity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) > 0.030;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 75);
+	}
+}
+
+disabled rule("roof player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Y Component Of(Position Of(Event Player)) > 49;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Vector(0, -1, 0), 0.500 * Absolute Value(Y Component Of(Velocity Of(Event Player))), To World,
+			Cancel Contrary Motion);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
