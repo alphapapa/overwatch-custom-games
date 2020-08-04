@@ -87,6 +87,8 @@ variables
 		13: EFFECTS_Holes
 		14: TEXTS_Tees
 		15: TEXTS_Holes
+		16: REAL_Disc_Speak_Probability
+		23: INT_Temp
 		24: ARRAY_Temp
 		25: INT_Loop_Index
 
@@ -150,6 +152,7 @@ rule("INIT")
 
 	actions
 	{
+		Global.REAL_Disc_Speak_Probability = 0.300;
 		Global.EFFECTS_Tees_Holes = Empty Array;
 		Global.TEXT_Tees_Holes = Empty Array;
 		Wait(2, Ignore Condition);
@@ -330,6 +333,33 @@ rule("PLAYER: Spawn disc / Begin hole")
 		End;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc spawned"), Custom String("Now you can"), Custom String(
 			"Pick it up or spawn a new one"));
+		"\"Address the ball.\""
+		If(Random Real(0, 1) >= Global.REAL_Disc_Speak_Probability);
+			Global.INT_Temp = Random Integer(0, 10);
+			If(Global.INT_Temp == 0);
+				Communicate(Event Player.ENTITY_Disc, Hello);
+			Else If(Global.INT_Temp == 1);
+				Communicate(Event Player.ENTITY_Disc, Thanks);
+			Else If(Global.INT_Temp == 2);
+				Communicate(Event Player.ENTITY_Disc, Acknowledge);
+			Else If(Global.INT_Temp == 3);
+				Communicate(Event Player.ENTITY_Disc, You are Welcome);
+			Else If(Global.INT_Temp == 4);
+				Communicate(Event Player.ENTITY_Disc, Yes);
+			Else If(Global.INT_Temp == 5);
+				Communicate(Event Player.ENTITY_Disc, Go);
+			Else If(Global.INT_Temp == 6);
+				Communicate(Event Player.ENTITY_Disc, Ready);
+			Else If(Global.INT_Temp == 7);
+				Communicate(Event Player.ENTITY_Disc, With You);
+			Else If(Global.INT_Temp == 8);
+				Communicate(Event Player.ENTITY_Disc, Going In);
+			Else If(Global.INT_Temp == 9);
+				Communicate(Event Player.ENTITY_Disc, On My Way);
+			Else If(Global.INT_Temp == 10);
+				Communicate(Event Player.ENTITY_Disc, Countdown);
+			End;
+		End;
 	}
 }
 
@@ -533,6 +563,33 @@ rule("DISC: Came to rest")
 				Modify Player Score(Event Player.PLAYER_Disc_Owner, -1 * Event Player.PLAYER_Disc_Owner.INT_Current_Strokes);
 				Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole = Custom String("None");
 				disabled Event Player.PLAYER_Disc_Owner.INT_Current_Hole = 0;
+				"\"Address the ball.\""
+				If(Random Real(0, 1) >= Global.REAL_Disc_Speak_Probability);
+					Global.INT_Temp = Random Integer(0, 4);
+					If(Global.INT_Temp == 0);
+						Communicate(Event Player.ENTITY_Disc, Thanks);
+					Else If(Global.INT_Temp == 1);
+						Communicate(Event Player.ENTITY_Disc, Acknowledge);
+					Else If(Global.INT_Temp == 2);
+						Communicate(Event Player.ENTITY_Disc, You are Welcome);
+					Else If(Global.INT_Temp == 4);
+						Communicate(Event Player.ENTITY_Disc, Yes);
+					End;
+				End;
+			Else;
+				"\"Address the ball.\""
+				If(Random Real(0, 1) >= Global.REAL_Disc_Speak_Probability);
+					Global.INT_Temp = Random Integer(0, 4);
+					If(Global.INT_Temp == 0);
+						Communicate(Event Player.ENTITY_Disc, Need Healing);
+					Else If(Global.INT_Temp == 1);
+						Communicate(Event Player.ENTITY_Disc, No);
+					Else If(Global.INT_Temp == 2);
+						Communicate(Event Player.ENTITY_Disc, Need Help);
+					Else If(Global.INT_Temp == 4);
+						Communicate(Event Player.ENTITY_Disc, Sorry);
+					End;
+				End;
 			End;
 		End;
 	}
