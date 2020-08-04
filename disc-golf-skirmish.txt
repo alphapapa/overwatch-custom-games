@@ -30,6 +30,7 @@ settings
 				Blizzard World Winter
 				Eichenwalde
 				Eichenwalde Halloween
+				Hanamura Winter
 			}
 		}
 
@@ -1134,7 +1135,7 @@ rule("MAP: BIizzard World")
 	}
 }
 
-rule("MAP: Dorado")
+rule("MAP: Hanamura (designed with help from AuggieStyle)")
 {
 	event
 	{
@@ -1143,12 +1144,22 @@ rule("MAP: Dorado")
 
 	conditions
 	{
-		Current Map == Map(Dorado);
+		(Current Map == Map(Hanamura Winter) || Current Map == Map(Hanamura)) == True;
 	}
 
 	actions
 	{
-		Global.VECTORS_Tee_Positions = Array(Vector(2.050, 1.861, 15.402), Vector(-1.443, -1.890, 23.922));
-		Global.VECTORS_Hole_Positions = Array(Null, Vector(24.026, -1.979, 24.271));
+		Global.VECTORS_Tee_Positions = Array(Vector(66.884, -1.913, 26.375), Vector(61.413, 0.443, 35.513), Vector(62.931, -1.918, 11.616),
+			Vector(57.691, -1.016, -12.390), Vector(50.781, 2.093, -26.222), Vector(48.095, 6.179, 4.005), Vector(40.854, 0.484, 34.476),
+			Vector(44.133, 1.093, 2.024), Vector(29.420, 0.351, -4.759), Vector(-11.940, 1.090, 30.973), Vector(18.226, 4.188, 9.120),
+			Vector(-21.017, -1.148, -15.296), Vector(-17.317, -1.166, -32.669), Vector(-26.300, 1.094, -70.134), Vector(5.438, -0.910,
+			-68.377), Vector(31.784, 1.823, -51.518), Vector(38.646, -1.790, -38.633), Vector(22.583, -1.765, -66.925), Vector(13.115,
+			-1.707, -37.307), Vector(9.856, 6.943, -21.739));
+		Global.VECTORS_Hole_Positions = Array(Null, Vector(58.333, -1.915, 21.173), Vector(62.282, -1.535, -11.067), Vector(54.651, 2,
+			-26.564), Vector(48.052, 6, -13.198), Vector(35.375, 3, 28.392), Vector(36.435, 0.167, 11.170), Vector(39.061, -0.017,
+			-19.244), Vector(13.859, -1.212, 34.621), Vector(12.076, 4, 22.276), Vector(-13.873, 1, 0.563), Vector(-3.612, 7, -21.077),
+			Vector(-32.320, 1, -60.400), Vector(-0.408, -0.140, -74.268), Vector(30.883, 1.796, -59.677), Vector(20.615, -1.979, -34.485),
+			Vector(45.346, -1.979, -72.268), Vector(5.919, -1.716, -41.135), Vector(13.052, 6.739, -21.685), Vector(11.921, 11.336,
+			21.019));
 	}
 }
