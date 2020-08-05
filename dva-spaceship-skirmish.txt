@@ -19,12 +19,14 @@ settings
 			enabled maps
 			{
 				Dorado
+				Lijiang Tower
 			}
 		}
 
 		General
 		{
 			Hero Limit: Off
+			Limit Valid Control Points: Second
 			Respawn As Random Hero: On
 		}
 	}
@@ -48,16 +50,24 @@ variables
 		12: INT_Reactor_HP_Team_2
 		13: VECTORS_Cargo
 		14: VECTOR_Current_Cargo
-		15: EFFECT_Cargo
-		16: TEXT_Cargo
+		15: REAL_Jump_Drive_Charge_Rate
+		16: REAL_Jump_Drive_Countdown
 		17: INT_Cargo_Drop_Quantity
 		18: PLAYERS_Cargo_Drop_Visible_To
-		19: REAL_Jump_Drive_Charge_Rate
-		20: REAL_Jump_Drive_Countdown
+		19: INT_Cargo_Sphere_Radius
+		20: REAL_Maneuvering_Thruster_Power
+		21: REAL_Max_Shields
+		22: REAL_Main_Thruster_Power
+		23: REAL_Reactor_Max_HP
+		24: REAL_Collision_Damage_Factor
+		25: REAL_Rescue_Distance
+		26: REAL_Low_Altitude
+		27: REAL_Ground_Move_Speed_Percent
 
 	player:
 		0: STRING_Team_Status
 		1: PLAYER_Passenger
+		2: ARRAY_Camera_Settings
 		3: INT_Cargo
 		4: STRING_HUD_Cargo_Status
 		5: STRING_Cargo_Status
@@ -65,8 +75,11 @@ variables
 		7: INT_Ammo
 		8: STRING_HUD_Status_Subheader
 		9: DOT_Cold
-		10: FLOAT_Accel_Factor
+		10: REAL_Accel_Factor
+		11: EFFECT_Cargo
 		12: VECTOR_Last_Position
+		13: POOL_Shields
+		14: REAL_Last_Speed
 		15: BOOL_Warp_Targeting
 		16: EFFECT_Warp_Target
 		17: VECTOR_Warp_Target
@@ -75,12 +88,15 @@ variables
 		20: INT_Jump_Target_Percent
 		21: BOOL_Jump_Drive_Activated
 		22: REAL_Jump_Drive_Countdown
+		23: INT_Camera_Type
+		24: EFFECTS_Jumping
+		25: INT_Loop_Control
+		26: STRING_HUD_Jump_Target
 }
 
 subroutines
 {
 	1: New_Cargo
-	2: Unclaimed_Cargo
 }
 
 rule("MAP: Dorado")
@@ -105,7 +121,35 @@ rule("MAP: Dorado")
 		Global.VECTOR_Reactor_Team_2 = Vector(22.611, 1.247, -30.313);
 		Global.VECTORS_Cargo = Array(Vector(57.243, 14.450, 26.322), Vector(47.549, 3.235, 9.671), Vector(74.799, 12.246, -39.701), Vector(
 			106.748, 12.246, -28.665), Vector(96.869, 13.237, 15.602), Vector(118.111, 8.486, -23.674), Vector(109.525, 11.234, -0.100),
-			Vector(73.727, 8.197, -11.306), Vector(62.309, 8.746, -3.092));
+			Vector(73.727, 8.197, -11.306), Vector(62.309, 8.746, -3.092), Vector(148.135, 17.018, 66.185), Vector(13.221, -1.097, 16.161),
+			Vector(76.482, 12.431, -26.286), Vector(112.723, 12.414, 46.438));
+	}
+}
+
+rule("MAP: Lijiang Garden")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Lijiang Tower);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn_Team_1 = Vector(248.842, 16.345, 47.005);
+		Global.VECTOR_Spawn_Team_2 = Vector(-41.501, 1.234, -30.448);
+		Global.VECTOR_Depot_Team_1 = Vector(28.543, 95.064, 172.502);
+		Global.VECTOR_Depot_Team_2 = Vector(-28.190, 95.064, 166.345);
+		Global.VECTOR_Reactor_Team_1 = Vector(50.957, 95.173, 134.193);
+		Global.VECTOR_Reactor_Team_2 = Vector(-51.018, 95.174, 133.932);
+		Global.VECTORS_Cargo = Array(Vector(-33.440, 94.424, 141.963), Vector(-7.537, 95.016, 157.428), Vector(-7.100, 98.174, 177.291),
+			Vector(3.193, 95.043, 166.547), Vector(0.016, 94.173, 186.905), Vector(7.127, 98.173, 177.688), Vector(7.472, 95.022, 157.388),
+			Vector(33.568, 94.424, 142.403), Vector(-0.004, 97.089, 116.078), Vector(-2.747, 94.174, 151.104), Vector(2.695, 94.174,
+			148.706));
 	}
 }
 
@@ -124,35 +168,57 @@ rule("INIT (after map rules)")
 	actions
 	{
 		Global.BOOL_Initialized = True;
-		Global.REAL_Jump_Drive_Countdown = 3;
-		Global.REAL_Jump_Drive_Charge_Rate = 0.500;
+		Global.REAL_Ground_Move_Speed_Percent = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Ground move speed (percent)"), 20, 0, 100);
+		Global.REAL_Jump_Drive_Countdown = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Jump Drive Countdown (seconds)"), 3, 0, 10);
+		Global.REAL_Jump_Drive_Charge_Rate = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Jump Drive Charge Rate (%/second)"), 0.500, 0, 100);
+		Global.REAL_Low_Altitude = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String("Low altitude (meters)"),
+			0.500, 0, 500);
+		Global.REAL_Rescue_Distance = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Rescue Distance (meters)"), 1, 0.100, 5);
+		Global.REAL_Collision_Damage_Factor = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Collision Damage Factor"), 10, 0, 1000);
+		Global.REAL_Reactor_Max_HP = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String("Reactor Max HP"), 100,
+			10, 1000);
+		Global.REAL_Main_Thruster_Power = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Main thruster power (meters/second/second x 10)"), 0.200, 0, 100);
+		Global.REAL_Maneuvering_Thruster_Power = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Maneuvering thruster power (meters/second/second x 10)"), 0.100, 0, 100);
+		Global.INT_Cargo_Sphere_Radius = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Cargo Sphere Radius (meters)"), 3, 0.100, 5);
+		Global.INT_Max_Ammo = Workshop Setting Integer(Custom String("D.Va Spaceship Skirmish"), Custom String("Max Ammo"), 500, 0, 1000);
+		Global.REAL_Max_Shields = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String("Max Shields"), 100, 0,
+			1000);
+		Global.INT_Reactor_HP_Team_1 = Global.REAL_Reactor_Max_HP;
+		Global.INT_Reactor_HP_Team_2 = Global.REAL_Reactor_Max_HP;
 		Set Objective Description(Global.PLAYERS_All, Custom String("Attack enemy reactor.  Deliver cargo to your depot."),
 			Visible To and String);
-		Create Effect(Global.PLAYERS_All, Sphere, Team 1, Global.VECTOR_Depot_Team_1, 3, Visible To Position and Radius);
-		Create Effect(Global.PLAYERS_All, Sphere, Team 2, Global.VECTOR_Depot_Team_2, 3, Visible To Position and Radius);
+		"Create depots."
+		Create Effect(Global.PLAYERS_All, Sphere, Team 1, Global.VECTOR_Depot_Team_1, Global.INT_Cargo_Sphere_Radius,
+			Visible To Position and Radius);
+		Create Effect(Global.PLAYERS_All, Sphere, Team 2, Global.VECTOR_Depot_Team_2, Global.INT_Cargo_Sphere_Radius,
+			Visible To Position and Radius);
 		Create In-World Text(All Players(All Teams), Custom String("Depot"), Global.VECTOR_Depot_Team_1, 1, Do Not Clip,
 			Visible To Position and String, Team 1, Default Visibility);
 		Create In-World Text(All Players(All Teams), Custom String("Depot"), Global.VECTOR_Depot_Team_2, 1, Do Not Clip,
 			Visible To Position and String, Team 2, Default Visibility);
-		Global.INT_Max_Ammo = 150;
+		"Create reactors."
 		Create Effect(Global.PLAYERS_All, Sphere, Team 1, Global.VECTOR_Reactor_Team_1, 2.500, Visible To Position and Radius);
 		Create Effect(Global.PLAYERS_All, Sphere, Team 2, Global.VECTOR_Reactor_Team_2, 2.500, Visible To Position and Radius);
 		Create In-World Text(All Players(All Teams), Custom String("Reactor"), Global.VECTOR_Reactor_Team_1, 1, Do Not Clip,
 			Visible To Position and String, Team 1, Default Visibility);
 		Create In-World Text(All Players(All Teams), Custom String("Reactor"), Global.VECTOR_Reactor_Team_2, 1, Do Not Clip,
 			Visible To Position and String, Team 2, Default Visibility);
-		Global.INT_Reactor_HP_Team_1 = 100;
-		Global.INT_Reactor_HP_Team_2 = 100;
-		Create HUD Text(Global.PLAYERS_All, Custom String("Share code"), Custom String("https://workshop.codes/dva-spaceship"),
-			Custom String("NPF92"), Left, 0, White, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(Global.PLAYERS_All, Custom String("Brake"), Custom String("Omnidirectional"), Custom String("{0} + {1}",
-			Custom String("Interact"), Custom String("Jump")), Right, 3, Red, Turquoise, White, Visible To and String, Default Visibility);
-		Create Effect(Global.PLAYERS_Cargo_Drop_Visible_To, Sphere, Yellow, Global.VECTOR_Current_Cargo, 3,
+		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/dva-spaceship"),
+			Custom String("NPF92"), Left, -1, White, Turquoise, White, Visible To and String, Default Visibility);
+		"Create cargo drop effect and text."
+		Create Effect(Global.PLAYERS_Cargo_Drop_Visible_To, Sphere, Yellow, Global.VECTOR_Current_Cargo, Global.INT_Cargo_Sphere_Radius,
 			Visible To Position and Radius);
-		disabled Global.EFFECT_Cargo = Last Created Entity;
 		Create In-World Text(Global.PLAYERS_Cargo_Drop_Visible_To, Custom String("Cargo Drop"), Global.VECTOR_Current_Cargo, 1,
 			Do Not Clip, Visible To Position and String, Yellow, Default Visibility);
-		disabled Global.TEXT_Cargo = Last Text ID;
+		"Make initial cargo drop after 15 seconds."
 		Wait(15, Ignore Condition);
 		Call Subroutine(New_Cargo);
 	}
@@ -172,38 +238,55 @@ rule("PLAYER: Joins")
 		Global.PLAYERS_All = All Players(All Teams);
 		Global.PLAYERS_Team_1 = Filtered Array(All Players(Team 1), True);
 		Global.PLAYERS_Team_2 = Filtered Array(All Players(Team 2), True);
+		"Cargo drop available: Update visibility."
+		If(Global.PLAYERS_Cargo_Drop_Visible_To != Empty Array);
+			Global.PLAYERS_Cargo_Drop_Visible_To = All Players(All Teams);
+		End;
 		Event Player.STRING_Team_Status = Custom String("");
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
-		Create HUD Text(Event Player, Custom String("Jump Drive"), Custom String("Max distance increases with charge"), Custom String(
-			"Charge: {0}%", Event Player.INT_Jump_Drive_Charge_Percent), Left, 0, White, Turquoise, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(Event Player, Custom String("Jump drive"), Custom String("Set target"), Custom String("Hold Ultimate"), Right, 1,
-			White, Turquoise, White, Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("Fly"), Custom String("Down: Hold Crouch                               "),
-			Custom String("Up: Hold Jump"), Right, 0, White, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("Fly"), Custom String("Backward: Hold Interact + Boosters"), Custom String(
-			"Forward: Hold Boosters"), Right, 0, White, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("CARGO"), Event Player.STRING_HUD_Cargo_Status, Custom String("{0} / 2",
-			Event Player.INT_Cargo), Left, 0, White, Turquoise, White, Visible To and String, Default Visibility);
+//		Start Scaling Player(Event Player, 0.100, False);
+		"Overhead text for other players to see."
 		Create In-World Text(Team Of(Event Player) == Team 1 ? Global.PLAYERS_Team_1 : Global.PLAYERS_Team_2, Custom String("{0}",
 			Event Player.STRING_Team_Status), Event Player, 1, Do Not Clip, Visible To Position and String, White, Default Visibility);
 		Create In-World Text(Global.PLAYERS_All, Custom String("{0}", Event Player.STRING_Cargo_Status), Event Player, 1,
 			Clip Against Surfaces, Visible To Position and String, Turquoise, Default Visibility);
-		Create HUD Text(Event Player, Custom String("AMMO"), Custom String("Rearm at base"), Custom String("{0} / {1}",
-			Event Player.INT_Ammo, Global.INT_Max_Ammo), Left, 0, White, Turquoise, White, Visible To and String, Default Visibility);
+		"Center HUD"
 		Create HUD Text(Event Player, Custom String("STATUS"), Event Player.STRING_HUD_Status_Subheader, Event Player.STRING_HUD_Status,
-			Top, 0, White, Turquoise, White, Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("PASSENGER"), Custom String("Rescue a pilot when needed"),
-			Event Player.PLAYER_Passenger, Left, 0, White, Turquoise, White, Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("speed"), Null, String("{0} m/s", Speed Of(Event Player)), Left, 0, White, White,
-			White, Visible To and String, Default Visibility);
+			Top, 1, White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Reactor"), Custom String("Enemy: {0}", Team Of(Event Player)
 			== Team 1 ? Global.INT_Reactor_HP_Team_2 : Global.INT_Reactor_HP_Team_1), Custom String("Friendly: {0}", Team Of(Event Player)
 			== Team 1 ? Global.INT_Reactor_HP_Team_1 : Global.INT_Reactor_HP_Team_2), Top, 0, Yellow, Red, Blue, Visible To and String,
 			Default Visibility);
-		If(Global.PLAYERS_Cargo_Drop_Visible_To != Null);
-			Global.PLAYERS_Cargo_Drop_Visible_To = Global.PLAYERS_All;
-		End;
+		Create HUD Text(Event Player, Custom String("Camera"), Custom String("Cycle modes"), Custom String("{0} + {1}",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Right, 0, White, Turquoise, White,
+			Visible To and String, Default Visibility);
+		"Right HUD"
+		Create HUD Text(Event Player, Custom String("Thrusters"), Custom String("Down: {0}          ", Input Binding String(Button(
+			Crouch))), Custom String("Up: {0}", Input Binding String(Button(Jump))), Right, 1, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Event Player, Custom String("Thrusters"), Custom String("Backward: {0} + {1}", Input Binding String(Button(
+			Interact)), Input Binding String(Button(Ability 1))), Custom String("Forward: {0}", Input Binding String(Button(Ability 1))),
+			Right, 2, Green, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Brake"), Custom String("Omnidirectional"), Custom String("{0} + {1}",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Jump))), Right, 3, Red, Turquoise, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Jump drive"), Custom String("Activate targeting", Input Binding String(Button(
+			Crouch))), Custom String("Hold {0}", Input Binding String(Button(Ultimate))), Right, 1, White, Turquoise, White,
+			Visible To and String, Default Visibility);
+		"Left HUD"
+		Create HUD Text(Event Player, Custom String("CARGO"), Event Player.STRING_HUD_Cargo_Status, Custom String("{0} / 2",
+			Event Player.INT_Cargo), Left, 8, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("PASSENGER"), Custom String("Rescue a pilot when needed"),
+			Event Player.PLAYER_Passenger, Left, 7, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("AMMO"), Custom String("Rearm at base"), Custom String("{0} / {1}",
+			Event Player.INT_Ammo, Global.INT_Max_Ammo), Left, 9, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("speed"), Custom String("In looking direction: {0}", Speed Of In Direction(
+			Event Player, Facing Direction Of(Event Player))), Custom String("Total: {0}", Speed Of(Event Player)), Left, 9, White,
+			Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Jump Drive"), Custom String("Max distance increases with charge"), Custom String(
+			"Charge: {0}%  Target: {1}", Event Player.INT_Jump_Drive_Charge_Percent, Event Player.STRING_HUD_Jump_Target), Left, 0, White,
+			Turquoise, White, Visible To and String, Default Visibility);
+		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 	}
 }
 
@@ -239,13 +322,24 @@ rule("PLAYER: Spawns")
 		Set Damage Dealt(Event Player, 100);
 		Set Damage Received(Event Player, 100);
 		Event Player.INT_Ammo = Global.INT_Max_Ammo;
-		Event Player.FLOAT_Accel_Factor = 1;
+		Event Player.REAL_Accel_Factor = 1;
 		Set Move Speed(Event Player, 200);
 		If(Team Of(Event Player) == Team 1);
 			Global.INT_Reactor_HP_Team_1 -= 2;
 		Else;
 			Global.INT_Reactor_HP_Team_2 -= 2;
 		End;
+		Clear Status(Event Player, Frozen);
+		"In case the player died just as it was picked up by a friendly mech, ensure it is detached after respawning."
+		Detach Players(Event Player);
+		Event Player.BOOL_Warp_Targeting = False;
+		Event Player.INT_Jump_Drive_Charge_Percent = 100;
+		Event Player.BOOL_Jump_Drive_Activated = False;
+		Event Player.REAL_Jump_Drive_Countdown = 0;
+		Stop All Damage Over Time(Event Player);
+		Remove All Health Pools From Player(Event Player);
+		Add Health Pool To Player(Event Player, Shields, Global.REAL_Max_Shields, True, True);
+		Event Player.POOL_Shields = Last Created Health Pool;
 	}
 }
 
@@ -267,12 +361,12 @@ rule("PLAYER: Forward")
 
 	actions
 	{
-		Apply Impulse(Event Player, Facing Direction Of(Event Player), 0.500 * Event Player.FLOAT_Accel_Factor, To World,
-			Incorporate Contrary Motion);
-		Play Effect(All Players(All Teams), Good Explosion, Orange, Position Of(Event Player) + Facing Direction Of(Event Player) * -0.500,
-			0.001);
+		Apply Impulse(Event Player, Facing Direction Of(Event Player), Global.REAL_Main_Thruster_Power * Event Player.REAL_Accel_Factor,
+			To World, Incorporate Contrary Motion);
 		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, 5);
-		Wait(0.250, Ignore Condition);
+		Play Effect(All Players(All Teams), Good Explosion, Orange, Position Of(Event Player) + Facing Direction Of(Event Player) * -0.200,
+			0.001);
+		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -295,9 +389,9 @@ rule("PLAYER: Backward")
 
 	actions
 	{
-		Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1000, 0.350 * Event Player.FLOAT_Accel_Factor, To World,
-			Incorporate Contrary Motion);
-		Wait(0.250, Ignore Condition);
+		Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1000,
+			Global.REAL_Maneuvering_Thruster_Power * Event Player.REAL_Accel_Factor, To World, Incorporate Contrary Motion);
+		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -314,15 +408,15 @@ rule("PLAYER: Climb")
 	conditions
 	{
 		Is Button Held(Event Player, Jump) == True;
-		Is In Alternate Form(Event Player) == False;
 		Is Button Held(Event Player, Interact) == False;
+		Is In Alternate Form(Event Player) == False;
 	}
 
 	actions
 	{
-		Apply Impulse(Event Player, World Vector Of(Vector(0, 1, 0), Event Player, Rotation), 0.250, To World,
-			Incorporate Contrary Motion);
-		Wait(0.250, Ignore Condition);
+		Apply Impulse(Event Player, World Vector Of(Vector(0, 1, 0), Event Player, Rotation),
+			Global.REAL_Maneuvering_Thruster_Power * Event Player.REAL_Accel_Factor, To World, Incorporate Contrary Motion);
+		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -339,19 +433,20 @@ rule("PLAYER: Descend")
 	conditions
 	{
 		Is Button Held(Event Player, Crouch) == True;
+		Is Button Held(Event Player, Interact) == False;
 		Is In Alternate Form(Event Player) == False;
 	}
 
 	actions
 	{
-		Apply Impulse(Event Player, World Vector Of(Vector(0, -1, 0), Event Player, Rotation), 0.250, To World,
-			Incorporate Contrary Motion);
-		Wait(0.250, Ignore Condition);
+		Apply Impulse(Event Player, World Vector Of(Vector(0, -1, 0), Event Player, Rotation),
+			Global.REAL_Maneuvering_Thruster_Power * Event Player.REAL_Accel_Factor, To World, Incorporate Contrary Motion);
+		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
 
-disabled rule("PLAYER: Left")
+disabled rule("PLAYER: Left (no good binds available, so left for later)")
 {
 	event
 	{
@@ -375,7 +470,7 @@ disabled rule("PLAYER: Left")
 	}
 }
 
-disabled rule("PLAYER: Right")
+disabled rule("PLAYER: Right (no good binds available, so left for later)")
 {
 	event
 	{
@@ -415,12 +510,15 @@ rule("PLAYER: Shooting Primary")
 
 	actions
 	{
-		Set Move Speed(Event Player, 200);
-		Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1000, 0.100, To World, Incorporate Contrary Motion);
+		disabled Set Move Speed(Event Player, 200);
+		If(Is On Ground(Event Player));
+			Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1000,
+				Global.REAL_Maneuvering_Thruster_Power * Event Player.REAL_Accel_Factor, To World, Incorporate Contrary Motion);
+		End;
 		If(!Is In Alternate Form(Event Player));
 			Event Player.INT_Ammo -= 1;
 		End;
-		Wait(0.250, Ignore Condition);
+		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -438,11 +536,12 @@ rule("PLAYER: Not Shooting Primary")
 	{
 		Is Firing Primary(Event Player) == False;
 		Is In Alternate Form(Event Player) == False;
+		Is On Ground(Event Player) == False;
 	}
 
 	actions
 	{
-		Set Move Speed(Event Player, 200);
+		disabled Set Move Speed(Event Player, 200);
 	}
 }
 
@@ -459,24 +558,24 @@ rule("PLAYER: Rescues pilot")
 	{
 		Has Spawned(Event Player) == True;
 		Is In Alternate Form(Event Player) == False;
-		Distance Between(Position Of(Event Player), Position Of(Closest Player To(Event Player, Team Of(Event Player)))) < 1.500;
+		Is In Spawn Room(Event Player) == False;
+		Distance Between(Position Of(Event Player), Position Of(Closest Player To(Event Player, Team Of(Event Player))))
+			< Global.REAL_Rescue_Distance;
 		Has Spawned(Closest Player To(Event Player, Team Of(Event Player))) == True;
 		Is In Alternate Form(Closest Player To(Event Player, Team Of(Event Player))) == True;
-		Is In Spawn Room(Event Player) == False;
 	}
 
 	actions
 	{
 		Event Player.PLAYER_Passenger = Closest Player To(Event Player, Team Of(Event Player));
 		Event Player.PLAYER_Passenger.STRING_Team_Status = Custom String("");
-		disabled Set Invisible(Event Player.PLAYER_Passenger, All);
-		Attach Players(Event Player.PLAYER_Passenger, Event Player, Vector(0, 0.400, -0.400));
-		Big Message(All Players(All Teams), Custom String("{0} picked up {1}!", Event Player, Event Player.PLAYER_Passenger));
-		Small Message(Event Player, Custom String("You picked up {0}!  Return to base to complete the rescue!",
-			Event Player.PLAYER_Passenger));
 		Event Player.PLAYER_Passenger.STRING_HUD_Status = Custom String("Rescued!");
 		Event Player.PLAYER_Passenger.STRING_HUD_Status_Subheader = Custom String("Much better");
 		Stop Damage Over Time(Event Player.PLAYER_Passenger.DOT_Cold);
+		Attach Players(Event Player.PLAYER_Passenger, Event Player, Vector(0, 0.010, -0.010));
+		Big Message(All Players(All Teams), Custom String("{0} picked up {1}!", Event Player, Event Player.PLAYER_Passenger));
+		Small Message(Event Player, Custom String("You picked up {0}!  Return to base to complete the rescue!",
+			Event Player.PLAYER_Passenger));
 	}
 }
 
@@ -491,13 +590,15 @@ rule("PLAYER: Returns pilot")
 
 	conditions
 	{
-		Entity Exists(Event Player.PLAYER_Passenger) != Custom String("");
 		Is In Spawn Room(Event Player) == True;
+		Entity Exists(Event Player.PLAYER_Passenger) == True;
 	}
 
 	actions
 	{
 		Big Message(All Players(All Teams), Custom String("{0} rescued {1}!", Event Player, Event Player.PLAYER_Passenger));
+		"Try to workaround apparent race condition?"
+		Wait(0.250, Ignore Condition);
 		Detach Players(Event Player.PLAYER_Passenger);
 		Event Player.PLAYER_Passenger = Custom String("");
 	}
@@ -517,9 +618,10 @@ rule("PLAYER: Pick up cargo drop")
 		Is Alive(Event Player) == True;
 		Has Spawned(Event Player) == True;
 		Is In Alternate Form(Event Player) == False;
-		Distance Between(Event Player, Global.VECTOR_Current_Cargo) < 3;
+		Distance Between(Event Player, Global.VECTOR_Current_Cargo) <= Global.INT_Cargo_Sphere_Radius;
 		Event Player.INT_Cargo < 2;
 		Global.INT_Cargo_Drop_Quantity > 0;
+		Is On Ground(Event Player) == True;
 	}
 
 	actions
@@ -528,15 +630,20 @@ rule("PLAYER: Pick up cargo drop")
 		Wait(5, Abort When False);
 		Small Message(Event Player, Custom String("Loaded cargo!"));
 		Event Player.INT_Cargo += 1;
-		Event Player.FLOAT_Accel_Factor = 1 - 0.250 * Event Player.INT_Cargo;
-		Event Player.STRING_Cargo_Status = Custom String("Cargo: {0} / 2", Event Player.INT_Cargo);
+		Event Player.REAL_Accel_Factor = 1 - 0.250 * Event Player.INT_Cargo;
+		disabled Event Player.STRING_Cargo_Status = Custom String("Cargo: {0} / 2", Event Player.INT_Cargo);
 		Event Player.STRING_HUD_Cargo_Status = Custom String("Deliver cargo to your depot");
 		Global.INT_Cargo_Drop_Quantity -= 1;
 		If(Global.INT_Cargo_Drop_Quantity <= 0);
 			Big Message(All Players(All Teams), Custom String("Cargo drop loaded!"));
-			Global.PLAYERS_Cargo_Drop_Visible_To = Null;
+			Global.PLAYERS_Cargo_Drop_Visible_To = Empty Array;
 			Wait(30, Ignore Condition);
 			Call Subroutine(New_Cargo);
+		End;
+		"Create cargo effect."
+		If(Event Player.EFFECT_Cargo == 0);
+			Create Effect(Global.PLAYERS_All, Good Aura, Turquoise, Event Player, 0.100, Visible To Position and Radius);
+			Event Player.EFFECT_Cargo = Last Created Entity;
 		End;
 		Loop If Condition Is True;
 	}
@@ -556,8 +663,10 @@ rule("PLAYER: Deliver cargo")
 		Is Alive(Event Player) == True;
 		Has Spawned(Event Player) == True;
 		Is In Alternate Form(Event Player) == False;
-		Distance Between(Event Player, Team Of(Event Player) == Team 1 ? Global.VECTOR_Depot_Team_1 : Global.VECTOR_Depot_Team_2) < 3;
+		Distance Between(Event Player, Team Of(Event Player) == Team 1 ? Global.VECTOR_Depot_Team_1 : Global.VECTOR_Depot_Team_2)
+			<= Global.INT_Cargo_Sphere_Radius;
 		Event Player.INT_Cargo > 0;
+		Is On Ground(Event Player) == True;
 	}
 
 	actions
@@ -567,18 +676,24 @@ rule("PLAYER: Deliver cargo")
 		Big Message(All Players(All Teams), Custom String("{0} delivered cargo!", Event Player));
 		Event Player.INT_Cargo -= 1;
 		If(Event Player.INT_Cargo > 0);
-			Event Player.STRING_Cargo_Status = Custom String("Cargo: {0} / 2", Event Player.INT_Cargo);
-			Event Player.FLOAT_Accel_Factor = 1 - 0.250 * Event Player.INT_Cargo;
+			disabled Event Player.STRING_Cargo_Status = Custom String("Cargo: {0} / 2", Event Player.INT_Cargo);
+			Event Player.REAL_Accel_Factor = 1 - 0.250 * Event Player.INT_Cargo;
 		Else;
+			Event Player.STRING_Cargo_Status = Custom String("", Event Player.INT_Cargo);
 			Event Player.STRING_Team_Status = Custom String("", Event Player.INT_Cargo);
-			Event Player.STRING_HUD_Cargo_Status = Custom String("Load cargo at your depot");
-			Event Player.FLOAT_Accel_Factor = 1;
+			Event Player.STRING_HUD_Cargo_Status = Custom String("Load cargo from a drop");
+			Event Player.REAL_Accel_Factor = 1;
+			"Destroy cargo effect."
+			Destroy Effect(Event Player.EFFECT_Cargo);
+			Event Player.EFFECT_Cargo = 0;
 		End;
 		"Repair reactor."
 		If(Team Of(Event Player) == Team 1);
 			Global.INT_Reactor_HP_Team_1 += 5;
+			Global.INT_Reactor_HP_Team_1 = Min(Global.INT_Reactor_HP_Team_1, Global.REAL_Reactor_Max_HP);
 		Else;
 			Global.INT_Reactor_HP_Team_2 += 5;
+			Global.INT_Reactor_HP_Team_2 = Min(Global.INT_Reactor_HP_Team_2, Global.REAL_Reactor_Max_HP);
 		End;
 		Loop If Condition Is True;
 	}
@@ -644,6 +759,7 @@ rule("PLAYER: Rearm")
 	{
 		Small Message(Event Player, Custom String("Rearmed and refueled!"));
 		Event Player.INT_Ammo = Global.INT_Max_Ammo;
+		Set Ultimate Charge(Event Player, 100);
 	}
 }
 
@@ -703,6 +819,7 @@ rule("PLAYER: Damaging reactor 1")
 
 	conditions
 	{
+		Is In Alternate Form(Event Player) == False;
 		Is Firing Primary(Event Player) == True;
 		Distance Between(Position Of(Event Player), Global.VECTOR_Reactor_Team_1) < 4;
 		Team Of(Event Player) == Team 2;
@@ -711,7 +828,7 @@ rule("PLAYER: Damaging reactor 1")
 	actions
 	{
 		Wait(1, Abort When False);
-		Small Message(All Players(All Teams), Custom String("Team 1's reactor under attack!"));
+		Small Message(Global.PLAYERS_Team_1, Custom String("Our reactor is under attack!"));
 		Global.INT_Reactor_HP_Team_1 = Max(0, Global.INT_Reactor_HP_Team_1 - 0.250);
 		disabled Wait(1, Abort When False);
 		Loop If Condition Is True;
@@ -729,6 +846,7 @@ rule("PLAYER: Damaging reactor 2")
 
 	conditions
 	{
+		Is In Alternate Form(Event Player) == False;
 		Is Firing Primary(Event Player) == True;
 		Distance Between(Position Of(Event Player), Global.VECTOR_Reactor_Team_2) < 4;
 		Team Of(Event Player) == Team 1;
@@ -737,7 +855,7 @@ rule("PLAYER: Damaging reactor 2")
 	actions
 	{
 		Wait(1, Abort When False);
-		Small Message(All Players(All Teams), Custom String("Team 2's reactor under attack!"));
+		Small Message(Global.PLAYERS_Team_2, Custom String("Our reactor is under attack!"));
 		Global.INT_Reactor_HP_Team_2 = Max(0, Global.INT_Reactor_HP_Team_2 - 0.250);
 		disabled Wait(1, Abort When False);
 		Loop If Condition Is True;
@@ -756,7 +874,7 @@ rule("SUBR: New Cargo")
 	{
 		Big Message(All Players(All Teams), Custom String("Cargo drop available!"));
 		Global.VECTOR_Current_Cargo = Random Value In Array(Global.VECTORS_Cargo);
-		Global.PLAYERS_Cargo_Drop_Visible_To = Global.PLAYERS_All;
+		Global.PLAYERS_Cargo_Drop_Visible_To = All Players(All Teams);
 		Global.INT_Cargo_Drop_Quantity = 2;
 	}
 }
@@ -778,6 +896,11 @@ rule("PLAYER: Demeched")
 	actions
 	{
 		Event Player.STRING_HUD_Status = Custom String("Bailed out!  Need rescue!");
+		Event Player.BOOL_Warp_Targeting = False;
+		"Destroy cargo effect."
+		Destroy Effect(Event Player.EFFECT_Cargo);
+		Event Player.EFFECT_Cargo = 0;
+		Remove All Health Pools From Player(Event Player);
 	}
 }
 
@@ -797,15 +920,18 @@ rule("PLAYER: Bailed out!")
 
 	actions
 	{
+		"Reset status strings."
+		Event Player.STRING_HUD_Status = Custom String("Bailed out!  Need rescue!");
 		Event Player.STRING_HUD_Status_Subheader = Custom String("It's very cold");
 		Event Player.STRING_Team_Status = Custom String("Downed pilot: Rescue!");
 		Event Player.STRING_Cargo_Status = Custom String("");
-		Set Primary Fire Enabled(Event Player, True);
 		"Start freezing, and adjust damage dealt and received."
 		Start Damage Over Time(Event Player, Null, 9999, 2);
 		Event Player.DOT_Cold = Last Damage Over Time ID;
 		Set Damage Dealt(Event Player, 10);
 		Set Damage Received(Event Player, 50);
+		"Try to prevent baby D.Va's from flying across the map too quickly. (Doesn't seem to work. Disabled.)"
+		disabled Set Move Speed(Event Player, 5);
 		"Detach any passengers."
 		Detach Players(Event Player.PLAYER_Passenger);
 		Event Player.PLAYER_Passenger.STRING_HUD_Status = Custom String("Bailed out!  Need rescue!");
@@ -825,7 +951,8 @@ rule("DEBUG: Damage self")
 	conditions
 	{
 		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Ultimate) == True;
+		Is Button Held(Event Player, Primary Fire) == True;
+		Is Button Held(Event Player, Secondary Fire) == True;
 	}
 
 	actions
@@ -834,7 +961,7 @@ rule("DEBUG: Damage self")
 	}
 }
 
-disabled rule("DEBUG: All stop")
+rule("DEBUG: All stop")
 {
 	event
 	{
@@ -858,19 +985,78 @@ disabled rule("DEBUG: All stop")
 	}
 }
 
-disabled rule("SUBR: Unclaimed_Cargo")
+rule("PLAYER: Emergency Brake")
 {
 	event
 	{
-		Subroutine;
-		Unclaimed_Cargo;
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Alternate Form(Event Player) == False;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Jump) == True;
 	}
 
 	actions
 	{
-		Wait(120, Ignore Condition);
-		Abort If(Global.INT_Cargo_Drop_Quantity <= 0);
-		Call Subroutine(New_Cargo);
+		Apply Impulse(Event Player, Direction Towards(Position Of(Event Player), Event Player.VECTOR_Last_Position),
+			Global.REAL_Maneuvering_Thruster_Power, To World, Incorporate Contrary Motion);
+		Event Player.VECTOR_Last_Position = Position Of(Event Player);
+		Play Effect(All Players(All Teams), Ring Explosion, Red, Event Player, 1);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+		Event Player.VECTOR_Last_Position = Vector(0, 0, 0);
+	}
+}
+
+rule("PLAYER: Frozen")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Alternate Form(Event Player) == True;
+		Health(Event Player) <= 25;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Frozen, 9999);
+	}
+}
+
+rule("PLAYER: Collides")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BOOL_Jump_Drive_Activated == False;
+	}
+
+	actions
+	{
+		"Collision detected."
+		If(Event Player.REAL_Last_Speed - Speed Of(Event Player) > 2);
+			Damage(Event Player, Event Player, (Event Player.REAL_Last_Speed - Speed Of(Event Player)) * Global.REAL_Collision_Damage_Factor);
+		End;
+		Event Player.REAL_Last_Speed = Speed Of(Event Player);
+		Wait(0.250, Ignore Condition);
+		Loop;
 	}
 }
 
@@ -916,7 +1102,7 @@ rule("REACTOR: Destroyed (team 2)")
 	}
 }
 
-rule("PLAYER: Emergency Brake")
+rule("PLAYER: Low altitude")
 {
 	event
 	{
@@ -927,20 +1113,320 @@ rule("PLAYER: Emergency Brake")
 
 	conditions
 	{
-		Is In Alternate Form(Event Player) == False;
-		Is Button Held(Event Player, Interact) == True;
-		Is Button Held(Event Player, Jump) == True;
+		Altitude Of(Event Player) <= Global.REAL_Low_Altitude;
 	}
 
 	actions
 	{
-		Apply Impulse(Event Player, Direction Towards(Position Of(Event Player), Event Player.VECTOR_Last_Position),
-			0.350 * Event Player.FLOAT_Accel_Factor, To World, Incorporate Contrary Motion);
-		Event Player.VECTOR_Last_Position = Position Of(Event Player);
-		Play Effect(All Players(All Teams), Ring Explosion, Red, Event Player, 1);
-		Wait(0.100, Ignore Condition);
-		Loop If Condition Is True;
-		Event Player.VECTOR_Last_Position = Vector(0, 0, 0);
+		Set Gravity(Event Player, 1);
+		Clear Status(Event Player, Rooted);
+		Set Move Speed(Event Player, Global.REAL_Ground_Move_Speed_Percent);
+		Set Jump Vertical Speed(Event Player, 10);
+	}
+}
+
+rule("PLAYER: Above low altitude")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) > Global.REAL_Low_Altitude;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 0);
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Move Speed(Event Player, 200);
+	}
+}
+
+rule("camera settings - s,0 = distance ,, s1 = vertical aim multiplier ,, S,2,3,4 = Offset x,y,z")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 2;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.500;
+		Event Player.ARRAY_Camera_Settings[3] = 0.500;
+		Event Player.ARRAY_Camera_Settings[4] = -1;
+	}
+}
+
+rule("CAMERA: Cycle mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Interact);
+		Stop Holding Button(Event Player, Crouch);
+		"Enable third-person camera, reset variant."
+		If(Event Player.INT_Camera_Type == 0);
+			Event Player.INT_Camera_Type += 1;
+			Event Player.ARRAY_Camera_Settings[0] = 0;
+		Else;
+			"Change camera and variant."
+			If(Event Player.ARRAY_Camera_Settings[0] >= 5);
+				Event Player.INT_Camera_Type += 1;
+				Event Player.ARRAY_Camera_Settings[0] = 0;
+			"Change variant."
+			Else;
+				Event Player.ARRAY_Camera_Settings[0] += 1;
+			End;
+			"Disable third-person camera. (only allow mode 1, mode 2 is too jumpy for this)"
+			If(Event Player.INT_Camera_Type > 1);
+				Event Player.INT_Camera_Type = 0;
+			End;
+		End;
+		"Message."
+		If(Event Player.INT_Camera_Type > 0);
+			Small Message(Event Player, Custom String("Camera mode: third-person type {0}, variant {1}", Event Player.INT_Camera_Type,
+				Event Player.ARRAY_Camera_Settings[0]));
+		Else;
+			Small Message(Event Player, Custom String("Camera mode: first-person"));
+		End;
+	}
+}
+
+rule("T(0) == 0: Disable third person camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 0;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
+	}
+}
+
+rule("T(0) == 1: Enable standard 3p-cam with collision detection. - camera code by Mornedil#2772")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 1;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Facing Direction Of(Event Player) * 0.200 + Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + World Vector Of(Vector(Event Player.ARRAY_Camera_Settings[2],
+			Event Player.ARRAY_Camera_Settings[3], Event Player.ARRAY_Camera_Settings[4]), Event Player, Rotation) + Facing Direction Of(
+			Event Player) * Vector(Event Player.ARRAY_Camera_Settings[0],
+			Event Player.ARRAY_Camera_Settings[0] * Event Player.ARRAY_Camera_Settings[1], Event Player.ARRAY_Camera_Settings[0]) * -1,
+			All Players(All Teams), Event Player, True), Eye Position(Event Player) + World Vector Of(Vector(
+			Event Player.ARRAY_Camera_Settings[2], Event Player.ARRAY_Camera_Settings[3], Event Player.ARRAY_Camera_Settings[4]),
+			Event Player, Rotation) + Facing Direction Of(Event Player) * 500, 0);
+	}
+}
+
+disabled rule("T(0) == 2:  Enable 3P-cam, \"true target\" mode - aims perfectly where you look at - camera code by Mornedil#2772")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 2;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Facing Direction Of(Event Player) * 0.200 + Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + World Vector Of(Vector(Event Player.ARRAY_Camera_Settings[2],
+			Event Player.ARRAY_Camera_Settings[3], Event Player.ARRAY_Camera_Settings[4]), Event Player, Rotation) + Facing Direction Of(
+			Event Player) * Vector(Event Player.ARRAY_Camera_Settings[0],
+			Event Player.ARRAY_Camera_Settings[0] * Event Player.ARRAY_Camera_Settings[1], Event Player.ARRAY_Camera_Settings[0]) * -1,
+			All Players(All Teams), Event Player, True), Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ Facing Direction Of(Event Player) * 500, All Players(All Teams), Event Player, True), 0);
+	}
+}
+
+rule("preset 1: standard camera with a slight offset to the right and up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 0;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 2;
+		Event Player.ARRAY_Camera_Settings[1] = 0;
+		Event Player.ARRAY_Camera_Settings[2] = -0.100;
+		Event Player.ARRAY_Camera_Settings[3] = 0.100;
+		Event Player.ARRAY_Camera_Settings[4] = -0.500;
+	}
+}
+
+rule("preset 2: standard camera with offset, but limited vertical movement")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 1;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.100;
+		Event Player.ARRAY_Camera_Settings[1] = 0.050;
+		Event Player.ARRAY_Camera_Settings[2] = -0.050;
+		Event Player.ARRAY_Camera_Settings[3] = 0.050;
+		Event Player.ARRAY_Camera_Settings[4] = -0.100;
+	}
+}
+
+rule("preset 3: no offset, which puts crosshair where the player is aiming")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 2;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.200;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = 0;
+		Event Player.ARRAY_Camera_Settings[3] = 0;
+		Event Player.ARRAY_Camera_Settings[4] = 0;
+	}
+}
+
+rule("preset 4: only vertical offset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 3;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.200;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = 0;
+		Event Player.ARRAY_Camera_Settings[3] = 0.075;
+		Event Player.ARRAY_Camera_Settings[4] = 0;
+	}
+}
+
+rule("preset 5: shoulder view")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 4;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.100;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.070;
+		Event Player.ARRAY_Camera_Settings[3] = 0.030;
+		Event Player.ARRAY_Camera_Settings[4] = -0.050;
+	}
+}
+
+rule("preset 6: tank shoulder view")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 5;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.013;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.009;
+		Event Player.ARRAY_Camera_Settings[3] = 0.006;
+		Event Player.ARRAY_Camera_Settings[4] = -0.005;
 	}
 }
 
@@ -968,9 +1454,10 @@ rule("PLAYER: Jump drive: Start targeting")
 		Event Player.BOOL_Warp_Targeting = True;
 		Event Player.INT_Jump_Target_Percent = 0;
 		Event Player.EFFECT_Warp_Target = Position Of(Event Player);
-		Create Effect(Event Player, Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, 0.500, Position and Radius);
+		Create Effect(Event Player, Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, 0.250, Position and Radius);
 		Event Player.EFFECT_Warp_Target = Last Created Entity;
-		Small Message(Event Player, Custom String("Targeting warp drive: Primary Fire to warp, Secondary Fire to cancel."));
+		Small Message(Event Player, Custom String("Targeting warp drive:  {0} to warp, {1} to cancel.", Input Binding String(Button(
+			Primary Fire)), Input Binding String(Button(Secondary Fire))));
 	}
 }
 
@@ -996,7 +1483,9 @@ rule("PLAYER: Jump Drive: Move target")
 		Event Player.INT_Jump_Target_Percent = Min(Event Player.INT_Jump_Drive_Charge_Percent, Event Player.INT_Jump_Target_Percent + 1);
 		Event Player.VECTOR_Warp_Target = Position Of(Event Player) + Facing Direction Of(Event Player)
 			* Event Player.INT_Jump_Target_Percent;
-		Wait(0.100, Abort When False);
+		Event Player.STRING_HUD_Jump_Target = Custom String("{0} m", Distance Between(Position Of(Event Player),
+			Event Player.VECTOR_Warp_Target));
+		Wait(0.050, Abort When False);
 		Loop If Condition Is True;
 	}
 }
@@ -1023,6 +1512,7 @@ rule("PLAYER: Jump drive: Canceling")
 		Destroy Effect(Event Player.EFFECT_Warp_Target);
 		Event Player.EFFECT_Warp_Target = Null;
 		Event Player.VECTOR_Warp_Target = Null;
+		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 		Small Message(Event Player, Custom String("Warp canceled."));
 	}
 }
@@ -1047,16 +1537,26 @@ rule("PLAYER: Jump drive: Activated.")
 	actions
 	{
 		Stop Holding Button(Event Player, Primary Fire);
-		If(!Is In Line of Sight(Position Of(Event Player), Event Player.VECTOR_Warp_Target, Barriers Do Not Block LOS));
+		If(!Is In Line of Sight(Eye Position(Event Player), Event Player.VECTOR_Warp_Target, Barriers Do Not Block LOS));
 			Small Message(Event Player, Custom String("Jump target requires line of sight."));
 			Abort;
 		End;
 		Event Player.BOOL_Jump_Drive_Activated = True;
 		Event Player.BOOL_Warp_Targeting = False;
+		Event Player.EFFECTS_Jumping = Empty Array;
 		Small Message(Event Player, Custom String("Jumping..."));
+		Destroy Effect(Event Player.EFFECT_Warp_Target);
+		"Create jumping effects around the jumping player."
+		Create Effect(Event Player, Good Aura, Yellow, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Good Aura, Green, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Good Aura, Sky Blue, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
+		Create Effect(Event Player, Good Aura, Red, Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, EFFECTS_Jumping, Append To Array, Last Created Entity);
 		Create Effect(All Players(All Teams), Bad Aura, Sky Blue, Event Player, 0.500, Visible To Position and Radius);
 		Event Player.EFFECT_Jumping = Last Created Entity;
-		Destroy Effect(Event Player.EFFECT_Warp_Target);
 		"Create jump portal effect at target."
 		Event Player.REAL_Jump_Drive_Countdown = 0;
 		Create Effect(All Players(All Teams), Good Aura, Sky Blue, Event Player.VECTOR_Warp_Target, Event Player.REAL_Jump_Drive_Countdown,
@@ -1076,6 +1576,10 @@ rule("PLAYER: Jump drive: Activated.")
 		Wait(0.025, Ignore Condition);
 		Stop Forcing Player Position(Event Player);
 		Play Effect(All Players(All Teams), Good Explosion, Sky Blue, Event Player, 0.500);
+		For Player Variable(Event Player, INT_Loop_Control, 0, Count Of(Event Player.EFFECTS_Jumping), 1);
+			Destroy Effect(Event Player.EFFECTS_Jumping[Event Player.INT_Loop_Control]);
+		End;
+		Event Player.EFFECTS_Jumping = Null;
 		"Animate the closing of the jump portal."
 		While(Event Player.REAL_Jump_Drive_Countdown > 0);
 			Event Player.REAL_Jump_Drive_Countdown -= 0.300;
@@ -1088,6 +1592,8 @@ rule("PLAYER: Jump drive: Activated.")
 		Event Player.VECTOR_Warp_Target = Null;
 		Event Player.EFFECT_Jumping = Null;
 		Event Player.BOOL_Jump_Drive_Activated = False;
+		Event Player.EFFECTS_Jumping = Empty Array;
+		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 	}
 }
 
