@@ -242,8 +242,8 @@ rule("PLAYER: Joins")
 		Global.PLAYERS_Team_1 = Filtered Array(All Players(Team 1), True);
 		Global.PLAYERS_Team_2 = Filtered Array(All Players(Team 2), True);
 		"Cargo drop available: Update visibility."
-		If(Global.PLAYERS_Cargo_Drop_Visible_To != Empty Array);
-			Global.PLAYERS_Cargo_Drop_Visible_To = All Players(All Teams);
+		If(Global.PLAYERS_Cargo_Drop_Visible_To != Null);
+			Global.PLAYERS_Cargo_Drop_Visible_To = Global.PLAYERS_All;
 		End;
 		Event Player.STRING_Team_Status = Custom String("");
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
@@ -639,7 +639,7 @@ rule("PLAYER: Pick up cargo drop")
 		Global.INT_Cargo_Drop_Quantity -= 1;
 		If(Global.INT_Cargo_Drop_Quantity <= 0);
 			Big Message(All Players(All Teams), Custom String("Cargo drop loaded!"));
-			Global.PLAYERS_Cargo_Drop_Visible_To = Empty Array;
+			Global.PLAYERS_Cargo_Drop_Visible_To = Null;
 			Wait(30, Ignore Condition);
 			Call Subroutine(New_Cargo);
 		End;
@@ -877,7 +877,7 @@ rule("SUBR: New Cargo")
 	{
 		Big Message(All Players(All Teams), Custom String("Cargo drop available!"));
 		Global.VECTOR_Current_Cargo = Random Value In Array(Global.VECTORS_Cargo);
-		Global.PLAYERS_Cargo_Drop_Visible_To = All Players(All Teams);
+		Global.PLAYERS_Cargo_Drop_Visible_To = Global.PLAYERS_All;
 		Global.INT_Cargo_Drop_Quantity = 2;
 	}
 }
