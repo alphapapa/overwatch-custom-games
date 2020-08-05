@@ -830,9 +830,10 @@ rule("PLAYER: Damaging reactor 1")
 
 	actions
 	{
-		Wait(1, Abort When False);
+		Wait(0.100, Abort When False);
 		Small Message(Global.PLAYERS_Team_1, Custom String("Our reactor is under attack!"));
-		Global.INT_Reactor_HP_Team_1 = Max(0, Global.INT_Reactor_HP_Team_1 - 0.250);
+		Global.INT_Reactor_HP_Team_1 = Max(0, Global.INT_Reactor_HP_Team_1 - 0.025);
+		Play Effect(All Players(All Teams), Bad Explosion, Yellow, Global.VECTOR_Reactor_Team_1, 3);
 		disabled Wait(1, Abort When False);
 		Loop If Condition Is True;
 	}
@@ -857,9 +858,10 @@ rule("PLAYER: Damaging reactor 2")
 
 	actions
 	{
-		Wait(1, Abort When False);
+		Wait(0.100, Abort When False);
 		Small Message(Global.PLAYERS_Team_2, Custom String("Our reactor is under attack!"));
-		Global.INT_Reactor_HP_Team_2 = Max(0, Global.INT_Reactor_HP_Team_2 - 0.250);
+		Global.INT_Reactor_HP_Team_2 = Max(0, Global.INT_Reactor_HP_Team_2 - 0.025);
+		Play Effect(All Players(All Teams), Bad Explosion, Yellow, Global.VECTOR_Reactor_Team_2, 3);
 		disabled Wait(1, Abort When False);
 		Loop If Condition Is True;
 	}
