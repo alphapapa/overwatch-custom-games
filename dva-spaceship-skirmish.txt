@@ -63,6 +63,7 @@ variables
 		25: REAL_Rescue_Distance
 		26: REAL_Low_Altitude
 		27: REAL_Ground_Move_Speed_Percent
+		28: REAL_Max_Landing_Speed
 
 	player:
 		0: STRING_Team_Status
@@ -168,6 +169,8 @@ rule("INIT (after map rules)")
 	actions
 	{
 		Global.BOOL_Initialized = True;
+		Global.REAL_Max_Landing_Speed = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
+			"Maximum landing speed (meters/second)"), 1, 0, 100);
 		Global.REAL_Ground_Move_Speed_Percent = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
 			"Ground move speed (percent)"), 20, 0, 100);
 		Global.REAL_Jump_Drive_Countdown = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
@@ -1114,6 +1117,7 @@ rule("PLAYER: Low altitude")
 	conditions
 	{
 		Altitude Of(Event Player) <= Global.REAL_Low_Altitude;
+		Speed Of(Event Player) <= Global.REAL_Max_Landing_Speed;
 	}
 
 	actions
