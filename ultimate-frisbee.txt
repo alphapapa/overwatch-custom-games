@@ -204,6 +204,8 @@ variables
 		32: BOOL_Scored
 		33: BOOL_Possession_Changing
 		34: BOOL_80s
+		35: EFFECT_Disc1_Bad_Aura
+		36: EFFECT_Disc1_Good_Aura
 
 	player:
 		0: BOOL_Throwing_Disc
@@ -956,6 +958,8 @@ rule("SUBR: POSSESSION_Swap")
 		Global.BOOL_Possession_Changing = False;
 		Small Message(All Players(All Teams), Custom String("Turnover"));
 		Destroy Effect(Global.EFFECT_Disc_Outer_Sphere);
+		Destroy Effect(Global.EFFECT_Disc1_Bad_Aura);
+		Destroy Effect(Global.EFFECT_Disc1_Good_Aura);
 		If(Global.TEAM_Possession == Team 1);
 			Global.TEAM_Possession = Team 2;
 			Global.TEAM_Not_Possession = Team 1;
@@ -963,9 +967,19 @@ rule("SUBR: POSSESSION_Swap")
 			If(Global.BOOL_80s == True);
 				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Purple, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
 					Visible To Position and Radius);
+				Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Bad Aura, Purple, Position Of(Global.ENTITY_Disc1), 0.100, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Bad_Aura = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Good Aura, Purple, Position Of(Global.ENTITY_Disc1), 0.500, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Good_Aura = Last Created Entity;
 			Else;
 				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Team 2, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
 					Visible To Position and Radius);
+				Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Bad Aura, Team 2, Position Of(Global.ENTITY_Disc1), 0.100, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Bad_Aura = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Good Aura, Team 2, Position Of(Global.ENTITY_Disc1), 0.500, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Good_Aura = Last Created Entity;
 			End;
 		Else;
 			Global.TEAM_Possession = Team 1;
@@ -974,12 +988,21 @@ rule("SUBR: POSSESSION_Swap")
 			If(Global.BOOL_80s == True);
 				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Sky Blue, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
 					Visible To Position and Radius);
+				Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Bad Aura, Sky Blue, Position Of(Global.ENTITY_Disc1), 0.100, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Bad_Aura = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Good Aura, Sky Blue, Position Of(Global.ENTITY_Disc1), 0.500, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Good_Aura = Last Created Entity;
 			Else;
 				Create Effect(Global.PLAYERS_Disc_Visible, Sphere, Team 1, Position Of(Global.ENTITY_Disc1), Global.INT_Disc_Outer_Orb_Width,
 					Visible To Position and Radius);
+				Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Bad Aura, Team 1, Position Of(Global.ENTITY_Disc1), 0.100, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Bad_Aura = Last Created Entity;
+				Create Effect(Global.PLAYERS_All, Good Aura, Team 1, Position Of(Global.ENTITY_Disc1), 0.500, Visible To Position and Radius);
+				Global.EFFECT_Disc1_Good_Aura = Last Created Entity;
 			End;
 		End;
-		Global.EFFECT_Disc_Outer_Sphere = Last Created Entity;
 	}
 }
 
