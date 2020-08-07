@@ -95,8 +95,8 @@ variables
 
 	player:
 		0: INT_Curve_Angle
-		1: INT_Last_Facing_Angle
-		2: INT_Turn_Rate
+		1: VECTOR_Last_Facing
+		2: REAL_Turn_Rate_Degrees
 		3: BOOL_Disc_Thrown
 		4: ENTITY_Disc
 		5: EFFECTS_Disc
@@ -223,8 +223,8 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 			Event Player.STRINGS_Disc_Status[2], Top, 0, White, Turquoise, White, String, Default Visibility);
 		Event Player.STRINGS_Disc_Status = Array(Custom String("No disc"), Custom String("Now you can"), Custom String("Spawn a disc"));
 		Create HUD Text(Event Player, Custom String("Last throw"), Custom String("Distance: {0}m", Event Player.INT_Last_Throw_Distance),
-			Custom String("Strength: {0}%", Absolute Value(Event Player.INT_Turn_Rate / 50 * 100)), Left, 9, Green, White, White, String,
-			Default Visibility);
+			Custom String("Strength: {0}%", Absolute Value(Event Player.REAL_Turn_Rate_Degrees / 50 * 100)), Left, 9, Green, White, White,
+			String, Default Visibility);
 		Event Player.ENTITY_Disc = False;
 		"Create reset HUD for host."
 		If(Event Player == Host Player);
@@ -412,8 +412,8 @@ rule("PLAYER: Record turn rate")
 
 	actions
 	{
-		Event Player.INT_Turn_Rate = Angle Difference(Event Player.INT_Last_Facing_Angle, Horizontal Facing Angle Of(Event Player));
-		Event Player.INT_Last_Facing_Angle = Horizontal Facing Angle Of(Event Player);
+		Event Player.REAL_Turn_Rate_Degrees = Angle Between Vectors(Facing Direction Of(Event Player), Event Player.VECTOR_Last_Facing);
+		Event Player.VECTOR_Last_Facing = Facing Direction Of(Event Player);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
@@ -459,17 +459,17 @@ rule("PLAYER: Throw disc")
 		disabled Event Player.ENTITY_Disc.INT_Disc_Curve_Speed = 1.500;
 		"Scale curve speed by throw speed (multiply by the fraction throw speed is of 50)."
 		disabled Event Player.ENTITY_Disc.INT_Disc_Curve_Speed = Event Player.ENTITY_Disc.INT_Disc_Curve_Speed * (Min(50, Absolute Value(
-			Event Player.INT_Turn_Rate)) / 50);
+			Event Player.REAL_Turn_Rate_Degrees)) / 50);
 		"Wait for dummy to spawn in.  (Maybe we could just phase it out until after it's thrown instead.)"
 		disabled Wait(0.150, Ignore Condition);
 		"Set dummy bot to facing direction of player."
 		Set Facing(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), To World);
 		"Apply impulse to disc (uncapped speed)."
-		disabled Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Absolute Value(Event Player.INT_Turn_Rate) * 2,
+		disabled Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Absolute Value(Event Player.REAL_Turn_Rate_Degrees) * 2,
 			To World, Incorporate Contrary Motion);
 		"Apply impulse to disc (capped to 40)."
-		Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Min(40, Absolute Value(Event Player.INT_Turn_Rate) * 2),
-			To World, Incorporate Contrary Motion);
+		Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Min(40, Absolute Value(
+			Event Player.REAL_Turn_Rate_Degrees) * 2), To World, Incorporate Contrary Motion);
 		Clear Status(Event Player, Rooted);
 		"Increment stroke counter."
 		Event Player.INT_Current_Strokes += 1;
@@ -1053,9 +1053,10 @@ disabled rule("DEBUG: HUD")
 
 	actions
 	{
-		Create HUD Text(Event Player, Custom String("Turn rate: {0}  Disc vector: {1}  Curve impulse: {2}", Event Player.INT_Turn_Rate,
-			Event Player.ENTITY_Disc.VECTOR_Disc_Curve_Impulse, Event Player.ENTITY_Disc.INT_Disc_Curve_Speed), Null, Null, Left, 0, White,
-			White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Turn rate: {0}  Disc vector: {1}  Curve impulse: {2}",
+			Event Player.REAL_Turn_Rate_Degrees, Event Player.ENTITY_Disc.VECTOR_Disc_Curve_Impulse,
+			Event Player.ENTITY_Disc.INT_Disc_Curve_Speed), Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
 	}
 }
 
