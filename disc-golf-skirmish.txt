@@ -233,10 +233,10 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 			String, Default Visibility);
 		Event Player.ENTITY_Disc = False;
 		"Create reset HUD for host."
-		If(Event Player == Host Player);
-			Create HUD Text(Event Player, Custom String("RESET"), Custom String("If anything malfunctions"), Custom String(
-				"Interact + Ultimate"), Right, 99, Purple, Turquoise, White, None, Visible Never);
-		End;
+		disabled If(Event Player == Host Player);
+		disabled Create HUD Text(Event Player, Custom String("RESET"), Custom String("If anything malfunctions"), Custom String(
+			"Interact + Ultimate"), Right, 99, Purple, Turquoise, White, None, Visible Never);
+		disabled End;
 		"Create dummy bot for player."
 		Create Dummy Bot(Hero(Torbjörn), Team 2, Slot Of(Event Player), Vector(0, 0, 0), Vector(0, 0, 0));
 		Event Player.ENTITY_Disc = Last Created Entity;
@@ -1000,7 +1000,7 @@ rule("DEBUG: Create tees")
 	}
 }
 
-rule("DEBUG: Manually reset effects and dummy bots")
+disabled rule("DEBUG: Manually reset effects and dummy bots")
 {
 	event
 	{
