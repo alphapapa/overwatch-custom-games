@@ -489,7 +489,7 @@ rule("PLAYER: Throw disc")
 	}
 }
 
-rule("PLAYER: Set throw charge (reload)")
+rule("PLAYER: Decrease (toward left) throw curve (ultimate)")
 {
 	event
 	{
@@ -500,7 +500,35 @@ rule("PLAYER: Set throw charge (reload)")
 
 	conditions
 	{
-		Is Button Held(Event Player, Reload) == True;
+		Is Button Held(Event Player, Ultimate) == True;
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		If(Event Player.INT_Curve_Angle > 0);
+			Event Player.INT_Curve_Angle -= 1;
+		Else;
+			Event Player.INT_Curve_Angle = 50;
+		End;
+		Set Ultimate Charge(Event Player, Event Player.INT_Curve_Angle);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Increase (toward right) throw curve (ultimate)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == True;
 		Is Button Held(Event Player, Interact) == False;
 	}
 
