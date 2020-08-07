@@ -105,6 +105,7 @@ variables
 		7: BOOL_Holding_Disc
 		8: VECTOR_Disc_Curve_Impulse
 		9: INT_Disc_Curve_Speed
+		10: INTS_Scores_by_Hole
 		11: BOOL_Throwing_Disc
 		12: TEXTS_Tees_Holes
 		13: INT_Color
@@ -112,6 +113,7 @@ variables
 		15: INT_Last_Throw_Distance
 		16: PLAYER_Disc_Owner
 		17: INT_Current_Hole
+		18: INT_Course_Score
 		19: BOOL_Playing_Hole
 		20: TEXT_Goal_Name
 		21: TEXT_Tee_Name
@@ -220,6 +222,9 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 		Event Player.STRING_Playing_Hole = Custom String("None");
 		Create HUD Text(Event Player, Custom String("Playing"), Custom String("Strokes: {0}", Event Player.INT_Current_Strokes),
 			Custom String("Hole: {0}", Event Player.STRING_Playing_Hole), Left, 9, Green, White, White, String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("COURSE"), Custom String("Holes Played: {0} / {1}", Count Of(Filtered Array(
+			Event Player.INTS_Scores_by_Hole, 0 != Current Array Element)), Count Of(Global.VECTORS_Tee_Positions) - 1), Custom String(
+			"Total Score: {0}", Event Player.INT_Course_Score), Left, 10, Green, White, White, String, Default Visibility);
 		Create HUD Text(Event Player, Event Player.STRINGS_Disc_Status[0], Event Player.STRINGS_Disc_Status[1],
 			Event Player.STRINGS_Disc_Status[2], Top, 0, White, Turquoise, White, String, Default Visibility);
 		Event Player.STRINGS_Disc_Status = Array(Custom String("No disc"), Custom String("Now you can"), Custom String("Spawn a disc"));
@@ -324,9 +329,14 @@ rule("PLAYER: Spawn disc / Begin hole")
 		"Player is on a tee: set his current hole to that number."
 		If(First Of(Global.ARRAY_Temp) != 0);
 			Event Player.INT_Current_Hole = Index Of Array Value(Global.VECTORS_Tee_Positions, Global.ARRAY_Temp);
-			Event Player.INT_Current_Strokes = 0;
 			Event Player.STRING_Playing_Hole = Event Player.INT_Current_Hole;
 			Small Message(All Players(All Teams), Custom String("{0} is playing hole #{1}", Event Player, Event Player.STRING_Playing_Hole));
+			"First hole: reset course score."
+			If(1 == Event Player.INT_Current_Hole);
+				Small Message(Event Player, Custom String("Hole #1: resetting course score"));
+				Event Player.INTS_Scores_by_Hole = Empty Array;
+				Event Player.INT_Course_Score = 0;
+			End;
 		"Not at a tee: Stop playing hole and spawn \"free\" disc."
 		Else;
 			Event Player.STRING_Playing_Hole = Custom String("None");
@@ -562,9 +572,12 @@ rule("DISC: Came to rest")
 			If(Distance Between(Event Player, Global.VECTORS_Hole_Positions[Event Player.PLAYER_Disc_Owner.INT_Current_Hole]) <= 1.850);
 				Big Message(All Players(All Teams), Custom String("{0} made #{1} with {2} strokes", Event Player.PLAYER_Disc_Owner,
 					Event Player.PLAYER_Disc_Owner.INT_Current_Hole, Event Player.PLAYER_Disc_Owner.INT_Current_Strokes));
-				Modify Player Score(Event Player.PLAYER_Disc_Owner, -1 * Event Player.PLAYER_Disc_Owner.INT_Current_Strokes);
+				"Wait after message to avoid the variable being reset to 0 before the message is displayed. (Race conditions WITHIN RULES...)"
+				Wait(0.050, Ignore Condition);
+				Event Player.PLAYER_Disc_Owner.INTS_Scores_by_Hole[Event Player.PLAYER_Disc_Owner.INT_Current_Hole] = Event Player.PLAYER_Disc_Owner.INT_Current_Strokes;
+				Event Player.PLAYER_Disc_Owner.INT_Course_Score += Event Player.PLAYER_Disc_Owner.INT_Current_Strokes;
 				Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole = Custom String("None");
-				disabled Event Player.PLAYER_Disc_Owner.INT_Current_Hole = 0;
+				Event Player.PLAYER_Disc_Owner.INT_Current_Strokes = 0;
 				"\"Address the ball.\""
 				If(Random Real(0, 1) >= Global.REAL_Disc_Speak_Probability);
 					Global.INT_Temp = Random Integer(0, 4);
