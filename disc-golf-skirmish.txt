@@ -30,6 +30,7 @@ settings
 				Blizzard World Winter
 				Eichenwalde
 				Eichenwalde Halloween
+				Hanamura
 				Hanamura Winter
 			}
 		}
