@@ -178,24 +178,29 @@ rule("HUD: Instructions")
 
 	actions
 	{
-		Create HUD Text(All Players(All Teams), Custom String("Set Color"), Custom String(""), Custom String("Interact + Reload "), Right,
-			0, White, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Place goal"), Custom String(""), Custom String("Interact + Crouch"), Right,
-			0, Red, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Place tee"), Custom String(""), Custom String("Interact + Jump     "),
-			Right, 0, Green, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Set Angle"), Custom String("Ultimate charge 0-24=left, 26-50=right"),
-			Custom String("Reload"), Right, 0, Orange, Orange, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Throw disc"), Custom String(" while turning (slowly!)"), Custom String(
-			"Hold and release Primary Fire"), Right, 0, White, Turquoise, White, Visible To and String, Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Pick up disc"), Custom String("While next to disc"), Custom String(
+		Create HUD Text(Global.PLAYERS_All, Custom String("Set Color"), Custom String(""), Custom String("{0} + {1}", Input Binding String(
+			Button(Interact)), Input Binding String(Button(Reload))), Right, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Place goal"), Custom String(""), Custom String("{0} + {1}",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Right, 0, Red, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Place tee"), Custom String(""), Custom String("{0} + {1}", Input Binding String(
+			Button(Interact)), Input Binding String(Button(Jump))), Right, 0, Green, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Set Angle"), Custom String("Ultimate charge 0-24=left, 26-50=right"),
+			Custom String("Left: {1} + {0}  Right: {0}", Input Binding String(Button(Ultimate)), Input Binding String(Button(Interact))),
+			Right, 0, Orange, Orange, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Throw disc"), Custom String(" while turning (slowly!)"), Custom String(
+			"Hold and release {0}", Input Binding String(Button(Primary Fire))), Right, 0, White, Turquoise, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Pick up disc"), Custom String("While next to disc"), Custom String(
 			"Crouch                                           "), Right, 0, White, Turquoise, White, Visible To and String,
 			Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Spawn disc"), Custom String("Can only interact with own disc"),
-			Custom String("Interact + Primary Fire              "), Right, 0, White, Turquoise, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/disc-golf"),
-			Custom String("V337X"), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Spawn disc"), Custom String("Can only interact with own disc          "),
+			Custom String("{0} + {1}", Input Binding String(Button(Interact)), Input Binding String(Button(Primary Fire))), Right, 0,
+			White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Share code"), Custom String("https://workshop.codes/disc-golf"), Custom String(
+			"V337X"), Left, 0, White, White, White, Visible To and String, Default Visibility);
 	}
 }
 
