@@ -1,0 +1,451 @@
+settings
+{
+	main
+	{
+		Description: "Escape the bucket before the other crabs pull you back in!  (by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Blizzard World Winter
+				Castillo
+				Château Guillard
+				Château Guillard Halloween
+				Dorado
+				Temple of Anubis
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Roadhog
+			{
+				Chain Hook Cooldown Time: 50%
+				Movement Speed: 75%
+				Primary Fire: Off
+				Quick Melee: Off
+				Secondary Fire: Off
+				Ultimate Generation - Passive Whole Hog: 200%
+			}
+
+			enabled heroes
+			{
+				Roadhog
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: VECTOR_Spawn
+		1: VECTOR_Arena_Center
+		2: BOOL_Initialized
+		3: PLAYERS_All
+		4: VECTOR_Goal
+		5: VECTOR_Jump_Pad
+		6: VECTORS_Barriers
+		7: INT_Loop_Control
+		8: STRINGS_Crab_Facts
+		9: REAL_Arena_Sphere_Radius
+}
+
+disabled rule("CREDITS: Thanks to Pizzazle, DeadMeat, gretschman, and Pafk for their help playtesting!")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+disabled rule("DEBUG: Teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Position Of(Event Player) + Facing Direction Of(Event Player) * 2);
+	}
+}
+
+rule("MAP: Blizz4rd World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		(Current Map == Map(Blizzard World) || Current Map == Map(Blizzard World Winter)) == True;
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(-0.888, -3.473, 16.558);
+		Global.VECTOR_Arena_Center = Vector(-14.674, -3.479, 12.609);
+		Global.VECTOR_Goal = Vector(-9.030, 1.631, 21.013);
+		Global.VECTOR_Jump_Pad = Vector(-17.100, -3.473, 13.245);
+		Global.VECTORS_Barriers = Array(Vector(3.103, -3.464, 11.313), Vector(11.005, -3.482, 16.753), Vector(-7.115, -2.365, -3.246),
+			Vector(-11.544, -2.465, -4.993), Vector(-15.145, -2.454, -5.833), Vector(-19.065, -2.458, -5.435));
+		Global.REAL_Arena_Sphere_Radius = 20;
+	}
+}
+
+rule("MAP: Castillo")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		Current Map == Map(Castillo);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(-118.998, 35.997, 61.419);
+		Global.VECTOR_Arena_Center = Vector(-124.997, 35.970, 62.915);
+		Global.VECTOR_Goal = Vector(-109.173, 34.934, 59.515);
+		Global.VECTOR_Jump_Pad = Vector(-130.156, 36.038, 63.550);
+		Global.VECTORS_Barriers = Array(Vector(-114.200, 35.229, 53.001), Vector(-121.584, 36.291, 45.118), Vector(-111.414, 35.181,
+			67.222), Vector(-115.065, 36.280, 77.703), Vector(-115.984, 40.193, 52.837), Vector(-112.842, 40.191, 68.444));
+		Global.REAL_Arena_Sphere_Radius = 20;
+	}
+}
+
+rule("MAP: Chateau Guillard")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		(Current Map == Map(Château Guillard) || Current Map == Map(Château Guillard Halloween)) == True;
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(196.054, 17.840, 60.039);
+		Global.VECTOR_Arena_Center = Vector(210.540, 8.455, 51.508);
+		Global.VECTOR_Goal = Vector(220.273, 15.542, 61.977);
+		Global.VECTOR_Jump_Pad = Vector(206.227, 9.625, 61.836);
+		Global.VECTORS_Barriers = Array(Vector(206.659, 9.623, 68.212), Vector(216.465, 10.589, 62.149));
+		Global.REAL_Arena_Sphere_Radius = 30;
+	}
+}
+
+rule("MAP: Dorado")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		Current Map == Map(Dorado);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(18.244, 6.172, -33.901);
+		Global.VECTOR_Arena_Center = Vector(25.575, 5.624, -34.393);
+		Global.VECTOR_Goal = Vector(28.089, 5.374, -17.906);
+		Global.VECTOR_Jump_Pad = Vector(26.035, 6, -41.307);
+		Global.VECTORS_Barriers = Array(Vector(20.973, 5.659, -23.833), Vector(31.008, 5.637, -23.653), Vector(36.247, 12.650, -22.604));
+		Global.REAL_Arena_Sphere_Radius = 20;
+	}
+}
+
+rule("MAP: Temple of Anubis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		Current Map == Map(Temple of Anubis);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(-31.622, 2.888, 28.347);
+		Global.VECTOR_Arena_Center = Vector(-31.622, 2.888, 28.347);
+		Global.VECTOR_Goal = Vector(-16.402, 6.124, 38.658);
+		Global.VECTOR_Jump_Pad = Vector(-33.838, 2.966, 35.981);
+		Global.VECTORS_Barriers = Array(Vector(-24.390, 9.575, 44.223), Vector(-27.520, 9.668, 45.262));
+		Global.REAL_Arena_Sphere_Radius = 20;
+	}
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Initialized != True;
+	}
+
+	actions
+	{
+		Create Effect(Global.PLAYERS_All, Sphere, Blue, Global.VECTOR_Arena_Center, Global.REAL_Arena_Sphere_Radius, Visible To);
+		Create Effect(Global.PLAYERS_All, Sphere, Green, Global.VECTOR_Goal, 2, Visible To);
+		Disable Built-In Game Mode Scoring;
+		Set Objective Description(Global.PLAYERS_All, Custom String("Escape the bucket before the other crabs pull you back in!"),
+			Visible To);
+		Create Effect(Global.PLAYERS_All, Ring, Green, Global.VECTOR_Jump_Pad, 2, Visible To Position and Radius);
+		Create HUD Text(Global.PLAYERS_All, Custom String("SHARE CODE"), Custom String("https://workshop.codes/crab-bucket"),
+			Custom String("D2DMX"), Left, 0, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("BREATHER"), Custom String(""), Custom String("Blocks hooks for 1 second"),
+			Right, 0, Orange, White, White, Visible To, Default Visibility);
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.VECTORS_Barriers), 1);
+			Create Effect(Global.PLAYERS_All, Bad Aura, Red, Global.VECTORS_Barriers[Global.INT_Loop_Control], 1, Visible To);
+		End;
+		Global.STRINGS_Crab_Facts = Array(Custom String("Life's like a bucket o'crabs."), Custom String(
+			"There's a life lesson in here somewhere."), Custom String("What kind of crab are you?"), Custom String(
+			"Non-crab fact: pulled pork is delicious barbecued in a pit."), Custom String("You seem a little crabby."), Custom String(
+			"There are more than 4,500 species of crabs."), Custom String("Crabs are omnivores."), Custom String(
+			"A female crab may lay 50,000 to 10 million eggs in one session."), Custom String(
+			"Groups of crabs living together are known as “casts.”"), Custom String("A crab lives 3 to 4 years."), Custom String(
+			"There is no such thing as a tree crab."), Custom String(
+			"In 1972, a domestic housecat rescued an injured crab and later ate it."), Custom String(
+			"A strong waterspout may lift crabs near the water's surface and rain them down over land."), Custom String(
+			"The giant Japanese Spider Crab can measure up to 13 feet across."), Custom String(
+			"Crabs have compound eyes with hundreds of lenses."), Custom String(
+			"Crabs communicate by flapping pincers or drumming claws."), Custom String(
+			"Research suggests crabs may suffer pain and remember it."), Custom String(
+			"True crabs can walk in any direction, but they move fastest sideways."), Custom String(
+			"Pea crabs are the smallest crabs, about the size of a pea."), Custom String(
+			"Humans eat about 1.5 million tons of crab every year."), Custom String("Crabs have eyestalks."), Custom String(
+			"A crab may lose a claw or leg in a fight, but it grows back in time."), Custom String(
+			"A crab can live on land as long as it keeps its gills moist."), Custom String(
+			"As a crab grows, it outgrows its shell and must grow a new one."), Custom String(
+			"Crabs often work together to get food and to protect their families."), Custom String(
+			"Some crabs have teeth in their stomachs."), Custom String("Adult crabs migrate up to 100 miles to mate."), Custom String(
+			"Female crabs only eat their own young when hungry."));
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Global.VECTOR_Spawn);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Set Damage Received(Event Player, 0);
+	}
+}
+
+rule("PLAYER: Lands in goal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Goal) <= 2;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Custom String("{0} escaped the bucket!", Event Player));
+		Small Message(Event Player, Random Value In Array(Global.STRINGS_Crab_Facts));
+		Modify Player Score(Event Player, 1);
+		Wait(2, Ignore Condition);
+		Teleport(Event Player, Global.VECTOR_Spawn);
+	}
+}
+
+rule("PLAYER: Out of bounds")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Arena_Center) > Global.REAL_Arena_Sphere_Radius;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Position Of(Event Player) + Direction Towards(Event Player, Global.VECTOR_Arena_Center) * 2);
+		"Do a small amount of damage so that if a player gets stuck he'll eventually respawn."
+		Set Player Health(Event Player, Health(Event Player) - 0.450);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Vaping")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Phased Out, 1);
+	}
+}
+
+rule("PLAYER: Uses jump pad")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Jump_Pad) <= 1.500;
+		Is Jumping(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 2);
+		disabled Set Status(Event Player, Null, Stunned, 0.100);
+		Start Forcing Player Position(Event Player, Event Player, False);
+		Wait(0.160, Ignore Condition);
+		Stop Forcing Player Position(Event Player);
+		Apply Impulse(Event Player, Vector(0, 1, 0), 15, To Player, Incorporate Contrary Motion);
+		disabled Start Forcing Player Position(Event Player, Event Player, False);
+	}
+}
+
+rule("PLAYER: Walks into barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Filtered Array(Global.VECTORS_Barriers, Distance Between(Current Array Element, Position Of(Event Player)) <= 3) != Empty Array;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Position Of(Event Player) + Direction Towards(Event Player, First Of(Filtered Array(Global.VECTORS_Barriers,
+			Distance Between(Position Of(Event Player), Current Array Element) <= 3))) * -1);
+		disabled Small Message(Host Player, Custom String("tping {0}", Event Player));
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Respawn(Event Player);
+		Wait(0.250, Ignore Condition);
+		Teleport(Event Player, Global.VECTOR_Spawn);
+	}
+}
