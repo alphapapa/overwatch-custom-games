@@ -25,6 +25,7 @@ settings
 				Château Guillard
 				Château Guillard Halloween
 				Dorado
+				Hanamura
 				Temple of Anubis
 			}
 		}
@@ -201,6 +202,30 @@ rule("MAP: Dorado")
 		Global.VECTOR_Jump_Pad = Vector(26.035, 6, -41.307);
 		Global.VECTORS_Barriers = Array(Vector(20.973, 5.659, -23.833), Vector(31.008, 5.637, -23.653), Vector(36.247, 12.650, -22.604));
 		Global.REAL_Arena_Sphere_Radius = 20;
+	}
+}
+
+rule("MAP: Hanamura")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		(Current Map == Map(Hanamura) || Current Map == Map(Hanamura Winter)) == True;
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(12.101, 0.636, 28.921);
+		Global.VECTOR_Arena_Center = Vector(6.735, 0.613, 30.370);
+		Global.VECTOR_Goal = Vector(-4.030, 3.883, 9.244);
+		Global.VECTOR_Jump_Pad = Vector(-1.884, 0.640, 34.479);
+		Global.VECTORS_Barriers = Array();
+		Global.REAL_Arena_Sphere_Radius = 25;
 	}
 }
 
