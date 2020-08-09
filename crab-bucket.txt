@@ -356,7 +356,7 @@ rule("PLAYER: Out of bounds")
 
 	actions
 	{
-		Teleport(Event Player, Position Of(Event Player) + Direction Towards(Event Player, Global.VECTOR_Arena_Center) * 2);
+		Apply Impulse(Event Player, Direction Towards(Event Player, Global.VECTOR_Arena_Center), 5, To World, Cancel Contrary Motion);
 		"Do a small amount of damage so that if a player gets stuck he'll eventually respawn."
 		Set Player Health(Event Player, Health(Event Player) - 0.450);
 		Wait(0.016, Ignore Condition);
