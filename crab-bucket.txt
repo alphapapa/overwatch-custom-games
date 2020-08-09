@@ -25,8 +25,11 @@ settings
 				Château Guillard
 				Château Guillard Halloween
 				Dorado
+				Eichenwalde
+				Eichenwalde Halloween
 				Hanamura
 				Hanamura Winter
+				Havana
 				Temple of Anubis
 			}
 		}
@@ -206,6 +209,30 @@ rule("MAP: Dorado")
 	}
 }
 
+rule("MAP: Eichenwalde")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		(Current Map == Map(Eichenwalde) || Current Map == Map(Eichenwalde Halloween)) == True;
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(71.571, 12.342, -115.866);
+		Global.VECTOR_Arena_Center = Null;
+		Global.VECTOR_Goal = Vector(104.419, 14.352, -78.579);
+		Global.VECTOR_Jump_Pad = Vector(92.939, 14.295, -72.219);
+		Global.VECTORS_Barriers = Array();
+		Global.REAL_Arena_Sphere_Radius = Null;
+	}
+}
+
 rule("MAP: Hanamura")
 {
 	event
@@ -227,6 +254,31 @@ rule("MAP: Hanamura")
 		Global.VECTOR_Jump_Pad = Vector(-1.884, 0.640, 34.479);
 		Global.VECTORS_Barriers = Array();
 		Global.REAL_Arena_Sphere_Radius = 25;
+	}
+}
+
+rule("MAP: Havana")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		Current Map == Map(Havana);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(6.123, 9.624, -61.711);
+		Global.VECTOR_Arena_Center = Null;
+		Global.VECTOR_Goal = Vector(26.976, 13.636, -73.689);
+		Global.VECTOR_Jump_Pad = Vector(35.335, 7.432, -67.177);
+		Global.VECTORS_Barriers = Array();
+		"Not needed on the indoor stage."
+		Global.REAL_Arena_Sphere_Radius = Null;
 	}
 }
 
@@ -378,6 +430,7 @@ rule("PLAYER: Out of bounds")
 
 	conditions
 	{
+		Global.VECTOR_Arena_Center != Null;
 		Distance Between(Event Player, Global.VECTOR_Arena_Center) > Global.REAL_Arena_Sphere_Radius;
 	}
 
