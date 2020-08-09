@@ -212,6 +212,12 @@ rule("PLAYER: Joins")
 			+ Event Player.VECTOR_Ship_Facing * 5, White, Position and Radius);
 		Create HUD Text(Event Player, Custom String("POSITION"), Null, Position Of(Event Player), Left, 0, White, White, White, String,
 			Default Visibility);
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Position Of(Event Player) + Event Player.VECTOR_Ship_Facing * Vector(5, 0, 5),
+			Position Of(Event Player) + -10 * Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) - 15,
+			0), White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Good Beam, Position Of(Event Player) + Event Player.VECTOR_Ship_Facing * Vector(5, 0, 5),
+			Position Of(Event Player) + -10 * Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) - -15,
+			0), White, Position and Radius);
 	}
 }
 
@@ -367,7 +373,7 @@ rule("SUBR: PLAYER_Propulsion")
 			Event Player.VECTOR_Ship_Facing) * 0.500);
 		Play Effect(All Players(All Teams), Ring Explosion, Blue, Position Of(Event Player) + Vector(0,
 			Global.REAL_Effects_Vertical_Offset, 0) + Event Player.VECTOR_Ship_Facing * -9, Speed Of In Direction(Event Player,
-			Event Player.VECTOR_Ship_Facing) * 0.800);
+			Event Player.VECTOR_Ship_Facing) * 1.100);
 		Wait(0.100, Ignore Condition);
 		Loop If(Is Alive(Event Player));
 	}
