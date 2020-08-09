@@ -475,3 +475,29 @@ rule("PLAYER: Dies")
 		Teleport(Event Player, Global.VECTOR_Spawn);
 	}
 }
+
+rule("PLAYER: Tries to hook through barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		"Attempt to detect whether the player throws hook at another player through a barrier effect.  Not sure how reliable this will be, but it seems to be somewhat effective."
+		Is True For Any(Global.VECTORS_Barriers, Distance Between(Current Array Element, Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + Facing Direction Of(Event Player) * 10, All Players(All Teams), Event Player, True)) <= 3)
+			== True;
+	}
+
+	actions
+	{
+		disabled Small Message(Host Player, Custom String("{0} threw hook through barrier", Event Player));
+		"Freeze the hook-throwing player to prevent the hooked player from being pulled through the barrier.  Probably not 100% reliable, but seems to work fairly well."
+		Set Status(Event Player, Null, Frozen, 1);
+	}
+}
