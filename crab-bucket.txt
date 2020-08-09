@@ -104,7 +104,7 @@ disabled rule("DEBUG: Teleport")
 
 	actions
 	{
-		Teleport(Event Player, Position Of(Event Player) + Facing Direction Of(Event Player) * 2);
+		Teleport(Event Player, Position Of(Event Player) + Facing Direction Of(Event Player) * 5);
 	}
 }
 
