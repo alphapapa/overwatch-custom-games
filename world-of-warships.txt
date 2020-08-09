@@ -36,10 +36,15 @@ settings
 	{
 		General
 		{
-			Damage Dealt: 10%
+			Damage Dealt: 25%
 			Ultimate Generation: 10%
 			Ultimate Generation - Combat: 0%
 			Ultimate Generation - Passive: 0%
+
+			Ana
+			{
+				No Scope: On
+			}
 
 			Ashe
 			{
@@ -95,7 +100,14 @@ settings
 			{
 				Concussive Blast: Off
 				Hover Jets: Off
+				Jump Jet: Off
 				Rocket Launcher Knockback Scalar: 0%
+			}
+
+			Reinhardt
+			{
+				Damage Dealt: 500%
+				Fire Strike Cooldown Time: 500%
 			}
 
 			Sigma
@@ -127,6 +139,7 @@ settings
 			{
 				Doomfist
 				Genji
+				Widowmaker
 			}
 		}
 	}
@@ -144,6 +157,7 @@ variables
 
 	player:
 		0: REAL_Accel_Factor
+		1: REAL_Rudder_Impulse
 		2: VECTOR_Ship_Facing
 		3: REAL_Throttle
 		5: ENTITY_Dummy
@@ -178,6 +192,7 @@ rule("INIT")
 		Global.REAL_Water_Level = -23;
 		disabled Global.REAL_Water_Level = -27;
 		Global.REAL_Effects_Vertical_Offset = -0.100;
+		Global.REALS_Hero_Depths = Array();
 	}
 }
 
@@ -218,6 +233,8 @@ rule("PLAYER: Joins")
 		Create Beam Effect(Global.PLAYERS_All, Good Beam, Position Of(Event Player) + Event Player.VECTOR_Ship_Facing * Vector(5, 0, 5),
 			Position Of(Event Player) + -10 * Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) - -15,
 			0), White, Position and Radius);
+		Create HUD Text(Event Player, Custom String("RUDDER"), Null, Event Player.REAL_Rudder_Impulse, Left, 0, White, White, White,
+			String, Default Visibility);
 	}
 }
 
@@ -287,13 +304,15 @@ rule("PLAYER: Rudder")
 
 	conditions
 	{
-		X Component Of(Throttle Of(Event Player)) != 0;
+		Is Alive(Event Player) == True;
 	}
 
 	actions
 	{
-		Event Player.VECTOR_Ship_Facing = Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + Min(
-			X Component Of(Throttle Of(Event Player)) * (Speed Of In Direction(Event Player, Event Player.VECTOR_Ship_Facing) / 5), 4), 0);
+		Chase Player Variable At Rate(Event Player, REAL_Rudder_Impulse, Min(X Component Of(Throttle Of(Event Player)) * (
+			Speed Of In Direction(Event Player, Event Player.VECTOR_Ship_Facing) / 3), 8), 0.500, Destination and Rate);
+		Event Player.VECTOR_Ship_Facing = Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing)
+			+ Event Player.REAL_Rudder_Impulse, 0);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
