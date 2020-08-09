@@ -302,6 +302,7 @@ rule("INIT")
 			"Crabs often work together to get food and to protect their families."), Custom String(
 			"Some crabs have teeth in their stomachs."), Custom String("Adult crabs migrate up to 100 miles to mate."), Custom String(
 			"Female crabs only eat their own young when hungry."));
+		Create Icon(Global.PLAYERS_All, Global.VECTOR_Goal, Arrow: Down, Visible To, Green, True);
 	}
 }
 
