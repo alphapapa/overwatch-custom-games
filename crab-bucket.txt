@@ -26,6 +26,7 @@ settings
 				Château Guillard Halloween
 				Dorado
 				Hanamura
+				Hanamura Winter
 				Temple of Anubis
 			}
 		}
