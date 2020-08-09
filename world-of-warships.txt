@@ -1,5 +1,10 @@
 settings
 {
+	main
+	{
+		Description: "Similar to World of Warships.  WIP/proof-of-concept.  (By nobody#1774.) (Share: KGREF)"
+	}
+
 	lobby
 	{
 		Allow Players Who Are In Queue: Yes
@@ -32,6 +37,9 @@ settings
 		General
 		{
 			Damage Dealt: 10%
+			Ultimate Generation: 10%
+			Ultimate Generation - Combat: 0%
+			Ultimate Generation - Passive: 0%
 
 			Ashe
 			{
@@ -136,10 +144,8 @@ variables
 
 	player:
 		0: REAL_Accel_Factor
-		1: INT_Rudder
 		2: VECTOR_Ship_Facing
 		3: REAL_Throttle
-		4: REAL_Temp
 		5: ENTITY_Dummy
 		6: ARRAY_Camera_Settings
 		7: INT_Camera_Type
@@ -192,8 +198,6 @@ rule("PLAYER: Joins")
 	actions
 	{
 		Global.PLAYERS_All = All Players(All Teams);
-		disabled Create HUD Text(Event Player, Custom String("THROTTLE"), Null, Throttle Of(Event Player), Left, 0, White, White, White, String,
-			Default Visibility);
 		Create HUD Text(Event Player, Custom String("THROTTLE"), Null, Event Player.REAL_Throttle, Left, 0, White, White, White, String,
 			Default Visibility);
 		Create HUD Text(Event Player, Custom String("SPEED"), Null, Custom String("{0} kts", Speed Of In Direction(Event Player,
@@ -206,15 +210,8 @@ rule("PLAYER: Joins")
 		Create Beam Effect(Global.PLAYERS_All, Good Beam, Position Of(Event Player) + -10 * Event Player.VECTOR_Ship_Facing + Vector(0,
 			Global.REAL_Effects_Vertical_Offset, 0), Position Of(Event Player) + Vector(0, Global.REAL_Effects_Vertical_Offset, 0)
 			+ Event Player.VECTOR_Ship_Facing * 5, White, Position and Radius);
-		"Dummy bot"
-		disabled Create Dummy Bot(Hero(Junkrat), Team Of(Event Player), -1, Vector(0, 0, 0), Vector(0, 0, 0));
-		disabled Event Player.ENTITY_Dummy = Last Created Entity;
-		disabled Set Primary Fire Enabled(Event Player, False);
-		disabled Create HUD Text(Event Player, Custom String("SPEED"), Null, Speed Of In Direction(Event Player, Event Player.VECTOR_Ship_Facing),
-			Left, 0, White, White, White, String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("POSITION"), Null, Position Of(Event Player), Left, 0, White, White, White, String,
 			Default Visibility);
-		disabled Event Player.ENTITY_Dummy.ENTITY_Owner = Event Player;
 	}
 }
 
@@ -230,35 +227,29 @@ rule("PLAYER: Spawns")
 	conditions
 	{
 		Has Spawned(Event Player) == True;
-		disabled Is Dummy Bot(Event Player) == False;
 		Is Alive(Event Player) == True;
+		disabled Is Dummy Bot(Event Player) == False;
 	}
 
 	actions
 	{
 		Event Player.INT_Camera_Type = 1;
 		Event Player.REAL_Accel_Factor = 1;
+		Event Player.REAL_Throttle = 0;
 		Event Player.VECTOR_Ship_Facing = Facing Direction Of(Event Player);
 		Set Move Speed(Event Player, 0);
-		disabled Set Ability 1 Enabled(Event Player, False);
 		Set Gravity(Event Player, 0.250);
 		Disable Movement Collision With Environment(Event Player, True);
 		Disable Movement Collision With Players(Event Player);
-		"Arrest the player's movement."
-		disabled Set Status(Event Player, Null, Rooted, 9999);
 		Wait(1, Ignore Condition);
 		Teleport(Event Player, Vector(800, Global.REAL_Water_Level, 300));
 		Start Rule(PLAYER_Maintain_Depth, Restart Rule);
 		Start Rule(PLAYER_Propulsion, Restart Rule);
-		Set Projectile Gravity(Event Player, 500);
-		Attach Players(Event Player.ENTITY_Dummy, Event Player, Vector(0, 1, 0));
-		Set Invisible(Event Player.ENTITY_Dummy, All);
 		Small Message(Host Player, Custom String("Respawned: {0}", Event Player));
-		Event Player.REAL_Throttle = 0;
 	}
 }
 
-rule("PLAYER: Leaves")
+disabled rule("PLAYER: Leaves")
 {
 	event
 	{
@@ -295,13 +286,9 @@ rule("PLAYER: Rudder")
 
 	actions
 	{
-		disabled Event Player.INT_Rudder = -1;
-		disabled Small Message(Host Player, Custom String("Right rudder: {0}", Event Player));
 		Event Player.VECTOR_Ship_Facing = Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + Min(
 			X Component Of(Throttle Of(Event Player)) * (Speed Of In Direction(Event Player, Event Player.VECTOR_Ship_Facing) / 5), 4), 0);
-		disabled Apply Impulse(Event Player, Vector(-1, 0, 0), 1, To Player, Incorporate Contrary Motion);
 		Wait(0.100, Ignore Condition);
-		disabled Event Player.REAL_Temp = Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing);
 		Loop If Condition Is True;
 	}
 }
@@ -322,13 +309,9 @@ rule("PLAYER: Throttle")
 
 	actions
 	{
-		disabled Event Player.INT_Rudder = -1;
-		disabled Small Message(Host Player, Custom String("Right rudder: {0}", Event Player));
 		Event Player.REAL_Throttle += Z Component Of(Throttle Of(Event Player));
 		Event Player.REAL_Throttle = Min(Max(0, Event Player.REAL_Throttle), 100);
-		disabled Apply Impulse(Event Player, Vector(-1, 0, 0), 1, To Player, Incorporate Contrary Motion);
 		Wait(0.050, Ignore Condition);
-		disabled Event Player.REAL_Temp = Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing);
 		Loop If Condition Is True;
 	}
 }
@@ -449,7 +432,7 @@ rule("CAMERA: Cycle mode")
 	actions
 	{
 		Stop Holding Button(Event Player, Interact);
-		Stop Holding Button(Event Player, Crouch);
+		Stop Holding Button(Event Player, Reload);
 		"Enable third-person camera, reset variant."
 		If(Event Player.INT_Camera_Type == 0);
 			Event Player.INT_Camera_Type += 1;
