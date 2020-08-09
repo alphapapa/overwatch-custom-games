@@ -12,14 +12,30 @@ settings
 		Match Voice Chat: Enabled
 		Max Spectators: 12
 		Return To Lobby: Never
+		Team Balancing: After A Game
 	}
 
 	modes
 	{
+		Elimination
+		{
+			Capture Objective Tiebreaker: Off
+			Hero Selection: Limited
+			Limited Choice Pool: Team Size +3
+			Reveal Heroes: On
+
+			enabled maps
+			{
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
 		Skirmish
 		{
 			enabled maps
 			{
+				Workshop Expanse
 				Workshop Expanse Night
 			}
 		}
@@ -51,6 +67,12 @@ settings
 				Coach Gun: Off
 			}
 
+			Bastion
+			{
+				Damage Dealt: 10%
+				Healing Received: 10%
+			}
+
 			D.Va
 			{
 				Boosters: Off
@@ -74,10 +96,15 @@ settings
 
 			Junkrat
 			{
-				Ammunition Clip Size Scalar: 25%
 				Concussion Mine Knockback Scalar: 0%
 				Frag Launcher Knockback Scalar: 0%
 				Projectile Gravity: 20%
+			}
+
+			Lúcio
+			{
+				Healing Received: 10%
+				Soundwave: Off
 			}
 
 			Mercy
@@ -140,6 +167,7 @@ settings
 				Doomfist
 				Genji
 				Widowmaker
+				Winston
 			}
 		}
 	}
@@ -154,6 +182,7 @@ variables
 		3: PLAYERS_All
 		4: REAL_Water_Level
 		5: REAL_Effects_Vertical_Offset
+		6: VECTORS_Spawns
 
 	player:
 		0: REAL_Accel_Factor
@@ -193,6 +222,9 @@ rule("INIT")
 		disabled Global.REAL_Water_Level = -27;
 		Global.REAL_Effects_Vertical_Offset = -0.100;
 		Global.REALS_Hero_Depths = Array();
+		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/warships"),
+			Custom String("KGREF"), Left, -1, White, Turquoise, White, Visible To and String, Default Visibility);
+		Global.VECTORS_Spawns = Array(Vector(500, Global.REAL_Water_Level, 500), Vector(600, Global.REAL_Water_Level, 600));
 	}
 }
 
@@ -265,7 +297,13 @@ rule("PLAYER: Spawns")
 		Disable Movement Collision With Environment(Event Player, True);
 		Disable Movement Collision With Players(Event Player);
 		Wait(1, Ignore Condition);
-		Teleport(Event Player, Vector(800, Global.REAL_Water_Level, 300));
+		If(Team Of(Event Player) == Team 1);
+			Teleport(Event Player, Global.VECTORS_Spawns[0]);
+			Set Facing(Event Player, Direction Towards(Position Of(Event Player), Global.VECTORS_Spawns[1]), To World);
+		Else;
+			Teleport(Event Player, Global.VECTORS_Spawns[1]);
+			Set Facing(Event Player, Direction Towards(Position Of(Event Player), Global.VECTORS_Spawns[0]), To World);
+		End;
 		Start Rule(PLAYER_Maintain_Depth, Restart Rule);
 		Start Rule(PLAYER_Propulsion, Restart Rule);
 		Small Message(Host Player, Custom String("Respawned: {0}", Event Player));
