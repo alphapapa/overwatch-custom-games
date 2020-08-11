@@ -1,0 +1,797 @@
+settings
+{
+	main
+	{
+		Description: "Roadhog truck-driving tech demo.  (By nobody#1774.)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		disabled Elimination
+		{
+			Capture Objective Tiebreaker: Off
+			Hero Selection: Limited
+			Limited Choice Pool: Team Size +3
+			Reveal Heroes: On
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Junkertown
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 25%
+			Ultimate Generation: 10%
+			Ultimate Generation - Combat: 0%
+			Ultimate Generation - Passive: 0%
+
+			Ana
+			{
+				No Scope: On
+			}
+
+			Ashe
+			{
+				Coach Gun: Off
+			}
+
+			Bastion
+			{
+				Damage Dealt: 10%
+				Healing Received: 10%
+			}
+
+			D.Va
+			{
+				Boosters: Off
+			}
+
+			Echo
+			{
+				Flight: Off
+				Glide: Off
+			}
+
+			Genji
+			{
+				Jump Vertical Speed: 25%
+			}
+
+			Hanzo
+			{
+				Lunge: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 0%
+				Frag Launcher Knockback Scalar: 0%
+				Projectile Gravity: 20%
+			}
+
+			Lúcio
+			{
+				Healing Received: 10%
+				Soundwave: Off
+			}
+
+			Mercy
+			{
+				Guardian Angel: Off
+			}
+
+			Orisa
+			{
+				Ammunition Clip Size Scalar: 25%
+				Damage Dealt: 10%
+				Projectile Gravity: 500%
+				Projectile Speed: 25%
+				Ultimate Generation - Combat Supercharger: 0%
+				Ultimate Generation - Passive Supercharger: 0%
+				Ultimate Generation Supercharger: 10%
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+				Hover Jets: Off
+				Jump Jet: Off
+				Rocket Launcher Knockback Scalar: 0%
+			}
+
+			Reinhardt
+			{
+				Damage Dealt: 500%
+				Fire Strike Cooldown Time: 500%
+			}
+
+			Sigma
+			{
+				Accretion Knockback Scalar: 0%
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 0%
+			}
+
+			Sombra
+			{
+				Translocator: Off
+			}
+
+			Tracer
+			{
+				Blink: Off
+			}
+
+			Winston
+			{
+				Jump Pack: Off
+			}
+
+			enabled heroes
+			{
+				Roadhog
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: REAL_Turn_Rate
+		1: REAL_Wheel_Height
+		2: REAL_Main_Thruster_Power
+		3: PLAYERS_All
+		4: REAL_Water_Level
+		5: REAL_Truck_Width
+		6: VECTORS_Spawns
+		7: REAL_Vehicle_Height
+		8: REAL_Wheel_Size
+
+	player:
+		0: REAL_Accel_Factor
+		1: REAL_Rudder_Impulse
+		2: VECTOR_Ship_Facing
+		3: REAL_Throttle
+		4: VECTORS_Vehicle_Outline
+		5: ENTITY_Dummy
+		6: ARRAY_Camera_Settings
+		7: INT_Camera_Type
+		8: ENTITY_Owner
+		9: VECTORS_Wheels
+		10: VECTORS_Steering_Wheel
+}
+
+subroutines
+{
+	1: PLAYER_Propulsion
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.REAL_Main_Thruster_Power == Null;
+	}
+
+	actions
+	{
+		Global.REAL_Main_Thruster_Power = 0.012;
+		Global.REAL_Truck_Width = 1.500;
+		Global.VECTORS_Spawns = Array(Vector(500, Global.REAL_Water_Level, 500), Vector(600, Global.REAL_Water_Level, 600));
+		disabled Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/warships"),
+			Custom String("KGREF"), Left, -1, White, Turquoise, White, Visible To and String, Default Visibility);
+		Global.REAL_Wheel_Height = 0.300;
+		Global.REAL_Vehicle_Height = 0.500;
+		Global.REAL_Wheel_Size = 0.300;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Event Player.VECTORS_Vehicle_Outline = Empty Array;
+		Event Player.VECTORS_Steering_Wheel = Empty Array;
+		Create HUD Text(Event Player, Custom String("THROTTLE"), Null, Event Player.REAL_Throttle, Left, 0, White, White, White, String,
+			Default Visibility);
+		Create HUD Text(Event Player, Custom String("SPEED"), Null, Custom String("{0} kts", Speed Of In Direction(Event Player,
+			Event Player.VECTOR_Ship_Facing) * 1.900), Left, 0, White, White, White, String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("HEADING"), Null, 180 + Horizontal Angle From Direction(
+			Event Player.VECTOR_Ship_Facing) * -1, Left, 0, White, White, White, String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Camera"), Custom String("Cycle modes"), Custom String("{0} + {1}",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Right, 0, White, Turquoise, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("POSITION"), Null, Position Of(Event Player), Left, 0, White, White, White, String,
+			Default Visibility);
+		Create HUD Text(Event Player, Custom String("RUDDER"), Null, Event Player.REAL_Rudder_Impulse, Left, 0, White, White, White,
+			String, Default Visibility);
+		"Vehicle outline effects"
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[0],
+			Event Player.VECTORS_Vehicle_Outline[1], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[1],
+			Event Player.VECTORS_Vehicle_Outline[2], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[2],
+			Event Player.VECTORS_Vehicle_Outline[3], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[3],
+			Event Player.VECTORS_Vehicle_Outline[4], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[4],
+			Event Player.VECTORS_Vehicle_Outline[0], White, Position and Radius);
+		Create HUD Text(Event Player, Custom String("ON GROUND"), Null, Is On Ground(Event Player), Left, 0, White, White, White, String,
+			Default Visibility);
+		"Wheels"
+		Create Effect(Global.PLAYERS_All, Sphere, White, Event Player.VECTORS_Wheels[0], Global.REAL_Wheel_Size,
+			Visible To Position and Radius);
+		Create Effect(Global.PLAYERS_All, Sphere, White, Event Player.VECTORS_Wheels[1], Global.REAL_Wheel_Size,
+			Visible To Position and Radius);
+		Create Effect(Global.PLAYERS_All, Sphere, White, Event Player.VECTORS_Wheels[2], Global.REAL_Wheel_Size,
+			Visible To Position and Radius);
+		Create Effect(Global.PLAYERS_All, Sphere, White, Event Player.VECTORS_Wheels[3], Global.REAL_Wheel_Size,
+			Visible To Position and Radius);
+		"Windshield"
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[0],
+			Event Player.VECTORS_Vehicle_Outline[5], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[5],
+			Event Player.VECTORS_Vehicle_Outline[6], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[5],
+			Event Player.VECTORS_Vehicle_Outline[7], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[6],
+			Event Player.VECTORS_Vehicle_Outline[1], White, Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Vehicle_Outline[7],
+			Event Player.VECTORS_Vehicle_Outline[4], White, Position and Radius);
+		"Steering wheel"
+		disabled Create Effect(Event Player, Sphere, Blue, Event Player.VECTORS_Steering_Wheel[0], 0.300, Visible To Position and Radius);
+		Create Beam Effect(Event Player, Grapple Beam, Event Player.VECTORS_Steering_Wheel[0], Event Player.VECTORS_Steering_Wheel[1],
+			White, Visible To Position and Radius);
+		Create Beam Effect(Event Player, Grapple Beam, Event Player.VECTORS_Steering_Wheel[0], Event Player.VECTORS_Steering_Wheel[2],
+			White, Visible To Position and Radius);
+		Create Beam Effect(Event Player, Grapple Beam, Event Player.VECTORS_Steering_Wheel[0], Event Player.VECTORS_Steering_Wheel[3],
+			White, Visible To Position and Radius);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		disabled Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.INT_Camera_Type = 0;
+		Event Player.REAL_Accel_Factor = 1;
+		Event Player.REAL_Throttle = 0;
+		Event Player.VECTOR_Ship_Facing = Facing Direction Of(Event Player);
+		Start Rule(PLAYER_Propulsion, Restart Rule);
+		Small Message(Host Player, Custom String("Respawned: {0}", Event Player));
+		Set Jump Enabled(Event Player, False);
+		Set Move Speed(Event Player, 0);
+		disabled Start Facing(Event Player, Event Player.VECTOR_Ship_Facing, 25, To World, Direction and Turn Rate);
+		disabled Set Gravity(Event Player, 0.250);
+		disabled Disable Movement Collision With Environment(Event Player, True);
+		disabled Disable Movement Collision With Players(Event Player);
+		disabled Wait(1, Ignore Condition);
+		disabled If(Team Of(Event Player) == Team 1);
+		disabled Teleport(Event Player, Global.VECTORS_Spawns[0]);
+		disabled Set Facing(Event Player, Direction Towards(Position Of(Event Player), Global.VECTORS_Spawns[1]), To World);
+		disabled Else;
+		disabled Teleport(Event Player, Global.VECTORS_Spawns[1]);
+		disabled Set Facing(Event Player, Direction Towards(Position Of(Event Player), Global.VECTORS_Spawns[0]), To World);
+		disabled End;
+		Start Holding Button(Event Player, Crouch);
+	}
+}
+
+disabled rule("PLAYER: Leaves")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Entity Exists(Event Player.ENTITY_Owner) == False;
+	}
+
+	actions
+	{
+		Destroy Dummy Bot(Team Of(Event Player), Slot Of(Event Player));
+	}
+}
+
+rule("PLAYER: Steering")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, REAL_Rudder_Impulse, -1 * Min(X Component Of(Throttle Of(Event Player)) * (
+			Global.REAL_Turn_Rate - Speed Of In Direction(Event Player, Event Player.VECTOR_Ship_Facing)), 30), 2, Destination and Rate);
+		Event Player.VECTOR_Ship_Facing = Direction From Angles(Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing)
+			+ Event Player.REAL_Rudder_Impulse, 0);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) != 0;
+	}
+
+	actions
+	{
+		Event Player.REAL_Throttle += Z Component Of(Throttle Of(Event Player)) * 5;
+		Event Player.REAL_Throttle = Min(Max(-100, Event Player.REAL_Throttle), 100);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: PLAYER_Propulsion")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Propulsion;
+	}
+
+	actions
+	{
+		If(Is On Ground(Event Player));
+			"Engine"
+			Apply Impulse(Event Player, Event Player.VECTOR_Ship_Facing,
+				Global.REAL_Main_Thruster_Power * Event Player.REAL_Throttle * Event Player.REAL_Accel_Factor, To World,
+				Incorporate Contrary Motion);
+			"Drag"
+			Apply Impulse(Event Player, Event Player.VECTOR_Ship_Facing * Vector(-1, 0, -1), (Speed Of In Direction(Event Player,
+				Event Player.VECTOR_Ship_Facing) * 0.050) ^ 2, To World, Incorporate Contrary Motion);
+		End;
+		"Move outline"
+		Event Player.VECTORS_Vehicle_Outline[0] = Position Of(Event Player) + Event Player.VECTOR_Ship_Facing * 2 + Vector(0,
+			Global.REAL_Vehicle_Height, 0);
+		Event Player.VECTORS_Vehicle_Outline[1] = Event Player.VECTORS_Vehicle_Outline[0] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + 120, 0) * Global.REAL_Truck_Width;
+		Event Player.VECTORS_Vehicle_Outline[2] = Event Player.VECTORS_Vehicle_Outline[1] - Event Player.VECTOR_Ship_Facing * 2;
+		Event Player.VECTORS_Vehicle_Outline[4] = Event Player.VECTORS_Vehicle_Outline[0] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) - 120, 0) * Global.REAL_Truck_Width;
+		Event Player.VECTORS_Vehicle_Outline[3] = Event Player.VECTORS_Vehicle_Outline[4] - Event Player.VECTOR_Ship_Facing * 2;
+		"Move wheels"
+		Event Player.VECTORS_Wheels[0] = Event Player.VECTORS_Vehicle_Outline[1] - Vector(0, Global.REAL_Wheel_Height, 0);
+		Event Player.VECTORS_Wheels[1] = Event Player.VECTORS_Vehicle_Outline[2] - Vector(0, Global.REAL_Wheel_Height, 0);
+		Event Player.VECTORS_Wheels[2] = Event Player.VECTORS_Vehicle_Outline[3] - Vector(0, Global.REAL_Wheel_Height, 0);
+		Event Player.VECTORS_Wheels[3] = Event Player.VECTORS_Vehicle_Outline[4] - Vector(0, Global.REAL_Wheel_Height, 0);
+		"Move windshield"
+		Event Player.VECTORS_Vehicle_Outline[5] = Event Player.VECTORS_Vehicle_Outline[0] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + 180, Vertical Angle From Direction(
+			Event Player.VECTOR_Ship_Facing) + -60) * 1;
+		Event Player.VECTORS_Vehicle_Outline[6] = Event Player.VECTORS_Vehicle_Outline[5] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + 120, 0) * Global.REAL_Truck_Width;
+		Event Player.VECTORS_Vehicle_Outline[7] = Event Player.VECTORS_Vehicle_Outline[5] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + -120, 0) * Global.REAL_Truck_Width;
+		"Steering wheel"
+		Event Player.VECTORS_Steering_Wheel[0] = Position Of(Event Player) + Vector(0, 0.400, 0) + Event Player.VECTOR_Ship_Facing * 1.100;
+		Event Player.VECTORS_Steering_Wheel[1] = Event Player.VECTORS_Steering_Wheel[0] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + Event Player.REAL_Rudder_Impulse * 45, 0) * -0.290;
+		Event Player.VECTORS_Steering_Wheel[2] = Event Player.VECTORS_Steering_Wheel[0] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + Event Player.REAL_Rudder_Impulse * 45 - 125, 0) * -0.290;
+		Event Player.VECTORS_Steering_Wheel[3] = Event Player.VECTORS_Steering_Wheel[0] + Direction From Angles(
+			Horizontal Angle From Direction(Event Player.VECTOR_Ship_Facing) + Event Player.REAL_Rudder_Impulse * 45 + 125, 0) * -0.290;
+		Wait(0.025, Ignore Condition);
+		Loop If(Is Alive(Event Player));
+	}
+}
+
+disabled rule("PLAYER: Fire main gun")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		disabled Stop Holding Button(Event Player, Primary Fire);
+		Press Button(Event Player.ENTITY_Dummy, Primary Fire);
+		Set Facing(Event Player.ENTITY_Dummy, Facing Direction Of(Event Player), To World);
+	}
+}
+
+rule("camera settings - s,0 = distance ,, s1 = vertical aim multiplier ,, S,2,3,4 = Offset x,y,z")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 2;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.500;
+		Event Player.ARRAY_Camera_Settings[3] = 0.500;
+		Event Player.ARRAY_Camera_Settings[4] = -1;
+	}
+}
+
+rule("CAMERA: Cycle mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Interact);
+		Stop Holding Button(Event Player, Reload);
+		"Enable third-person camera, reset variant."
+		If(Event Player.INT_Camera_Type == 0);
+			Event Player.INT_Camera_Type += 1;
+			Event Player.ARRAY_Camera_Settings[0] = 0;
+		Else;
+			"Change camera and variant."
+			disabled If(Event Player.ARRAY_Camera_Settings[0] == 0);
+			disabled Event Player.INT_Camera_Type += 1;
+			disabled Event Player.ARRAY_Camera_Settings[0] = 0;
+			"Change variant."
+			disabled Else;
+			disabled Event Player.ARRAY_Camera_Settings[0] += 1;
+			disabled End;
+			"Disable third-person camera. (only allow mode 1, mode 2 is too jumpy for this)"
+			If(Event Player.INT_Camera_Type == 1);
+				Event Player.INT_Camera_Type = 0;
+			End;
+		End;
+		"Message."
+		If(Event Player.INT_Camera_Type > 0);
+			Small Message(Event Player, Custom String("Camera mode: third-person type {0}, variant {1}", Event Player.INT_Camera_Type,
+				Event Player.ARRAY_Camera_Settings[0]));
+		Else;
+			Small Message(Event Player, Custom String("Camera mode: first-person"));
+		End;
+	}
+}
+
+rule("T(0) == 0: Disable third person camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 0;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
+	}
+}
+
+rule("T(0) == 1: Enable standard 3p-cam with collision detection. - camera code by Mornedil#2772")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 1;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Eye Position(Event Player) + Vector(0, 5, 0) + -1 * Facing Direction Of(Event Player) * 10,
+			Eye Position(Event Player) + Facing Direction Of(Event Player) * 10, 50);
+	}
+}
+
+disabled rule("T(0) == 2:  Enable 3P-cam, \"true target\" mode - aims perfectly where you look at - camera code by Mornedil#2772")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 2;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Facing Direction Of(Event Player) * 0.200 + Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + World Vector Of(Vector(Event Player.ARRAY_Camera_Settings[2],
+			Event Player.ARRAY_Camera_Settings[3], Event Player.ARRAY_Camera_Settings[4]), Event Player, Rotation) + Facing Direction Of(
+			Event Player) * Vector(Event Player.ARRAY_Camera_Settings[0],
+			Event Player.ARRAY_Camera_Settings[0] * Event Player.ARRAY_Camera_Settings[1], Event Player.ARRAY_Camera_Settings[0]) * -1,
+			All Players(All Teams), Event Player, True), Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ Facing Direction Of(Event Player) * 500, All Players(All Teams), Event Player, True), 0);
+	}
+}
+
+disabled rule("preset 1: standard camera with a slight offset to the right and up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 0;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 2;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.500;
+		Event Player.ARRAY_Camera_Settings[3] = 0.500;
+		Event Player.ARRAY_Camera_Settings[4] = -1;
+	}
+}
+
+disabled rule("preset 2: standard camera with offset, but limited vertical movement")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 1;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.100;
+		Event Player.ARRAY_Camera_Settings[1] = 0.050;
+		Event Player.ARRAY_Camera_Settings[2] = -0.050;
+		Event Player.ARRAY_Camera_Settings[3] = 0.050;
+		Event Player.ARRAY_Camera_Settings[4] = -0.100;
+	}
+}
+
+disabled rule("preset 3: no offset, which puts crosshair where the player is aiming")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 2;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.200;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = 0;
+		Event Player.ARRAY_Camera_Settings[3] = 0;
+		Event Player.ARRAY_Camera_Settings[4] = 0;
+	}
+}
+
+disabled rule("preset 4: only vertical offset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 3;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.200;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = 0;
+		Event Player.ARRAY_Camera_Settings[3] = 0.075;
+		Event Player.ARRAY_Camera_Settings[4] = 0;
+	}
+}
+
+disabled rule("preset 5: shoulder view")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 4;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.100;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.070;
+		Event Player.ARRAY_Camera_Settings[3] = 0.030;
+		Event Player.ARRAY_Camera_Settings[4] = -0.050;
+	}
+}
+
+disabled rule("preset 6: tank shoulder view")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ARRAY_Camera_Settings[5] == 5;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 0.013;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.009;
+		Event Player.ARRAY_Camera_Settings[3] = 0.006;
+		Event Player.ARRAY_Camera_Settings[4] = -0.005;
+	}
+}
+
+disabled rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Wait(1, Ignore Condition);
+		Respawn(Event Player);
+	}
+}
+
+rule("PLAYER: Jumps (kill throttle)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Throttle = 0;
+	}
+}
