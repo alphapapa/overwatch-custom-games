@@ -415,6 +415,8 @@ rule("PLAYER: Lands in goal")
 		Small Message(Event Player, Random Value In Array(Global.STRINGS_Crab_Facts));
 		Modify Player Score(Event Player, 1);
 		Wait(2, Ignore Condition);
+		Respawn(Event Player);
+		Wait(0.250, Ignore Condition);
 		Teleport(Event Player, Global.VECTOR_Spawn);
 	}
 }
