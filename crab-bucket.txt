@@ -178,7 +178,7 @@ rule("MAP: Chateau Guillard")
 	{
 		Global.VECTOR_Spawn = Vector(196.054, 17.840, 60.039);
 		Global.VECTOR_Arena_Center = Vector(210.540, 8.455, 51.508);
-		Global.VECTOR_Goal = Vector(220.273, 15.542, 61.977);
+		Global.VECTOR_Goal = Vector(229.330, 14.210, 61.870);
 		Global.VECTOR_Jump_Pad = Vector(206.227, 9.625, 61.836);
 		Global.VECTORS_Barriers = Array(Vector(206.115, 9.626, 65.593), Vector(216.465, 10.589, 62.149));
 		Global.REAL_Arena_Sphere_Radius = 30;
