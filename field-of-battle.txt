@@ -61,6 +61,7 @@ variables
 		4: VECTOR_Last_Position
 		5: INT_Camera_Type
 		6: ARRAY_Camera_Settings
+		7: PLAYER_Bank
 }
 
 subroutines
@@ -206,8 +207,9 @@ rule("PLAYER: Disable movement in air")
 
 	actions
 	{
-		Set Status(Event Player, Null, Rooted, 9999);
+		disabled Set Status(Event Player, Null, Rooted, 9999);
 		Disallow Button(Event Player, Ultimate);
+		Set Move Speed(Event Player, 0);
 	}
 }
 
@@ -227,9 +229,10 @@ rule("PLAYER: Enable movement on ground")
 
 	actions
 	{
-		Clear Status(Event Player, Rooted);
+		disabled Clear Status(Event Player, Rooted);
 		disabled Set Ultimate Ability Enabled(Event Player, True);
 		Allow Button(Event Player, Ultimate);
+		Set Move Speed(Event Player, 100);
 	}
 }
 
@@ -252,6 +255,8 @@ rule("SUBR: PLAYER_Propulsion")
 		"Drag"
 		Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, (Speed Of(Event Player) * 0.020) ^ 2, To Player,
 			Incorporate Contrary Motion);
+		"Horizontal thrust to fake banking (needed to help with landing)"
+		Apply Impulse(Event Player, Vector(Event Player.PLAYER_Bank, 0, 0), 0.100, To Player, Incorporate Contrary Motion);
 		"Fuselage"
 		Event Player.VECTORS_Fuselage[0] = Position Of(Event Player) + Vector(0, 2, 0) + -2 * Event Player.VECTOR_Vehicle_Facing;
 		Event Player.VECTORS_Fuselage[1] = Position Of(Event Player) + Vector(0, 1, 0) + Direction From Angles(0,
@@ -470,5 +475,27 @@ rule("MAP: Lijiang")
 	actions
 	{
 		Global.REAL_Ceiling = 148;
+	}
+}
+
+rule("PLAYER: Banks (not really, but something is needed to allow horizontal movement for landing)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) > 0.200;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, PLAYER_Bank, X Component Of(Throttle Of(Event Player)), 0.200, Destination and Rate);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
