@@ -1,5 +1,10 @@
 settings
 {
+	main
+	{
+		Description: "Tech demo of D.Va as a helicopter. (By nobody#1774.)"
+	}
+
 	lobby
 	{
 		Allow Players Who Are In Queue: Yes
@@ -256,7 +261,7 @@ rule("SUBR: PLAYER_Propulsion")
 		Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, (Speed Of(Event Player) * 0.020) ^ 2, To Player,
 			Incorporate Contrary Motion);
 		"Horizontal thrust to fake banking (needed to help with landing)"
-		Apply Impulse(Event Player, Vector(Event Player.PLAYER_Bank, 0, 0), 0.100, To Player, Incorporate Contrary Motion);
+		Apply Impulse(Event Player, Vector(1, 0, 0), Event Player.PLAYER_Bank, To Player, Incorporate Contrary Motion);
 		"Fuselage"
 		Event Player.VECTORS_Fuselage[0] = Position Of(Event Player) + Vector(0, 2, 0) + -2 * Event Player.VECTOR_Vehicle_Facing;
 		Event Player.VECTORS_Fuselage[1] = Position Of(Event Player) + Vector(0, 1, 0) + Direction From Angles(0,
@@ -457,6 +462,8 @@ rule("DEBUG: Host HUD, etc.")
 			/ Global.REAL_Ceiling * 100), Left, 0, White, White, White, Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("% of CEILING"), Null, Y Component Of(Position Of(Event Player)) / Global.REAL_Ceiling,
 			Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("BANK"), Null, Event Player.PLAYER_Bank, Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
 	}
 }
 
@@ -494,8 +501,31 @@ rule("PLAYER: Banks (not really, but something is needed to allow horizontal mov
 
 	actions
 	{
-		Chase Player Variable At Rate(Event Player, PLAYER_Bank, X Component Of(Throttle Of(Event Player)), 0.200, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, PLAYER_Bank, X Component Of(Throttle Of(Event Player)) / 4, 0.500,
+			Destination and Rate);
 		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Shooting (try to compensate for speed reduction of D.Va's guns)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Event Player.VECTOR_Movement * Vector(1, 0, 1), 0.500, To World, Incorporate Contrary Motion);
+		Wait(0.050, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
