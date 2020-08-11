@@ -1,0 +1,474 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Lijiang Tower
+				Lijiang Tower Lunar New Year
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Manual
+			Hero Limit: Off
+			Limit Valid Control Points: Second
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			D.Va
+			{
+				Ultimate Generation - Combat Self-Destruct: 0%
+				Ultimate Generation - Passive Self-Destruct: 0%
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: REAL_Rotor_Base_Thrust
+		1: REAL_Loop_Delay
+		2: REAL_Rotor_Base_Thrust_Per_Frame
+		3: PLAYERS_All
+		4: REAL_Collective_Max
+		5: REAL_Collective_Change_Rate
+		6: REAL_Ceiling
+
+	player:
+		0: VECTOR_Vehicle_Facing
+		1: REAL_Collective
+		2: VECTORS_Fuselage
+		3: VECTOR_Movement
+		4: VECTOR_Last_Position
+		5: INT_Camera_Type
+		6: ARRAY_Camera_Settings
+}
+
+subroutines
+{
+	0: PLAYER_Propulsion
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.REAL_Rotor_Base_Thrust = 0.001;
+		Global.REAL_Loop_Delay = 0.050;
+		Global.REAL_Rotor_Base_Thrust_Per_Frame = Global.REAL_Rotor_Base_Thrust / Global.REAL_Loop_Delay;
+		Global.REAL_Collective_Max = 100;
+		Global.REAL_Collective_Change_Rate = 2.500;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Event Player.INT_Camera_Type = 0;
+		Event Player.ARRAY_Camera_Settings = Array();
+		"Fuselage"
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Position Of(Event Player) + Vector(0, 2, 0), Event Player.VECTORS_Fuselage[0],
+			White, Visible To Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Fuselage[0], Position Of(Event Player) + Vector(0, 1, 0),
+			White, Visible To Position and Radius);
+		Create Effect(Global.PLAYERS_All, Sphere, Turquoise, Event Player.VECTORS_Fuselage[0], 0.200, Visible To Position and Radius);
+		"HUD"
+		Create HUD Text(Event Player, Custom String("COLLECTIVE"), Null, Custom String("{0} / {1}", Event Player.REAL_Collective,
+			Global.REAL_Collective_Max), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("SPEED"), Null, Speed Of In Direction(Event Player,
+			Event Player.VECTOR_Vehicle_Facing), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("ALTITUDE"), Null, Y Component Of(Position Of(Event Player)), Left, 0, White, White,
+			White, Visible To and String, Default Visibility);
+		"The \"Vertical Speed Of\" value doesn't seem to work properly, showing negative even when climbing slightly.  Dunno why."
+		disabled Create HUD Text(Event Player, Custom String("VSI"), Null, Vertical Speed Of(Event Player), Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Collective = 0;
+		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
+		Set Jump Enabled(Event Player, False);
+		Start Rule(PLAYER_Propulsion, Restart Rule);
+	}
+}
+
+rule("PLAYER: Collective (increase)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Collective = Min(Max(Global.REAL_Collective_Change_Rate + Event Player.REAL_Collective, 0),
+			Global.REAL_Collective_Max);
+		Set Ultimate Charge(Event Player, Event Player.REAL_Collective);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Collective (decrease)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Collective = Min(Max(Global.REAL_Collective_Change_Rate * -1 + Event Player.REAL_Collective, 0),
+			Global.REAL_Collective_Max);
+		Set Ultimate Charge(Event Player, Event Player.REAL_Collective);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Disable movement in air")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) > 0.100;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+		Disallow Button(Event Player, Ultimate);
+	}
+}
+
+rule("PLAYER: Enable movement on ground")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) <= 0.100;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+		disabled Set Ultimate Ability Enabled(Event Player, True);
+		Allow Button(Event Player, Ultimate);
+	}
+}
+
+rule("SUBR: PLAYER_Propulsion")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Propulsion;
+	}
+
+	actions
+	{
+		Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
+		Event Player.VECTOR_Vehicle_Facing = Facing Direction Of(Event Player);
+		"Lift"
+		Apply Impulse(Event Player, Direction From Angles(0, 0 - Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing)
+			/ -2 - 90), Global.REAL_Rotor_Base_Thrust_Per_Frame * Event Player.REAL_Collective * 0.750 * (1.500 - (Y Component Of(
+			Position Of(Event Player)) / Global.REAL_Ceiling) ^ 2), To Player, Incorporate Contrary Motion);
+		"Drag"
+		Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, (Speed Of(Event Player) * 0.020) ^ 2, To Player,
+			Incorporate Contrary Motion);
+		"Fuselage"
+		Event Player.VECTORS_Fuselage[0] = Position Of(Event Player) + Vector(0, 2, 0) + -2 * Event Player.VECTOR_Vehicle_Facing;
+		Event Player.VECTORS_Fuselage[1] = Position Of(Event Player) + Vector(0, 1, 0) + Direction From Angles(0,
+			Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing) + 90);
+		"Misc"
+		Event Player.VECTOR_Last_Position = Position Of(Event Player);
+		Wait(Global.REAL_Loop_Delay, Ignore Condition);
+		Loop If(Is Alive(Event Player));
+	}
+}
+
+rule("CAMERA: Cycle mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Interact);
+		Stop Holding Button(Event Player, Reload);
+		"Enable third-person camera, reset variant."
+		If(Event Player.INT_Camera_Type == 0);
+			Event Player.INT_Camera_Type += 1;
+			Event Player.ARRAY_Camera_Settings[0] = 0;
+		Else;
+			"Change camera and variant."
+			disabled If(Event Player.ARRAY_Camera_Settings[0] == 0);
+			disabled Event Player.INT_Camera_Type += 1;
+			disabled Event Player.ARRAY_Camera_Settings[0] = 0;
+			"Change variant."
+			disabled Else;
+			disabled Event Player.ARRAY_Camera_Settings[0] += 1;
+			disabled End;
+			"Disable third-person camera. (only allow mode 1, mode 2 is too jumpy for this)"
+			If(Event Player.INT_Camera_Type == 1);
+				Event Player.INT_Camera_Type = 0;
+			End;
+		End;
+		"Message."
+		If(Event Player.INT_Camera_Type > 0);
+			Small Message(Event Player, Custom String("Camera mode: third-person type {0}, variant {1}", Event Player.INT_Camera_Type,
+				Event Player.ARRAY_Camera_Settings[0]));
+		Else;
+			Small Message(Event Player, Custom String("Camera mode: first-person"));
+		End;
+	}
+}
+
+rule("camera settings - s,0 = distance ,, s1 = vertical aim multiplier ,, S,2,3,4 = Offset x,y,z")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.ARRAY_Camera_Settings[0] = 2;
+		Event Player.ARRAY_Camera_Settings[1] = 1;
+		Event Player.ARRAY_Camera_Settings[2] = -0.500;
+		Event Player.ARRAY_Camera_Settings[3] = 0.500;
+		Event Player.ARRAY_Camera_Settings[4] = -1;
+	}
+}
+
+rule("T(0) == 0: Disable third-person camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 0;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
+	}
+}
+
+rule("T(0) == 1: Enable third-person camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Camera_Type[0] == 1;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Eye Position(Event Player) + Vector(0, 5, 0) + -1 * Facing Direction Of(Event Player) * 10,
+			Eye Position(Event Player) + Facing Direction Of(Event Player) * 10, 50);
+	}
+}
+
+disabled rule("PLAYER: Crouch when in air")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) >= 2;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player, Crouch);
+	}
+}
+
+disabled rule("PLAYER: Uncrouch when near ground")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) < 2;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Crouch);
+	}
+}
+
+rule("MAP: Junkertown")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Junkertown);
+	}
+
+	actions
+	{
+		Global.REAL_Ceiling = 29;
+	}
+}
+
+rule("DEBUG: Host HUD, etc.")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Custom String("POSITION"), Null, Position Of(Event Player), Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("LIFT"), Null,
+			Global.REAL_Rotor_Base_Thrust_Per_Frame * Event Player.REAL_Collective * 0.750 * (1 - Y Component Of(Position Of(Event Player))
+			/ Global.REAL_Ceiling * 100), Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("% of CEILING"), Null, Y Component Of(Position Of(Event Player)) / Global.REAL_Ceiling,
+			Left, 0, White, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("MAP: Lijiang")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Current Map == Map(Lijiang Tower) || Current Map == Map(Lijiang Tower Lunar New Year)) == True;
+	}
+
+	actions
+	{
+		Global.REAL_Ceiling = 148;
+	}
+}
