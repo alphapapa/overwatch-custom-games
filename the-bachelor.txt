@@ -1,0 +1,522 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: Paused
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Brigitte
+			{
+				Barrier Shield Recharge Rate: 0%
+				Primary Fire: Off
+				Quick Melee: Off
+				Repair Pack: Off
+				Shield Bash: Off
+				Ultimate Ability Rally: Off
+				Whip Shot Cooldown Time: 150%
+				Whip Shot Knockback Scalar: 150%
+			}
+
+			Roadhog
+			{
+				Chain Hook Cooldown Time: 50%
+				Movement Gravity: 200%
+				Primary Fire: Off
+				Quick Melee: Off
+				Secondary Fire: Off
+				Take a Breather: Off
+				Ultimate Ability Whole Hog: Off
+			}
+
+			enabled heroes
+			{
+				Brigitte
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: PLAYERS_All
+		1: PLAYER_The_Bachelor
+		2: PLAYER_Chosen_One
+		3: VECTOR_TB_Spawn
+		4: VECTOR_Candidates_Spawn
+		5: PLAYERS_Times_TB
+		6: INT_Temp
+		7: INT_Length_Phase1
+		8: INT_Length_Phase2
+		9: INT_Phase
+		10: REAL_Catch_Radius
+		11: EFFECT_Chosen_One
+		12: VECTOR_Arena_Center
+		13: REAL_Arena_Radius
+		14: REAL_TB_Bounds_Radius
+		15: VECTORS_Barriers
+		16: REAL_Max_Vertical_Selection_Diff
+		17: INT_Score_Limit
+		18: PLAYERS_Winners
+		19: VECTOR_Goal
+		20: REAL_Barrier_Radius
+		21: REAL_Player_Separation_Radius
+}
+
+rule("MAP: Blizz4rd World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Blizzard World);
+	}
+
+	actions
+	{
+		Global.VECTOR_TB_Spawn = Vector(-46.157, 4.565, 103.095);
+		Global.VECTOR_Candidates_Spawn = Vector(-43.762, 1.376, 124.230);
+		Global.VECTOR_Arena_Center = Vector(-50.045, 1.374, 116.263);
+		Global.VECTOR_Goal = Vector(-44.670, 3.345, 106.435);
+		Global.REAL_Catch_Radius = 2.500;
+		Global.REAL_Arena_Radius = 20;
+		Global.REAL_TB_Bounds_Radius = 10;
+		Global.VECTORS_Barriers = Array(Vector(-45.193, 2.576, 108.799));
+		Global.REAL_Barrier_Radius = 4;
+	}
+}
+
+rule("MAP: Oasis University")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Oasis University);
+	}
+
+	actions
+	{
+		Global.VECTOR_TB_Spawn = Vector(-205.946, 20.659, -0.047);
+		Global.REAL_Catch_Radius = 8.500;
+		Global.VECTOR_Arena_Center = Vector(-187.940, 14, 0.059);
+		Global.REAL_Arena_Radius = 25;
+		Global.REAL_TB_Bounds_Radius = 10;
+		Global.VECTOR_Candidates_Spawn = Vector(-171.943, 18.549, -0.040);
+		Global.VECTORS_Barriers = Array(Vector(-199.914, 16.630, -4.015), Vector(-199.988, 16.630, 4.016));
+	}
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.REAL_Player_Separation_Radius = 0.500;
+		Disable Built-In Game Mode Scoring;
+		Disable Built-In Game Mode Completion;
+		Global.INT_Length_Phase1 = 10;
+		Global.INT_Length_Phase2 = 15;
+		"Distance in meters within which a candidate's vertical position must match The Bachelor's.  Prevents candidates within the selection radius from being selected if they are not on the same platform as TB."
+		Global.REAL_Max_Vertical_Selection_Diff = 0.200;
+		"Show TB bounds sphere.  (Probably just for debugging.)"
+		disabled Create Effect(Global.PLAYERS_All, Sphere, Blue, Global.VECTOR_TB_Spawn, Global.REAL_TB_Bounds_Radius, Visible To);
+		Create Effect(Filtered Array(Global.PLAYERS_All, Current Array Element != Global.PLAYER_Chosen_One), Sphere, Red,
+			Global.VECTOR_Arena_Center, Global.REAL_Arena_Radius, Visible To Position and Radius);
+		Global.INT_Score_Limit = 20;
+		Global.PLAYERS_Times_TB = Empty Array;
+		Create Effect(Global.PLAYERS_All, Ring, Purple, Global.VECTOR_Goal, Global.REAL_Catch_Radius, Visible To Position and Radius);
+		Create Icon(Global.PLAYERS_All, Global.VECTOR_Goal, Arrow: Down, Visible To, Purple, True);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Modify Global Variable(PLAYERS_Times_TB, Append To Array, Array(Event Player, 0));
+		Set Damage Received(Event Player, 0);
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		If(!Entity Exists(Global.PLAYER_The_Bachelor));
+			Big Message(All Players(All Teams), Custom String("The Bachelor left.  Next round..."));
+			Global.INT_Phase = 0;
+		Else If(!Entity Exists(Global.PLAYER_Chosen_One));
+			Big Message(All Players(All Teams), Custom String("The Chosen One left.  Next round..."));
+			Global.INT_Phase = 0;
+		End;
+	}
+}
+
+rule("PLAYER: Candidate hooked into \"catch\" zone")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Global.PLAYER_The_Bachelor;
+		Is On Ground(Event Player) == True;
+		Distance Between(Position Of(Event Player), Global.VECTOR_Goal) <= Global.REAL_Catch_Radius;
+		Global.INT_Phase > 0;
+	}
+
+	actions
+	{
+		"Announce and score."
+		If(Event Player != Global.PLAYER_Chosen_One);
+			Big Message(All Players(All Teams), Custom String("{0} tricked The Bachelor into choosing her!", Event Player));
+		Else;
+			Big Message(All Players(All Teams), Custom String("The Bachelor chose the Chosen One!", Event Player));
+			Modify Player Score(Global.PLAYER_The_Bachelor, Global.INT_Phase == 1 ? 2 : 1);
+		End;
+		Modify Player Score(Event Player, Global.INT_Phase == 1 ? 2 : 1);
+		"Prevent further scoring."
+		Global.INT_Phase = -1;
+		Pause Match Time;
+		"Check for winners."
+		Global.PLAYERS_Winners = Filtered Array(All Players(All Teams), Score Of(Event Player) >= Global.INT_Score_Limit);
+		If(Global.PLAYERS_Winners != Empty Array);
+			Big Message(All Players(All Teams), Custom String("Show's over!  Winner: {0} ", Last Of(Sorted Array(All Players(All Teams),
+				Score Of(Current Array Element)))));
+			Wait(5, Ignore Condition);
+			Set Player Score(All Players(All Teams), 0);
+		Else;
+			Wait(2, Ignore Condition);
+		End;
+		"Next round."
+		Global.INT_Phase = 0;
+	}
+}
+
+rule("GLOBAL: PHASE: 0 (next round)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.INT_Phase == 0;
+	}
+
+	actions
+	{
+		Global.PLAYER_The_Bachelor = Null;
+		Global.PLAYER_Chosen_One = Null;
+		"Record smallest number of times any player has been TB."
+		Global.INT_Temp = First Of(Sorted Array(Global.PLAYERS_Times_TB, Current Array Element[1]))[1];
+		"Set new TB to a player that has been selected that many times."
+		disabled Global.PLAYER_The_Bachelor = Random Value In Array(Filtered Array(Global.PLAYERS_Times_TB,
+			Current Array Element[1] == Global.INT_Temp))[0];
+		"Failsafe to select TB."
+		If(Global.PLAYER_The_Bachelor == Null);
+			Global.PLAYER_The_Bachelor = Random Value In Array(All Players(All Teams));
+		End;
+		"Set Chosen One."
+		Global.PLAYER_Chosen_One = Random Value In Array(Filtered Array(All Players(All Teams),
+			Current Array Element != Global.PLAYER_The_Bachelor));
+		"Announce and wait."
+		Big Message(All Players(All Teams), Custom String("{0} is the new Bachelor!", Global.PLAYER_The_Bachelor));
+		Big Message(Global.PLAYER_Chosen_One, Custom String("You are the Chosen One!  Get the Bachelor to choose you!"));
+		Big Message(Filtered Array(All Players(All Teams), !(
+			Current Array Element == Global.PLAYER_The_Bachelor || Current Array Element == Global.PLAYER_Chosen_One)), Custom String(
+			"Get the Bachelor to choose you!"));
+		"Force heroes."
+		Start Forcing Player To Be Hero(Global.PLAYER_The_Bachelor, Hero(Roadhog));
+		Start Forcing Player To Be Hero(Filtered Array(Global.PLAYERS_All, Current Array Element != Global.PLAYER_The_Bachelor), Hero(
+			Brigitte));
+		"Teleport players to the appropriate spawn."
+		For Global Variable(INT_Temp, 0, Count Of(Global.PLAYERS_All), 1);
+			Teleport(Global.PLAYERS_All[Global.INT_Temp],
+				Global.INT_Temp[Global.INT_Temp] == Global.PLAYER_The_Bachelor ? Global.VECTOR_TB_Spawn : Global.VECTOR_Candidates_Spawn);
+		End;
+		Teleport(Global.PLAYER_The_Bachelor, Global.VECTOR_TB_Spawn);
+		Destroy Effect(Global.EFFECT_Chosen_One);
+		Wait(1, Ignore Condition);
+		Global.INT_Phase = 1;
+	}
+}
+
+rule("GLOBAL: PHASE: Start 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.INT_Phase == 1;
+	}
+
+	actions
+	{
+		Pause Match Time;
+		Set Objective Description(Global.PLAYER_The_Bachelor, Custom String(
+			"Phase 1: Guess who the Chosen One is and reel her into the purple zone"), None);
+		Set Objective Description(Global.PLAYER_Chosen_One, Custom String(
+			"Phase 1: You are the Chosen One, but only you know!  Get The Bachelor to choose you!"), None);
+		Set Objective Description(Filtered Array(Global.PLAYERS_All,
+			Current Array Element != Global.PLAYER_The_Bachelor && Current Array Element != Global.PLAYER_Chosen_One), Custom String(
+			"Phase 1: Try to get The Bachelor to choose you!"), None);
+		disabled Wait(2, Ignore Condition);
+		Set Match Time(30);
+		Unpause Match Time;
+	}
+}
+
+rule("GLOBAL: PHASE: End 1, start 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Match Time <= Global.INT_Length_Phase1 + Global.INT_Length_Phase2 - Global.INT_Length_Phase1;
+		Global.INT_Phase == 1;
+	}
+
+	actions
+	{
+		Pause Match Time;
+		Big Message(All Players(All Teams), Custom String("Phase 1 ended.  Revealing the Chosen One!"));
+		Set Objective Description(Global.PLAYER_The_Bachelor, Custom String("Phase 2: Reel in the Chosen One!"), Visible To and String);
+		Wait(2, Ignore Condition);
+		Create Effect(Global.PLAYERS_All, Sparkles, Purple, Position Of(Global.PLAYER_Chosen_One), 2, Visible To Position and Radius);
+		Global.EFFECT_Chosen_One = Last Created Entity;
+		Set Match Time(Global.INT_Length_Phase2);
+		Global.INT_Phase = 2;
+		Unpause Match Time;
+	}
+}
+
+rule("GLOBAL: PHASE: End 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Match Time == 0;
+		Global.INT_Phase == 2;
+	}
+
+	actions
+	{
+		Pause Match Time;
+		Big Message(All Players(All Teams), Custom String("Round ended without a selection!  {0} was the Chosen One!",
+			Global.PLAYER_Chosen_One));
+		Wait(2, Ignore Condition);
+		Global.INT_Phase = 0;
+	}
+}
+
+rule("PLAYER: Out of bounds (candidates)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		disabled Event Player != Global.PLAYER_The_Bachelor;
+		Distance Between(Position Of(Event Player), Global.VECTOR_Arena_Center) >= Global.REAL_Arena_Radius;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Direction Towards(Position Of(Event Player), Global.VECTOR_Arena_Center), 10, To World,
+			Cancel Contrary Motion);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Out of bounds (The Bachelor)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.PLAYER_The_Bachelor;
+		Distance Between(Position Of(Event Player), Global.VECTOR_TB_Spawn) >= Global.REAL_TB_Bounds_Radius;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Direction Towards(Position Of(Event Player), Global.VECTOR_TB_Spawn), 10, To World,
+			Cancel Contrary Motion);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Candidate enters barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Global.PLAYER_The_Bachelor;
+		Has Status(Event Player, Stunned) == False;
+		(Filtered Array(Global.VECTORS_Barriers, Distance Between(Position Of(Event Player), Current Array Element)
+			<= Global.REAL_Barrier_Radius) != Empty Array) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, First Of(Sorted Array(Global.VECTORS_Barriers, Distance Between(Position Of(Event Player),
+			Current Array Element))), 10, To World, Cancel Contrary Motion);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Too close to another player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player), Closest Player To(Event Player, All Teams)) <= Global.REAL_Player_Separation_Radius;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Direction Towards(Closest Player To(Event Player, All Teams), Event Player), 10, To World,
+			Cancel Contrary Motion);
+	}
+}
+
+rule("PLAYER: Disable shield bash close to the circle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Global.PLAYER_The_Bachelor;
+		Distance Between(Position Of(Event Player), Global.VECTOR_Goal) <= 2 * Global.REAL_Catch_Radius;
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Primary Fire);
+	}
+}
+
+rule("PLAYER: Enable shield bash far fromthe circle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Global.PLAYER_The_Bachelor;
+		Distance Between(Event Player, Global.VECTOR_Goal) > Global.REAL_Catch_Radius;
+	}
+
+	actions
+	{
+		Allow Button(Event Player, Primary Fire);
+	}
+}
