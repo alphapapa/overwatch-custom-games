@@ -116,7 +116,8 @@ rule("PLAYER: Joins")
 			White, Visible To Position and Radius);
 		Create Effect(Global.PLAYERS_All, Sphere, Turquoise, Event Player.VECTORS_Fuselage[0], 0.200, Visible To Position and Radius);
 		"Rotor"
-		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Position Of(Event Player) + Vector(0, 2, 0), Event Player.VECTORS_Fuselage[2], White, Visible To Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Position Of(Event Player) + Vector(0, 2, 0), Event Player.VECTORS_Fuselage[2],
+			White, Visible To Position and Radius);
 		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Rotor[0], Event Player.VECTORS_Rotor[1], White,
 			Visible To Position and Radius);
 		"HUD"
@@ -284,23 +285,23 @@ rule("SUBR: PLAYER_Propulsion")
 
 	actions
 	{
-		Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
-		Event Player.VECTOR_Vehicle_Facing = Facing Direction Of(Event Player);
-		Event Player.REAL_Rotor_Angle = Event Player.REAL_Rotor_Angle + 30;
-		If(Event Player.REAL_Rotor_Angle > 359);
-			Event Player.REAL_Rotor_Angle = 0;
-		End;
-		"Lift"
-		Apply Impulse(Event Player, Direction From Angles(0, 0 - Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing)
-			/ -2 - 90), Global.REAL_Rotor_Base_Thrust_Per_Frame * Event Player.REAL_Collective * 0.750 * (1.500 - (Y Component Of(
-			Position Of(Event Player)) / Global.REAL_Ceiling) ^ 2), To Player, Incorporate Contrary Motion);
-		"Drag"
-		Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, (Speed Of(Event Player) * 0.020) ^ 2, To Player,
-			Incorporate Contrary Motion);
-		"Horizontal thrust to fake banking (needed to help with landing)"
-		Apply Impulse(Event Player, Vector(1, 0, 0), Event Player.PLAYER_Bank, To Player, Incorporate Contrary Motion);
-		"Fuselage"
 		If(!Is In Alternate Form(Event Player));
+			Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
+			Event Player.VECTOR_Vehicle_Facing = Facing Direction Of(Event Player);
+			Event Player.REAL_Rotor_Angle = Event Player.REAL_Rotor_Angle + 30;
+			If(Event Player.REAL_Rotor_Angle > 359);
+				Event Player.REAL_Rotor_Angle = 0;
+			End;
+			"Lift"
+			Apply Impulse(Event Player, Direction From Angles(0, 0 - Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing)
+				/ -2 - 90), Global.REAL_Rotor_Base_Thrust_Per_Frame * Event Player.REAL_Collective * 0.750 * (1.500 - (Y Component Of(
+				Position Of(Event Player)) / Global.REAL_Ceiling) ^ 2), To Player, Incorporate Contrary Motion);
+			"Drag"
+			Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, (Speed Of(Event Player) * 0.020) ^ 2, To Player,
+				Incorporate Contrary Motion);
+			"Horizontal thrust to fake banking (needed to help with landing)"
+			Apply Impulse(Event Player, Vector(1, 0, 0), Event Player.PLAYER_Bank, To Player, Incorporate Contrary Motion);
+			"Fuselage"
 			Event Player.VECTORS_Fuselage[0] = Position Of(Event Player) + Vector(0, 2, 0) + -4 * Event Player.VECTOR_Vehicle_Facing;
 			Event Player.VECTORS_Fuselage[1] = Position Of(Event Player) + Vector(0, 1, 0) + Direction From Angles(0,
 				Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing) + 90);
