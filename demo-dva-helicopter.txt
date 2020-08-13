@@ -40,6 +40,8 @@ settings
 		{
 			D.Va
 			{
+				Boosters: Off
+				Movement Speed: 50%
 				Ultimate Generation - Combat Self-Destruct: 0%
 				Ultimate Generation - Passive Self-Destruct: 0%
 			}
@@ -67,6 +69,8 @@ variables
 		5: INT_Camera_Type
 		6: ARRAY_Camera_Settings
 		7: PLAYER_Bank
+		8: VECTORS_Rotor
+		9: REAL_Rotor_Angle
 }
 
 subroutines
@@ -111,6 +115,10 @@ rule("PLAYER: Joins")
 		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Fuselage[0], Position Of(Event Player) + Vector(0, 1, 0),
 			White, Visible To Position and Radius);
 		Create Effect(Global.PLAYERS_All, Sphere, Turquoise, Event Player.VECTORS_Fuselage[0], 0.200, Visible To Position and Radius);
+		"Rotor"
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Position Of(Event Player) + Vector(0, 2, 0), Event Player.VECTORS_Fuselage[2], White, Visible To Position and Radius);
+		Create Beam Effect(Global.PLAYERS_All, Grapple Beam, Event Player.VECTORS_Rotor[0], Event Player.VECTORS_Rotor[1], White,
+			Visible To Position and Radius);
 		"HUD"
 		Create HUD Text(Event Player, Custom String("COLLECTIVE"), Null, Custom String("{0} / {1}", Event Player.REAL_Collective,
 			Global.REAL_Collective_Max), Left, 0, White, White, White, Visible To and String, Default Visibility);
@@ -142,13 +150,14 @@ rule("PLAYER: Spawns")
 	actions
 	{
 		Event Player.REAL_Collective = 0;
+		Event Player.REAL_Rotor_Angle = 0;
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
 		Set Jump Enabled(Event Player, False);
 		Start Rule(PLAYER_Propulsion, Restart Rule);
 	}
 }
 
-rule("PLAYER: Collective (increase)")
+disabled rule("PLAYER: Collective (increase)")
 {
 	event
 	{
@@ -172,7 +181,7 @@ rule("PLAYER: Collective (increase)")
 	}
 }
 
-rule("PLAYER: Collective (decrease)")
+disabled rule("PLAYER: Collective (decrease)")
 {
 	event
 	{
@@ -190,6 +199,30 @@ rule("PLAYER: Collective (decrease)")
 	{
 		Event Player.REAL_Collective = Min(Max(Global.REAL_Collective_Change_Rate * -1 + Event Player.REAL_Collective, 0),
 			Global.REAL_Collective_Max);
+		Set Ultimate Charge(Event Player, Event Player.REAL_Collective);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Collective")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Crouch) == True || Is Button Held(Event Player, Jump) == True) == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Collective = Min(Max((Global.REAL_Collective_Max - Event Player.REAL_Collective) / 40 * (Is Button Held(
+			Event Player, Crouch) ? -1 : 1) + Event Player.REAL_Collective, 0), Global.REAL_Collective_Max);
 		Set Ultimate Charge(Event Player, Event Player.REAL_Collective);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
@@ -253,6 +286,10 @@ rule("SUBR: PLAYER_Propulsion")
 	{
 		Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
 		Event Player.VECTOR_Vehicle_Facing = Facing Direction Of(Event Player);
+		Event Player.REAL_Rotor_Angle = Event Player.REAL_Rotor_Angle + 30;
+		If(Event Player.REAL_Rotor_Angle > 359);
+			Event Player.REAL_Rotor_Angle = 0;
+		End;
 		"Lift"
 		Apply Impulse(Event Player, Direction From Angles(0, 0 - Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing)
 			/ -2 - 90), Global.REAL_Rotor_Base_Thrust_Per_Frame * Event Player.REAL_Collective * 0.750 * (1.500 - (Y Component Of(
@@ -263,9 +300,21 @@ rule("SUBR: PLAYER_Propulsion")
 		"Horizontal thrust to fake banking (needed to help with landing)"
 		Apply Impulse(Event Player, Vector(1, 0, 0), Event Player.PLAYER_Bank, To Player, Incorporate Contrary Motion);
 		"Fuselage"
-		Event Player.VECTORS_Fuselage[0] = Position Of(Event Player) + Vector(0, 2, 0) + -2 * Event Player.VECTOR_Vehicle_Facing;
-		Event Player.VECTORS_Fuselage[1] = Position Of(Event Player) + Vector(0, 1, 0) + Direction From Angles(0,
-			Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing) + 90);
+		If(!Is In Alternate Form(Event Player));
+			Event Player.VECTORS_Fuselage[0] = Position Of(Event Player) + Vector(0, 2, 0) + -4 * Event Player.VECTOR_Vehicle_Facing;
+			Event Player.VECTORS_Fuselage[1] = Position Of(Event Player) + Vector(0, 1, 0) + Direction From Angles(0,
+				Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing) + 90);
+			Event Player.VECTORS_Fuselage[2] = Position Of(Event Player) + Direction From Angles(Horizontal Angle From Direction(
+				Event Player.VECTOR_Vehicle_Facing), 0 - Vertical Angle From Direction(Event Player.VECTOR_Vehicle_Facing) / -2 - 90) * 3;
+			Event Player.VECTORS_Rotor[0] = Event Player.VECTORS_Fuselage[2] + Direction From Angles(Event Player.REAL_Rotor_Angle, 0) * 3;
+			Event Player.VECTORS_Rotor[1] = Event Player.VECTORS_Fuselage[2] + Direction From Angles(Event Player.REAL_Rotor_Angle, 0) * -3;
+		Else;
+			Event Player.VECTORS_Fuselage[0] = Position Of(Event Player);
+			Event Player.VECTORS_Fuselage[1] = Position Of(Event Player);
+			Event Player.VECTORS_Fuselage[2] = Position Of(Event Player);
+			Event Player.VECTORS_Rotor[0] = Position Of(Event Player);
+			Event Player.VECTORS_Rotor[1] = Position Of(Event Player);
+		End;
 		"Misc"
 		Event Player.VECTOR_Last_Position = Position Of(Event Player);
 		Wait(Global.REAL_Loop_Delay, Ignore Condition);
