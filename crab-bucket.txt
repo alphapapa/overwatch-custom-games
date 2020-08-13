@@ -130,8 +130,7 @@ rule("MAP: Blizz4rd World")
 		Global.VECTOR_Arena_Center = Vector(-14.674, -3.479, 12.609);
 		Global.VECTOR_Goal = Vector(-9.030, 1.631, 21.013);
 		Global.VECTOR_Jump_Pad = Vector(-17.100, -3.473, 13.245);
-		Global.VECTORS_Barriers = Array(Vector(3.103, -3.464, 11.313), Vector(11.005, -3.482, 16.753), Vector(-7.115, -2.365, -3.246),
-			Vector(-11.544, -2.465, -4.993), Vector(-15.145, -2.454, -5.833), Vector(-19.065, -2.458, -5.435));
+		Global.VECTORS_Barriers = Empty Array;
 		Global.REAL_Arena_Sphere_Radius = 20;
 	}
 }
