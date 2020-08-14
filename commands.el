@@ -47,11 +47,13 @@ the inspector as rules."
 
 ;; Settings I use when not using my main config.
 
+(menu-bar-mode -1)
+(tool-bar-mode -1)
 (electric-pair-mode 1)
+
 (set-face-font 'default "Lucida Console")
 
 (require 'package)
 (setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
                          ("melpa" . "https://melpa.org/packages/")))
-
 (package-initialize)
