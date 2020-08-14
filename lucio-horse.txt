@@ -20,7 +20,23 @@ settings
 		{
 			enabled maps
 			{
+				Black Forest
+				Blizzard World
+				Castillo
+				Château Guillard
+				Dorado
+				Eichenwalde
+				Hollywood
+				Ilios Lighthouse
+				Ilios Ruins
 				Ilios Well
+				Necropolis
+				Oasis City Center
+				Oasis Gardens
+				Oasis University
+				Paris
+				Petra
+				Temple of Anubis
 			}
 		}
 
@@ -28,7 +44,6 @@ settings
 		{
 			Allow Hero Switching: Off
 			Enemy Health Bars: Off
-			Game Length In Minutes: 15
 			Game Mode Start: Immediately
 			Hero Limit: Off
 			Respawn As Random Hero: On
@@ -81,6 +96,7 @@ variables
 		14: BOOL_Follower_Ready
 		15: REAL_Time_Remaining
 		16: REAL_Time_Limit
+		17: REAL_Allowed_Delay_Seconds
 		18: REAL_Checkpoint_Radius_Factor
 		20: REAL_Checkpoint_Min_Separation
 		21: PLAYER_Of_Interest
@@ -136,11 +152,14 @@ rule("INIT")
 
 	actions
 	{
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
 		"Initialize variables."
 		Global.REAL_Checkpoint_Radius = 1;
 		Global.REAL_Checkpoint_Radius_Factor = 1.500;
 		Global.REAL_Time_Limit = 10;
+		Global.REAL_Allowed_Delay_Seconds = 30;
 		Global.REAL_Checkpoint_Min_Separation = 2;
 		"HUD"
 		Create HUD Text(Global.PLAYERS_All, Custom String("BEGIN TURN"), Custom String("When it's your turn"), Custom String("Press: {0}",
@@ -152,6 +171,8 @@ rule("INIT")
 			White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("FOLLOWER"), Custom String("Follows course"), Global.PLAYER_Follower, Left, 0,
 			White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("TELEPORT"), Custom String("To checkpoint #1"), Custom String("Press: {0}",
+			Input Binding String(Button(Reload))), Right, 0, White, Turquoise, White, Visible To and String, Default Visibility);
 		"Effects."
 		Create Effect(Global.PLAYERS_All, Bad Aura, Green, Global.PLAYER_Leader, 0.500, Visible To Position and Radius);
 		Create Effect(Global.PLAYERS_All, Good Aura, Green, Global.PLAYER_Follower, 0.500, Visible To Position and Radius);
@@ -240,6 +261,7 @@ rule("PLAYER: Leader attaches for first time, beginning turn")
 		Global.BOOL_Leader_Started = True;
 		Global.REAL_Time_Remaining = Global.REAL_Time_Limit;
 		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, Destination and Rate);
+		Set Match Time(Global.REAL_Time_Limit);
 	}
 }
 
@@ -348,6 +370,7 @@ rule("SUBR: ROUND_Next")
 		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Leader), Custom String(
 			"Wait for {0} to set a path for you to follow.", Global.PLAYER_Leader), Visible To and String);
 		Global.PLAYER_Of_Interest = Global.PLAYER_Leader;
+		Set Match Time(Global.REAL_Allowed_Delay_Seconds);
 	}
 }
 
@@ -412,6 +435,7 @@ rule("SUBR: TURN_Next")
 				Visible To and String);
 			Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Follower), Custom String(
 				"Wait for {0} to follow {1}'s path", Global.PLAYER_Follower, Global.PLAYER_Leader), Visible To and String);
+			Set Match Time(Global.REAL_Allowed_Delay_Seconds);
 		"No more followers.  Next round."
 		Else;
 			Call Subroutine(ROUND_Next);
@@ -440,6 +464,7 @@ rule("PLAYER: Follower begins turn")
 	{
 		Global.BOOL_Follower_Started = True;
 		Small Message(All Players(All Teams), Custom String("{0} began following {1}'s path", Event Player, Global.PLAYER_Leader));
+		Set Match Time(0);
 	}
 }
 
@@ -465,7 +490,7 @@ rule("PLAYER: Follower hits checkpoint")
 	{
 		Global.INT_Checkpoints_Completed += 1;
 		Play Effect(All Players(All Teams), Good Explosion, Green, Event Player, 2);
-		Play Effect(All Players(All Teams), Buff Impact Sound, White, Event Player, 5);
+		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Event Player, 50);
 		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
 			Call Subroutine(TURN_End);
 		End;
@@ -634,5 +659,66 @@ rule("PLAYER: Dies (Leader forfeits turn if course not already laid out.)")
 	actions
 	{
 		Call Subroutine(ROUND_Next);
+	}
+}
+
+rule("PLAYER: Leader times out before starting course")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Leader_Started == False;
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Call Subroutine(ROUND_Next);
+	}
+}
+
+rule("PLAYER: Follower times out before starting course")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Leader_Finished == True;
+		Global.BOOL_Follower_Started == False;
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Call Subroutine(TURN_End);
+	}
+}
+
+rule("PLAYER: Teleports to #1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		((Event Player == Global.PLAYER_Follower && Global.BOOL_Follower_Started == False) || (Event Player != Global.PLAYER_Leader))
+			== True;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Nearest Walkable Position(First Of(First Of(Global.VECTORS_EFFECTS_Checkpoints))));
 	}
 }
