@@ -68,7 +68,7 @@ variables
 		1: PLAYER_Leader
 		2: BOOL_Leader_Started
 		3: PLAYERS_All
-		4: BOOL_Leader_Fell
+		4: BOOL_Leader_Finished
 		5: INT_Checkpoints_Completed
 		6: VECTOR_Temp
 		7: PLAYER_Follower
@@ -255,7 +255,7 @@ rule("PLAYER: Leader attached to wall")
 	conditions
 	{
 		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Fell == False;
+		Global.BOOL_Leader_Finished == False;
 		Global.BOOL_Leader_Started == True;
 		Is On Wall(Event Player) == True;
 	}
@@ -278,7 +278,7 @@ rule("PLAYER: Leader detached from wall")
 	conditions
 	{
 		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Fell == False;
+		Global.BOOL_Leader_Finished == False;
 		Global.BOOL_Leader_Started == True;
 		Is On Wall(Event Player) == False;
 	}
@@ -301,14 +301,14 @@ rule("PLAYER: Leader fell")
 	conditions
 	{
 		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Fell == False;
+		Global.BOOL_Leader_Finished == False;
 		Global.BOOL_Leader_Started == True;
 		Is On Ground(Event Player) == True;
 	}
 
 	actions
 	{
-		Global.BOOL_Leader_Fell = True;
+		Global.BOOL_Leader_Finished = True;
 		Big Message(All Players(All Teams), Custom String("{0}'s run finished", Event Player));
 		Call Subroutine(TURN_Next);
 	}
@@ -331,7 +331,7 @@ rule("SUBR: ROUND_Next")
 		Global.INT_Checkpoints_Completed = 0;
 		Global.BOOL_Leader_Ready = False;
 		Global.BOOL_Leader_Started = False;
-		Global.BOOL_Leader_Fell = False;
+		Global.BOOL_Leader_Finished = False;
 		Global.REAL_Time_Remaining = Global.REAL_Time_Limit;
 		"Choose new \"it\"."
 		Global.PLAYER_Leader = First Of(Sorted Array(All Players(All Teams), Current Array Element.INT_Times_Leader));
@@ -411,7 +411,7 @@ rule("SUBR: TURN_Next")
 			Set Objective Description(Global.PLAYER_Follower, Custom String("Your turn!  Follow {0}'s path", Global.PLAYER_Leader),
 				Visible To and String);
 			Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Follower), Custom String(
-				"Wait for {0} to follow {1}'s path", Global.PLAYER_Leader), Visible To and String);
+				"Wait for {0} to follow {1}'s path", Global.PLAYER_Follower, Global.PLAYER_Leader), Visible To and String);
 		"No more followers.  Next round."
 		Else;
 			Call Subroutine(ROUND_Next);
@@ -557,12 +557,12 @@ rule("PLAYER: Leader ran out of time")
 	{
 		Global.BOOL_Leader_Started == True;
 		Global.REAL_Time_Remaining == 0;
-		Global.BOOL_Leader_Fell == False;
+		Global.BOOL_Leader_Finished == False;
 	}
 
 	actions
 	{
-		Global.BOOL_Leader_Fell = True;
+		Global.BOOL_Leader_Finished = True;
 		Big Message(All Players(All Teams), Custom String("{0}'s run finished", Global.PLAYER_Leader));
 		Small Message(Global.PLAYER_Leader, Custom String("Time's up!"));
 		Call Subroutine(TURN_Next);
@@ -613,5 +613,26 @@ rule("PLAYER: Dies (Teleport follower near to the checkpoint if not started yet.
 		Respawn(Event Player);
 		Wait(0.250, Ignore Condition);
 		Teleport(Event Player, Nearest Walkable Position(First Of(First Of(Global.VECTORS_EFFECTS_Checkpoints))));
+	}
+}
+
+rule("PLAYER: Dies (Leader forfeits turn if course not already laid out.)")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.PLAYER_Leader;
+		Global.BOOL_Leader_Finished == False;
+	}
+
+	actions
+	{
+		Call Subroutine(ROUND_Next);
 	}
 }
