@@ -81,19 +81,13 @@ variables
 	global:
 		0: VECTORS_EFFECTS_Checkpoints
 		1: PLAYER_Leader
-		2: BOOL_Leader_Started
 		3: PLAYERS_All
-		4: BOOL_Leader_Finished
 		5: INT_Checkpoints_Completed
 		6: VECTOR_Temp
 		7: PLAYER_Follower
 		8: PLAYERS_Tried_This_Round
 		9: REAL_Checkpoint_Radius
 		10: EFFECT_Current_Checkpoint
-		11: BOOL_Follower_Started
-		12: BOOL_Follower_Fell
-		13: BOOL_Leader_Ready
-		14: BOOL_Follower_Ready
 		15: REAL_Time_Remaining
 		16: REAL_Time_Limit
 		17: REAL_Allowed_Delay_Seconds
@@ -104,6 +98,8 @@ variables
 	player:
 		0: INT_Times_Leader
 		1: BOOL_Ready
+		2: BOOL_Started
+		3: BOOL_Finished
 }
 
 subroutines
@@ -131,7 +127,7 @@ rule("CREDITS")
 		Small Message(All Players(All Teams), Custom String("Thanks to these playtesters:"));
 		Small Message(All Players(All Teams), Custom String("OGGamerTag, DPSFrog, Zrizzt, Pheonix050"));
 		Small Message(All Players(All Teams), Custom String("Jakesicle, XFacts, Creepercomix, Aurorus"));
-		Small Message(All Players(All Teams), Custom String("BluePhoenix"));
+		Small Message(All Players(All Teams), Custom String("BluePhoenix, Spiralgaster, Teradeus"));
 	}
 }
 
@@ -193,6 +189,13 @@ rule("INIT")
 		Create Effect(Global.PLAYERS_All, Bad Aura, Green, Global.PLAYER_Leader, 0.500, Visible To Position and Radius);
 		Create Effect(Global.PLAYERS_All, Good Aura, Green, Global.PLAYER_Follower, 0.500, Visible To Position and Radius);
 		Create Icon(Global.PLAYERS_All, Global.PLAYER_Of_Interest, Flag, Visible To and Position, Green, True);
+		"Objectives (IIUC these only need to be set once, and reevaluation will update them)."
+		Set Objective Description(Global.PLAYER_Follower, Custom String("Your turn!  Follow {0}'s path", Global.PLAYER_Leader),
+			Visible To and String);
+		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Follower), Custom String(
+			"Wait for {0} to follow {1}'s path", Global.PLAYER_Follower, Global.PLAYER_Leader), Visible To and String);
+		"Avoid initial race condition."
+		Global.REAL_Time_Remaining = 99;
 	}
 }
 
@@ -207,10 +210,8 @@ rule("PLAYER: Joins")
 
 	actions
 	{
-		"Update list of players."
 		Global.PLAYERS_All = All Players(All Teams);
 		Event Player.INT_Times_Leader = 0;
-		Start Forcing Player Outlines(Event Player, Global.PLAYERS_All, True, Green);
 		Set Status(Event Player, Null, Phased Out, 9999);
 	}
 }
@@ -230,7 +231,9 @@ rule("PLAYER: Leaves")
 		If(!Entity Exists(Global.PLAYER_Leader));
 			Small Message(All Players(All Teams), Custom String("Leader left.  Next round..."));
 			Call Subroutine(ROUND_Next);
+		"Player who left was current follower: next turn."
 		Else If(Global.PLAYER_Follower != Null && !Entity Exists(Global.PLAYER_Follower));
+			Small Message(All Players(All Teams), Custom String("Follower left.  Next turn..."));
 			Call Subroutine(TURN_Next);
 		End;
 	}
@@ -251,6 +254,7 @@ rule("GLOBAL: Game begins")
 
 	actions
 	{
+		"Wait for deathmatch \"countdown\" phase to end.  Otherwise, setting the match time might cause players to be stuck, immobilized, in the countdown phase."
 		Wait(5, Ignore Condition);
 		Call Subroutine(ROUND_Next);
 	}
@@ -268,17 +272,19 @@ rule("PLAYER: Leader dies (Leader forfeits turn if course not already laid out.)
 	conditions
 	{
 		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Started == True;
-		Global.BOOL_Leader_Finished == False;
+		Event Player.BOOL_Started == True;
+		Event Player.BOOL_Finished == False;
 	}
 
 	actions
 	{
+		Small Message(All Players(All Teams), Custom String("{0} died while laying out course.  Turn forfeited.", Global.PLAYER_Leader));
+		Wait(0.250, Ignore Condition);
 		Call Subroutine(ROUND_Next);
 	}
 }
 
-rule("PLAYER: Leader times out before starting course")
+rule("GLOBAL: Leader times out before starting course")
 {
 	event
 	{
@@ -287,143 +293,19 @@ rule("PLAYER: Leader times out before starting course")
 
 	conditions
 	{
-		Global.BOOL_Leader_Started == False;
+		Global.PLAYER_Leader.BOOL_Started == False;
 		Global.REAL_Time_Remaining == 0;
 	}
 
 	actions
 	{
 		Small Message(All Players(All Teams), Custom String("{0} took too long to start laying out course", Global.PLAYER_Leader));
+		Wait(0.250, Ignore Condition);
 		Call Subroutine(ROUND_Next);
 	}
 }
 
-rule("PLAYER: Leader declares ready")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Started == False;
-		Event Player.BOOL_Ready == False;
-		Is Button Held(Event Player, Interact) == True;
-	}
-
-	actions
-	{
-		Small Message(All Players(All Teams), Custom String("{0} is laying out new course", Event Player));
-		Event Player.BOOL_Ready = True;
-		Destroy All Effects;
-		Destroy All In-World Text;
-		Wait(0.250, Ignore Condition);
-		Create Effect(Global.PLAYERS_All, Bad Aura, Green, Global.PLAYER_Leader, 0.500, Visible To Position and Radius);
-	}
-}
-
-rule("PLAYER: Leader attaches for first time, beginning turn")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Started == False;
-		Event Player.BOOL_Ready == True;
-		Is On Wall(Event Player) == True;
-	}
-
-	actions
-	{
-		Global.BOOL_Leader_Started = True;
-		Global.REAL_Time_Remaining = Global.REAL_Time_Limit;
-		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, Destination and Rate);
-		Set Match Time(Global.REAL_Time_Limit);
-	}
-}
-
-rule("PLAYER: Leader attached to wall")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Finished == False;
-		Global.BOOL_Leader_Started == True;
-		Is On Wall(Event Player) == True;
-	}
-
-	actions
-	{
-		Call Subroutine(CHECKPOINT_Record);
-	}
-}
-
-rule("PLAYER: Leader detached from wall")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Finished == False;
-		Global.BOOL_Leader_Started == True;
-		Is On Wall(Event Player) == False;
-	}
-
-	actions
-	{
-		Call Subroutine(CHECKPOINT_Record);
-	}
-}
-
-rule("PLAYER: Leader finished")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player == Global.PLAYER_Leader;
-		Global.BOOL_Leader_Finished == False;
-		Global.BOOL_Leader_Started == True;
-		Is On Ground(Event Player) == True;
-	}
-
-	actions
-	{
-		Global.BOOL_Leader_Finished = True;
-		Small Message(All Players(All Teams), Custom String("{0} laid out new course", Global.PLAYER_Leader));
-		Call Subroutine(TURN_Next);
-	}
-}
-
-rule("PLAYER: Leader ran out of time")
+rule("GLOBAL: Leader declares ready")
 {
 	event
 	{
@@ -432,16 +314,127 @@ rule("PLAYER: Leader ran out of time")
 
 	conditions
 	{
-		Global.BOOL_Leader_Started == True;
-		Global.REAL_Time_Remaining == 0;
-		Global.BOOL_Leader_Finished == False;
+		Global.PLAYER_Leader.BOOL_Ready == False;
+		Global.PLAYER_Leader.BOOL_Started == False;
+		Is Button Held(Global.PLAYER_Leader, Interact) == True;
 	}
 
 	actions
 	{
-		Global.BOOL_Leader_Finished = True;
+		Global.PLAYER_Leader.BOOL_Ready = True;
+		Small Message(All Players(All Teams), Custom String("{0} is laying out new course", Global.PLAYER_Leader));
+		Destroy All Effects;
+		Destroy All In-World Text;
+		Create Effect(Global.PLAYERS_All, Bad Aura, Green, Global.PLAYER_Leader, 0.500, Visible To Position and Radius);
+	}
+}
+
+rule("GLOBAL: Leader attaches for first time, beginning turn")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Leader.BOOL_Ready == True;
+		Global.PLAYER_Leader.BOOL_Started == False;
+		Is On Wall(Global.PLAYER_Leader) == True;
+	}
+
+	actions
+	{
+		Global.PLAYER_Leader.BOOL_Started = True;
+		Global.REAL_Time_Remaining = Global.REAL_Time_Limit;
+		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, Destination and Rate);
+		Set Match Time(Global.REAL_Time_Limit);
+	}
+}
+
+rule("GLOBAL: Leader attached to wall")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Leader.BOOL_Started == True;
+		Global.PLAYER_Leader.BOOL_Finished == False;
+		Is On Wall(Global.PLAYER_Leader) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(CHECKPOINT_Record);
+	}
+}
+
+rule("GLOBAL: Leader detached from wall")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Leader.BOOL_Started == True;
+		Global.PLAYER_Leader.BOOL_Finished == False;
+		Is On Wall(Global.PLAYER_Leader) == False;
+	}
+
+	actions
+	{
+		Call Subroutine(CHECKPOINT_Record);
+	}
+}
+
+rule("GLOBAL: Leader finished")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Leader.BOOL_Started == True;
+		Global.PLAYER_Leader.BOOL_Finished == False;
+		Is On Ground(Global.PLAYER_Leader) == True;
+	}
+
+	actions
+	{
+		Global.PLAYER_Leader.BOOL_Finished = True;
+		Small Message(All Players(All Teams), Custom String("{0} laid out new course", Global.PLAYER_Leader));
+		Wait(0.250, Ignore Condition);
+		Call Subroutine(TURN_Next);
+	}
+}
+
+rule("GLOBAL: Leader ran out of time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Leader.BOOL_Started == True;
+		Global.PLAYER_Leader.BOOL_Finished == False;
+		Global.REAL_Time_Remaining == 0;
+	}
+
+	actions
+	{
+		Global.PLAYER_Leader.BOOL_Finished = True;
 		Big Message(All Players(All Teams), Custom String("{0}'s run finished", Global.PLAYER_Leader));
 		Small Message(Global.PLAYER_Leader, Custom String("Time's up!"));
+		Wait(0.250, Ignore Condition);
 		Call Subroutine(TURN_Next);
 	}
 }
@@ -458,7 +451,8 @@ rule("PLAYER: Follower dies (Teleport follower near to the checkpoint if not sta
 	conditions
 	{
 		Event Player == Global.PLAYER_Follower;
-		Global.BOOL_Follower_Started == False;
+		Event Player.BOOL_Started == False;
+		"Course has been laid out, or at least the first checkpoint has."
 		Global.VECTORS_EFFECTS_Checkpoints != Empty Array;
 	}
 
@@ -470,7 +464,7 @@ rule("PLAYER: Follower dies (Teleport follower near to the checkpoint if not sta
 	}
 }
 
-rule("PLAYER: Follower times out before starting course")
+rule("GLOBAL: Follower times out before starting course")
 {
 	event
 	{
@@ -479,117 +473,115 @@ rule("PLAYER: Follower times out before starting course")
 
 	conditions
 	{
-		Global.BOOL_Leader_Finished == True;
-		Global.BOOL_Follower_Started == False;
+		Global.PLAYER_Leader.BOOL_Finished == True;
+		Global.PLAYER_Follower.BOOL_Started == False;
 		Global.REAL_Time_Remaining == 0;
 	}
 
 	actions
 	{
 		Small Message(All Players(All Teams), Custom String("{0} took too long to start following course", Global.PLAYER_Follower));
+		Wait(0.250, Ignore Condition);
 		Call Subroutine(TURN_End);
 	}
 }
 
-rule("PLAYER: Follower declares ready")
+rule("GLOBAL: Follower declares ready")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
+		Ongoing - Global;
 	}
 
 	conditions
 	{
-		Event Player == Global.PLAYER_Follower;
-		Global.BOOL_Follower_Started == False;
-		Event Player.BOOL_Ready == False;
-		Is Button Held(Event Player, Interact) == True;
-		Global.BOOL_Leader_Finished == True;
+		Global.PLAYER_Leader.BOOL_Finished == True;
+		Global.PLAYER_Follower.BOOL_Started == False;
+		Global.PLAYER_Follower.BOOL_Ready == False;
+		Is Button Held(Global.PLAYER_Follower, Interact) == True;
 	}
 
 	actions
 	{
-		Small Message(All Players(All Teams), Custom String("{0} is ready to follow", Event Player, Global.PLAYER_Leader));
-		Event Player.BOOL_Ready = True;
+		Small Message(All Players(All Teams), Custom String("{0} is ready to follow", Global.PLAYER_Follower, Global.PLAYER_Leader));
+		Wait(0.250, Ignore Condition);
+		Global.PLAYER_Follower.BOOL_Ready = True;
 	}
 }
 
-rule("PLAYER: Follower begins turn")
+rule("GLOBAL: Follower begins turn")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
+		Ongoing - Global;
 	}
 
 	conditions
 	{
-		Event Player == Global.PLAYER_Follower;
-		Global.BOOL_Follower_Started == False;
-		Event Player.BOOL_Ready == True;
-		Is On Wall(Event Player) == True;
+		Global.PLAYER_Leader.BOOL_Finished == True;
+		Global.PLAYER_Follower.BOOL_Ready == True;
+		Global.PLAYER_Follower.BOOL_Started == False;
+		Is On Wall(Global.PLAYER_Follower) == True;
 	}
 
 	actions
 	{
-		Global.BOOL_Follower_Started = True;
-		Small Message(All Players(All Teams), Custom String("{0} began following", Event Player, Global.PLAYER_Leader));
+		"No time limit for follower (for now, anyway)."
 		Set Match Time(0);
+		Stop Chasing Global Variable(REAL_Time_Remaining);
+		Wait(0.250, Ignore Condition);
+		Global.PLAYER_Follower.BOOL_Started = True;
+		Small Message(All Players(All Teams), Custom String("{0} began following course", Global.PLAYER_Follower));
 	}
 }
 
-rule("PLAYER: Follower hits checkpoint")
+rule("GLOBAL: Follower hits checkpoint")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
+		Ongoing - Global;
 	}
 
 	conditions
 	{
-		Event Player == Global.PLAYER_Follower;
-		Global.BOOL_Follower_Started == True;
-		Global.BOOL_Follower_Fell == False;
-		Distance Between(Eye Position(Event Player), Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0])
+		Global.PLAYER_Leader.BOOL_Finished == True;
+		Global.PLAYER_Follower.BOOL_Started == True;
+		Global.PLAYER_Follower.BOOL_Finished == False;
+		Distance Between(Eye Position(Global.PLAYER_Follower), Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0])
 			<= Global.REAL_Checkpoint_Radius * Global.REAL_Checkpoint_Radius_Factor;
 	}
 
 	actions
 	{
 		Global.INT_Checkpoints_Completed += 1;
-		Play Effect(All Players(All Teams), Good Explosion, Green, Event Player, 2);
-		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Event Player, 50);
+		Play Effect(All Players(All Teams), Good Explosion, Green, Global.PLAYER_Follower, 2);
+		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Global.PLAYER_Follower, 50);
 		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
+			Wait(0.250, Ignore Condition);
 			Call Subroutine(TURN_End);
 		End;
 	}
 }
 
-rule("PLAYER: Follower fell")
+rule("GLOBAL: Follower finished")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
+		Ongoing - Global;
 	}
 
 	conditions
 	{
-		Event Player == Global.PLAYER_Follower;
-		Global.BOOL_Follower_Fell == False;
-		Global.BOOL_Follower_Started == True;
-		Is On Ground(Event Player) == True;
+		Global.PLAYER_Leader.BOOL_Finished == True;
+		Global.PLAYER_Follower.BOOL_Started == True;
+		Global.PLAYER_Follower.BOOL_Finished == False;
+		Is On Ground(Global.PLAYER_Follower) == True;
 	}
 
 	actions
 	{
-		Global.BOOL_Follower_Fell = True;
+		Global.PLAYER_Follower.BOOL_Finished = True;
+		Wait(0.250, Ignore Condition);
 		Call Subroutine(TURN_End);
 	}
 }
@@ -605,8 +597,9 @@ rule("PLAYER: Teleports to #1")
 
 	conditions
 	{
-		((Event Player == Global.PLAYER_Follower && Global.BOOL_Follower_Started == False) || (Event Player != Global.PLAYER_Leader))
-			== True;
+		Global.PLAYER_Leader.BOOL_Finished == True;
+		((Event Player == Global.PLAYER_Follower && Global.PLAYER_Follower.BOOL_Started == False) || (
+			Event Player != Global.PLAYER_Follower)) == True;
 		Is Button Held(Event Player, Reload) == True;
 	}
 
@@ -615,6 +608,7 @@ rule("PLAYER: Teleports to #1")
 		If(Global.VECTORS_EFFECTS_Checkpoints == Empty Array);
 			Small Message(Event Player, Custom String("Course not yet laid out"));
 		Else;
+			Small Message(Event Player, Custom String("Teleporting to checkpoint #1"));
 			Teleport(Event Player, Nearest Walkable Position(First Of(First Of(Global.VECTORS_EFFECTS_Checkpoints))));
 		End;
 	}
@@ -633,29 +627,20 @@ rule("SUBR: ROUND_Next")
 		"Silly dance with match time to avoid players being stuck in undocumented and inaccessible COUNTDOWN phase when the game starts."
 		Set Match Time(0);
 		Stop Chasing Global Variable(REAL_Time_Remaining);
-		Wait(0.250, Ignore Condition);
 		Set Match Time(Global.REAL_Allowed_Delay_Seconds);
-		"Use this variable to track whether players have timed out.  (Can't use match time for this because of numerous race conditions.)"
-		Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-		Wait(0.250, Ignore Condition);
-		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
-		"Initialize variables."
+		"Reset global variables."
 		Global.VECTORS_EFFECTS_Checkpoints = Empty Array;
 		Global.PLAYER_Follower = Null;
 		Global.PLAYERS_Tried_This_Round = Empty Array;
 		Global.INT_Checkpoints_Completed = 0;
-		Global.BOOL_Leader_Ready = False;
-		Global.BOOL_Leader_Started = False;
-		Global.BOOL_Leader_Finished = False;
 		"Choose new \"it\"."
 		Global.PLAYER_Leader = First Of(Sorted Array(All Players(All Teams), Current Array Element.INT_Times_Leader));
-		"Avoid race condition."
-		Wait(0.250, Ignore Condition);
 		"Increment that player's times-it counter."
 		Global.PLAYER_Leader.INT_Times_Leader += 1;
+		"Initialize new leader's variables."
 		Global.PLAYER_Leader.BOOL_Ready = False;
-		"Avoid race condition."
-		Wait(0.250, Ignore Condition);
+		Global.PLAYER_Leader.BOOL_Started = False;
+		Global.PLAYER_Leader.BOOL_Finished = False;
 		"Announce."
 		Big Message(All Players(All Teams), Custom String("{0} is the leader", Global.PLAYER_Leader));
 		Small Message(Global.PLAYER_Leader, Custom String("You're the leader.  Press {0} when ready, then start wallriding.",
@@ -664,6 +649,9 @@ rule("SUBR: ROUND_Next")
 			Visible To and String);
 		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Leader), Custom String(
 			"Wait for {0} to set a path for you to follow.", Global.PLAYER_Leader), Visible To and String);
+		"Use this variable to track whether players have timed out.  (Can't use match time for this because of numerous race conditions.)"
+		Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
+		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 		Global.PLAYER_Of_Interest = Global.PLAYER_Leader;
 	}
 }
@@ -679,7 +667,7 @@ rule("SUBR: CHECKPOINT_Record")
 	actions
 	{
 		"Save position in a variable to ensure that the position of the effect and the recorded vector are the same."
-		Global.VECTOR_Temp = Eye Position(Event Player);
+		Global.VECTOR_Temp = Eye Position(Global.PLAYER_Leader);
 		Abort If(Global.VECTORS_EFFECTS_Checkpoints != Empty Array && Distance Between(Global.VECTOR_Temp, First Of(Last Of(
 			Global.VECTORS_EFFECTS_Checkpoints))) <= Global.REAL_Checkpoint_Min_Separation);
 		Global.INT_Checkpoints_Completed += 1;
@@ -700,45 +688,40 @@ rule("SUBR: TURN_Next")
 
 	actions
 	{
-		"Initialize vars."
-		Global.BOOL_Follower_Fell = False;
-		Global.BOOL_Follower_Ready = False;
-		Global.BOOL_Follower_Started = False;
-		Global.INT_Checkpoints_Completed = 0;
+		Pause Match Time;
 		Stop Chasing Global Variable(REAL_Time_Remaining);
 		Wait(0.250, Ignore Condition);
-		Set Match Time(Global.REAL_Allowed_Delay_Seconds);
-		Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-		Wait(0.250, Ignore Condition);
-		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
-		"Choose new follower."
+		"Select next follower."
 		Global.PLAYER_Follower = Random Value In Array(Filtered Array(All Players(All Teams), !(
 			Current Array Element == Global.PLAYER_Leader || Array Contains(Global.PLAYERS_Tried_This_Round, Current Array Element))));
 		"Next follower's turn."
 		If(Entity Exists(Global.PLAYER_Follower));
-			"RACE CONDITIONS!!!!!!!111!"
-			Wait(0.250, Ignore Condition);
+			"Reset follower's status variables."
+			Global.PLAYER_Follower.BOOL_Ready = False;
+			Global.PLAYER_Follower.BOOL_Started = False;
+			Global.PLAYER_Follower.BOOL_Finished = False;
 			"Add to list of followers this round."
 			Modify Global Variable(PLAYERS_Tried_This_Round, Append To Array, Global.PLAYER_Follower);
-			"Avoid race condition."
-			Wait(0.250, Ignore Condition);
 			"Reset current-checkpoint effect."
 			Destroy Effect(Global.EFFECT_Current_Checkpoint);
 			Create Effect(Global.PLAYERS_All, Sphere, Orange, Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0],
 				Global.REAL_Checkpoint_Radius / 2, Visible To Position and Radius);
 			Global.EFFECT_Current_Checkpoint = Last Created Entity;
-			Global.PLAYER_Of_Interest = Global.PLAYER_Follower;
-			Global.PLAYER_Follower.BOOL_Ready = False;
 			"Announce."
 			Small Message(All Players(All Teams), Custom String("{0}'s turn to follow", Global.PLAYER_Follower));
 			Small Message(Global.PLAYER_Follower, Custom String("Your turn!  Press {0} when ready, then follow {1}'s path.",
 				Input Binding String(Button(Interact)), Global.PLAYER_Leader));
-			Set Objective Description(Global.PLAYER_Follower, Custom String("Your turn!  Follow {0}'s path", Global.PLAYER_Leader),
-				Visible To and String);
-			Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Follower), Custom String(
-				"Wait for {0} to follow {1}'s path", Global.PLAYER_Follower, Global.PLAYER_Leader), Visible To and String);
+			"Reset variables."
+			Global.INT_Checkpoints_Completed = 0;
+			Global.PLAYER_Of_Interest = Global.PLAYER_Follower;
+			"Match time."
+			Set Match Time(Global.REAL_Allowed_Delay_Seconds);
+			Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
+			Wait(0.250, Ignore Condition);
+			Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 		"No more followers.  Next round."
 		Else;
+			Wait(0.250, Ignore Condition);
 			Call Subroutine(ROUND_Next);
 		End;
 	}
@@ -754,7 +737,7 @@ rule("SUBR: TURN_End")
 
 	actions
 	{
-		disabled Global.BOOL_Follower_Started = False;
+		"Update leader's score."
 		Modify Player Score(Global.PLAYER_Leader, Count Of(Global.VECTORS_EFFECTS_Checkpoints) - Global.INT_Checkpoints_Completed);
 		Wait(0.250, Ignore Condition);
 		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
