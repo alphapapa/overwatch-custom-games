@@ -81,6 +81,7 @@ variables
 	global:
 		0: VECTORS_EFFECTS_Checkpoints
 		1: PLAYER_Leader
+		2: BOOL_Turn_Ended
 		3: PLAYERS_All
 		5: INT_Checkpoints_Completed
 		6: VECTOR_Temp
@@ -284,7 +285,7 @@ rule("PLAYER: Leader dies (Leader forfeits turn if course not already laid out.)
 	}
 }
 
-rule("GLOBAL: Leader times out before starting course")
+disabled rule("GLOBAL: Leader times out before starting course")
 {
 	event
 	{
@@ -464,7 +465,7 @@ rule("PLAYER: Follower dies (Teleport follower near to the checkpoint if not sta
 	}
 }
 
-rule("GLOBAL: Follower times out before starting course")
+disabled rule("GLOBAL: Follower times out before starting course")
 {
 	event
 	{
@@ -557,8 +558,7 @@ rule("GLOBAL: Follower hits checkpoint")
 		Play Effect(All Players(All Teams), Good Explosion, Green, Global.PLAYER_Follower, 2);
 		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Global.PLAYER_Follower, 50);
 		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
-			Wait(0.250, Ignore Condition);
-			Call Subroutine(TURN_End);
+			Global.BOOL_Turn_Ended = True;
 		End;
 	}
 }
@@ -581,8 +581,37 @@ rule("GLOBAL: Follower finished")
 	actions
 	{
 		Global.PLAYER_Follower.BOOL_Finished = True;
-		Wait(0.250, Ignore Condition);
-		Call Subroutine(TURN_End);
+		Global.BOOL_Turn_Ended = True;
+	}
+}
+
+rule("GLOBAL: Follower turn ended (used to be subroutine, but that seems to come with race conditions; this seems to work better)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Turn_Ended == True;
+	}
+
+	actions
+	{
+		"Update leader's score."
+		Modify Player Score(Global.PLAYER_Leader, Count Of(Global.VECTORS_EFFECTS_Checkpoints) - Global.INT_Checkpoints_Completed);
+		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
+			Big Message(All Players(All Teams), Custom String("{0} hit all checkpoints", Global.PLAYER_Follower));
+			"Without these Wait()s, the messages display the wrong values, even though the variables are set to the right values when the call is made."
+			Wait(0.250, Ignore Condition);
+		Else;
+			Big Message(All Players(All Teams), Custom String("{0} hit {1} of {2} checkpoints", Global.PLAYER_Follower,
+				Global.INT_Checkpoints_Completed, Count Of(Global.VECTORS_EFFECTS_Checkpoints)));
+			"See previous."
+			Wait(0.250, Ignore Condition);
+		End;
+		Call Subroutine(TURN_Next);
 	}
 }
 
@@ -692,7 +721,6 @@ rule("SUBR: TURN_Next")
 	{
 		Pause Match Time;
 		Stop Chasing Global Variable(REAL_Time_Remaining);
-		Wait(0.250, Ignore Condition);
 		"Select next follower."
 		Global.PLAYER_Follower = Random Value In Array(Filtered Array(All Players(All Teams), !(
 			Current Array Element == Global.PLAYER_Leader || Array Contains(Global.PLAYERS_Tried_This_Round, Current Array Element))));
@@ -714,6 +742,7 @@ rule("SUBR: TURN_Next")
 			"Reset variables."
 			Global.INT_Checkpoints_Completed = 0;
 			Global.PLAYER_Of_Interest = Global.PLAYER_Follower;
+			Global.BOOL_Turn_Ended = False;
 			"Reset follower's status variables."
 			Global.PLAYER_Follower.BOOL_Ready = False;
 			Global.PLAYER_Follower.BOOL_Started = False;
@@ -721,36 +750,10 @@ rule("SUBR: TURN_Next")
 			"Match time."
 			Set Match Time(Global.REAL_Allowed_Delay_Seconds);
 			Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-			Wait(0.250, Ignore Condition);
 			Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 		"No more followers.  Next round."
 		Else;
-			Wait(0.250, Ignore Condition);
 			Call Subroutine(ROUND_Next);
 		End;
-	}
-}
-
-rule("SUBR: TURN_End")
-{
-	event
-	{
-		Subroutine;
-		TURN_End;
-	}
-
-	actions
-	{
-		"Update leader's score."
-		Modify Player Score(Global.PLAYER_Leader, Count Of(Global.VECTORS_EFFECTS_Checkpoints) - Global.INT_Checkpoints_Completed);
-		Wait(0.250, Ignore Condition);
-		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
-			Big Message(All Players(All Teams), Custom String("{0} hit all checkpoints", Global.PLAYER_Follower));
-		Else;
-			Big Message(All Players(All Teams), Custom String("{0} hit {1} of {2} checkpoints", Global.PLAYER_Follower,
-				Global.INT_Checkpoints_Completed, Count Of(Global.VECTORS_EFFECTS_Checkpoints)));
-		End;
-		Wait(0.250, Ignore Condition);
-		Call Subroutine(TURN_Next);
 	}
 }
