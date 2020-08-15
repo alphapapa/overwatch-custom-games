@@ -271,7 +271,7 @@ rule("MAP: Havana")
 
 	actions
 	{
-		Global.VECTOR_Spawn = Vector(6.123, 9.624, -61.711);
+		Global.VECTOR_Spawn = Vector(24.827, 7.639, -64.217);
 		Global.VECTOR_Arena_Center = Null;
 		Global.VECTOR_Goal = Vector(26.976, 13.636, -73.689);
 		Global.VECTOR_Jump_Pad = Vector(35.335, 7.432, -67.177);
