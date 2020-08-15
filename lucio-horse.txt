@@ -293,8 +293,8 @@ rule("PLAYER: Leader times out before starting course")
 
 	actions
 	{
-		Call Subroutine(ROUND_Next);
 		Small Message(All Players(All Teams), Custom String("{0} took too long to start laying out course", Global.PLAYER_Leader));
+		Call Subroutine(ROUND_Next);
 	}
 }
 
@@ -632,11 +632,13 @@ rule("SUBR: ROUND_Next")
 	{
 		"Silly dance with match time to avoid players being stuck in undocumented and inaccessible COUNTDOWN phase when the game starts."
 		Set Match Time(0);
+		Stop Chasing Global Variable(REAL_Time_Remaining);
 		Wait(0.250, Ignore Condition);
 		Set Match Time(Global.REAL_Allowed_Delay_Seconds);
 		"Use this variable to track whether players have timed out.  (Can't use match time for this because of numerous race conditions.)"
 		Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, Destination and Rate);
+		Wait(0.250, Ignore Condition);
+		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 		"Initialize variables."
 		Global.VECTORS_EFFECTS_Checkpoints = Empty Array;
 		Global.PLAYER_Follower = Null;
@@ -645,7 +647,6 @@ rule("SUBR: ROUND_Next")
 		Global.BOOL_Leader_Ready = False;
 		Global.BOOL_Leader_Started = False;
 		Global.BOOL_Leader_Finished = False;
-		Global.REAL_Time_Remaining = Global.REAL_Time_Limit;
 		"Choose new \"it\"."
 		Global.PLAYER_Leader = First Of(Sorted Array(All Players(All Teams), Current Array Element.INT_Times_Leader));
 		"Avoid race condition."
@@ -704,9 +705,12 @@ rule("SUBR: TURN_Next")
 		Global.BOOL_Follower_Ready = False;
 		Global.BOOL_Follower_Started = False;
 		Global.INT_Checkpoints_Completed = 0;
-		Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, Destination and Rate);
+		Stop Chasing Global Variable(REAL_Time_Remaining);
+		Wait(0.250, Ignore Condition);
 		Set Match Time(Global.REAL_Allowed_Delay_Seconds);
+		Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
+		Wait(0.250, Ignore Condition);
+		Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 		"Choose new follower."
 		Global.PLAYER_Follower = Random Value In Array(Filtered Array(All Players(All Teams), !(
 			Current Array Element == Global.PLAYER_Leader || Array Contains(Global.PLAYERS_Tried_This_Round, Current Array Element))));
