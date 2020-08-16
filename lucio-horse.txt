@@ -574,13 +574,14 @@ rule("GLOBAL: Follower turn ended (used to be subroutine, but that seems to come
 
 	actions
 	{
-		"Update leader's score."
-		Modify Player Score(Global.PLAYER_Leader, Count Of(Global.VECTORS_EFFECTS_Checkpoints) - Global.INT_Checkpoints_Completed);
 		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
 			Big Message(All Players(All Teams), Custom String("{0} hit all checkpoints", Global.PLAYER_Follower));
 			"Without these Wait()s, the messages display the wrong values, even though the variables are set to the right values when the call is made."
 			Wait(0.250, Ignore Condition);
 		Else;
+			"Update follower's score."
+			Modify Player Score(Global.PLAYER_Follower, -1 * (Count Of(Global.VECTORS_EFFECTS_Checkpoints)
+				- Global.INT_Checkpoints_Completed));
 			Big Message(All Players(All Teams), Custom String("{0} hit {1} of {2} checkpoints", Global.PLAYER_Follower,
 				Global.INT_Checkpoints_Completed, Count Of(Global.VECTORS_EFFECTS_Checkpoints)));
 			"See previous."
