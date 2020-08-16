@@ -18,25 +18,13 @@ settings
 	{
 		Deathmatch
 		{
-			enabled maps
+			disabled maps
 			{
-				Black Forest
-				Blizzard World
-				Castillo
-				Château Guillard
-				Dorado
-				Eichenwalde
-				Hollywood
-				Ilios Lighthouse
-				Ilios Ruins
-				Ilios Well
-				Necropolis
-				Oasis City Center
-				Oasis Gardens
-				Oasis University
-				Paris
-				Petra
-				Temple of Anubis
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
 			}
 		}
 
