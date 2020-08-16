@@ -85,11 +85,20 @@ variables
 		9: REAL_Arena_Sphere_Radius
 }
 
-disabled rule("CREDITS: Thanks to Pizzazle, DeadMeat, gretschman, and Pafk for their help playtesting!")
+rule("CREDITS")
 {
 	event
 	{
-		Ongoing - Global;
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Wait(5, Ignore Condition);
+		Small Message(Event Player, Custom String("Thanks to these players for their help playtesting:"));
+		Small Message(Event Player, Custom String("Pizzazle, DeadMeat, gretschman, Pafk"));
 	}
 }
 
