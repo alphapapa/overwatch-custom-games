@@ -773,7 +773,8 @@ rule("SUBR: FOLLOWER_Checkpoint")
 	actions
 	{
 		Global.INT_Checkpoints_Completed += 1;
-		Play Effect(All Players(All Teams), Good Explosion, Green, Global.PLAYER_Follower, 2);
+		Play Effect(All Players(All Teams), Good Explosion, Orange, First Of(
+			Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed - 1]), Global.REAL_Checkpoint_Radius);
 		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Global.PLAYER_Follower, 50);
 		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
 			Global.BOOL_Turn_Ended = True;
