@@ -109,6 +109,7 @@ subroutines
 	1: CHECKPOINT_Record
 	2: TURN_Next
 	3: TURN_End
+	4: FOLLOWER_Checkpoint
 }
 
 rule("CREDITS")
@@ -487,29 +488,6 @@ disabled rule("GLOBAL: Follower times out before starting course")
 	}
 }
 
-rule("GLOBAL: Follower declares ready")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.PLAYER_Leader.BOOL_Finished == True;
-		Global.PLAYER_Follower.BOOL_Started == False;
-		Global.PLAYER_Follower.BOOL_Ready == False;
-		Is Button Held(Global.PLAYER_Follower, Interact) == True;
-	}
-
-	actions
-	{
-		Small Message(All Players(All Teams), Custom String("{0} is ready to follow", Global.PLAYER_Follower, Global.PLAYER_Leader));
-		Wait(0.250, Ignore Condition);
-		Global.PLAYER_Follower.BOOL_Ready = True;
-	}
-}
-
 rule("GLOBAL: Follower begins turn")
 {
 	event
@@ -520,18 +498,20 @@ rule("GLOBAL: Follower begins turn")
 	conditions
 	{
 		Global.PLAYER_Leader.BOOL_Finished == True;
-		Global.PLAYER_Follower.BOOL_Ready == True;
 		Global.PLAYER_Follower.BOOL_Started == False;
 		Is On Wall(Global.PLAYER_Follower) == True;
+		Distance Between(Eye Position(Global.PLAYER_Follower), First Of(First Of(Global.VECTORS_EFFECTS_Checkpoints)))
+			<= Global.REAL_Checkpoint_Radius * Global.REAL_Checkpoint_Radius_Factor;
 	}
 
 	actions
 	{
+		Pause Match Time;
 		"No time limit for follower (for now, anyway)."
 		Set Match Time(0);
 		Stop Chasing Global Variable(REAL_Time_Remaining);
-		Wait(0.250, Ignore Condition);
 		Global.PLAYER_Follower.BOOL_Started = True;
+		Call Subroutine(FOLLOWER_Checkpoint);
 		Small Message(All Players(All Teams), Custom String("{0} began following course", Global.PLAYER_Follower));
 	}
 }
@@ -554,12 +534,7 @@ rule("GLOBAL: Follower hits checkpoint")
 
 	actions
 	{
-		Global.INT_Checkpoints_Completed += 1;
-		Play Effect(All Players(All Teams), Good Explosion, Green, Global.PLAYER_Follower, 2);
-		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Global.PLAYER_Follower, 50);
-		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
-			Global.BOOL_Turn_Ended = True;
-		End;
+		Call Subroutine(FOLLOWER_Checkpoint);
 	}
 }
 
@@ -674,8 +649,6 @@ rule("SUBR: ROUND_Next")
 			Visible To and String);
 		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Leader), Custom String(
 			"Wait for {0} to set a path for you to follow.", Global.PLAYER_Leader), Visible To and String);
-		"Wait 2 seconds to try to avoid the leader accidentally skipping his turn."
-		Wait(2, Ignore Condition);
 		"Initialize new leader's variables."
 		Global.PLAYER_Leader.BOOL_Ready = False;
 		Global.PLAYER_Leader.BOOL_Started = False;
@@ -735,8 +708,8 @@ rule("SUBR: TURN_Next")
 			Global.EFFECT_Current_Checkpoint = Last Created Entity;
 			"Announce."
 			Small Message(All Players(All Teams), Custom String("{0}'s turn to follow", Global.PLAYER_Follower));
-			Small Message(Global.PLAYER_Follower, Custom String("Your turn!  Press {0} when ready, then follow {1}'s path.",
-				Input Binding String(Button(Interact)), Global.PLAYER_Leader));
+			Small Message(Global.PLAYER_Follower, Custom String("Your turn!  Go to checkpoint #1 and start wallriding!", Input Binding String(
+				Button(Interact)), Global.PLAYER_Leader));
 			"Wait 2 seconds to try to avoid the follower accidentally skipping his turn."
 			Wait(2, Ignore Condition);
 			"Reset variables."
@@ -751,9 +724,29 @@ rule("SUBR: TURN_Next")
 			Set Match Time(Global.REAL_Allowed_Delay_Seconds);
 			Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
 			Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
+			Unpause Match Time;
 		"No more followers.  Next round."
 		Else;
 			Call Subroutine(ROUND_Next);
+		End;
+	}
+}
+
+rule("SUBR: FOLLOWER_Checkpoint")
+{
+	event
+	{
+		Subroutine;
+		FOLLOWER_Checkpoint;
+	}
+
+	actions
+	{
+		Global.INT_Checkpoints_Completed += 1;
+		Play Effect(All Players(All Teams), Good Explosion, Green, Global.PLAYER_Follower, 2);
+		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Global.PLAYER_Follower, 50);
+		If(Global.INT_Checkpoints_Completed == Count Of(Global.VECTORS_EFFECTS_Checkpoints));
+			Global.BOOL_Turn_Ended = True;
 		End;
 	}
 }
