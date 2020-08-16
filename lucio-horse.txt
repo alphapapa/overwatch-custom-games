@@ -666,9 +666,6 @@ rule("SUBR: ROUND_Next")
 		Global.PLAYER_Leader.BOOL_Ready = False;
 		Global.PLAYER_Leader.BOOL_Started = False;
 		Global.PLAYER_Leader.BOOL_Finished = False;
-		"Use this variable to track whether players have timed out.  (Can't use match time for this because of numerous race conditions.)"
-		disabled Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-		disabled Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 		Global.PLAYER_Of_Interest = Global.PLAYER_Leader;
 		Unpause Match Time;
 	}
@@ -741,8 +738,6 @@ rule("SUBR: TURN_Next")
 			Create Effect(Global.PLAYERS_All, Good Aura, Orange, Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0],
 				Global.REAL_Checkpoint_Radius / 2, Visible To Position and Radius);
 			Global.EFFECT_Current_Checkpoint_2 = Last Created Entity;
-			disabled Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
-			disabled Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
 			Unpause Match Time;
 		"No more followers.  Next round."
 		Else;
