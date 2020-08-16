@@ -520,7 +520,7 @@ rule("GLOBAL: Follower begins turn")
 		Set Match Time(0);
 		Stop Chasing Global Variable(REAL_Time_Remaining);
 		Global.PLAYER_Follower.BOOL_Started = True;
-		Call Subroutine(FOLLOWER_Checkpoint);
+		disabled Call Subroutine(FOLLOWER_Checkpoint);
 		Small Message(All Players(All Teams), Custom String("{0} began following course", Global.PLAYER_Follower));
 	}
 }
