@@ -190,10 +190,10 @@ rule("INIT")
 		Create Effect(Global.PLAYERS_All, Good Aura, Green, Global.PLAYER_Follower, 0.500, Visible To Position and Radius);
 		Create Icon(Global.PLAYERS_All, Global.PLAYER_Of_Interest, Flag, Visible To and Position, Green, True);
 		"Objectives (IIUC these only need to be set once, and reevaluation will update them)."
-		Set Objective Description(Global.PLAYER_Follower, Custom String("Your turn!  Follow {0}'s path", Global.PLAYER_Leader),
+		Set Objective Description(Global.PLAYER_Leader, Custom String("You're the Leader: wallride a course for others to follow"),
 			Visible To and String);
-		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Follower), Custom String(
-			"Wait for {0} to follow {1}'s path", Global.PLAYER_Follower, Global.PLAYER_Leader), Visible To and String);
+		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Leader), Custom String(
+			"You're a Follower: when it's your turn, follow the marked path"), Visible To and String);
 		"Avoid initial race condition."
 		Global.REAL_Time_Remaining = 99;
 	}
@@ -662,10 +662,6 @@ rule("SUBR: ROUND_Next")
 		Big Message(All Players(All Teams), Custom String("{0} is the leader", Global.PLAYER_Leader));
 		Small Message(Global.PLAYER_Leader, Custom String("You're the leader.  Press {0} when ready, then start wallriding.",
 			Input Binding String(Button(Interact))));
-		Set Objective Description(Global.PLAYER_Leader, Custom String("You're the leader.  Wallride a path for others to follow."),
-			Visible To and String);
-		Set Objective Description(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Leader), Custom String(
-			"Wait for {0} to set a path for you to follow.", Global.PLAYER_Leader), Visible To and String);
 		"Initialize new leader's variables."
 		Global.PLAYER_Leader.BOOL_Ready = False;
 		Global.PLAYER_Leader.BOOL_Started = False;
