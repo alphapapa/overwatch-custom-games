@@ -166,10 +166,14 @@ rule("INIT")
 		Disable Built-In Game Mode Completion;
 		Disable Built-In Game Mode Scoring;
 		"Initialize variables."
-		Global.REAL_Checkpoint_Radius = 1;
-		Global.REAL_Checkpoint_Radius_Factor = 1.500;
-		Global.REAL_Course_Time_Limit = 10;
-		Global.REAL_Allowed_Delay_Seconds = 30;
+		Global.REAL_Checkpoint_Radius = Workshop Setting Real(Custom String("Lucio HORSE (Competitive Wallriding)"), Custom String(
+			"Checkpoint radius (meters)"), 1, 0.500, 5);
+		Global.REAL_Checkpoint_Radius_Factor = Workshop Setting Real(Custom String("Lucio HORSE (Competitive Wallriding)"), Custom String(
+			"Checkpoint radius hitbox multiplier"), 1.500, 1, 5);
+		Global.REAL_Course_Time_Limit = Workshop Setting Real(Custom String("Lucio HORSE (Competitive Wallriding)"), Custom String(
+			"Course length limit (seconds)"), 10, 5, 30);
+		Global.REAL_Allowed_Delay_Seconds = Workshop Setting Real(Custom String("Lucio HORSE (Competitive Wallriding)"), Custom String(
+			"Player turn start timeout (seconds)"), 30, 5, 60);
 		Global.REAL_Checkpoint_Min_Separation = 2;
 		"HUD"
 		Create HUD Text(Global.PLAYERS_All, Custom String("BEGIN TURN"), Custom String("When it's your turn"), Custom String("Press: {0}",
