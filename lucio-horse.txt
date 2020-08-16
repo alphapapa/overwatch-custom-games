@@ -116,20 +116,18 @@ rule("CREDITS")
 {
 	event
 	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Is Game In Progress == True;
+		Player Joined Match;
+		All;
+		All;
 	}
 
 	actions
 	{
-		Small Message(All Players(All Teams), Custom String("Thanks to these playtesters:"));
-		Small Message(All Players(All Teams), Custom String("OGGamerTag, DPSFrog, Zrizzt, Pheonix050"));
-		Small Message(All Players(All Teams), Custom String("Jakesicle, XFacts, Creepercomix, Aurorus"));
-		Small Message(All Players(All Teams), Custom String("BluePhoenix, Spiralgaster, Teradeus"));
+		Wait(5, Ignore Condition);
+		Small Message(Event Player, Custom String("Thanks to these playtesters:"));
+		Small Message(Event Player, Custom String("OGGamerTag, DPSFrog, Zrizzt, Pheonix050"));
+		Small Message(Event Player, Custom String("Jakesicle, XFacts, Creepercomix, Aurorus"));
+		Small Message(Event Player, Custom String("BluePhoenix, Spiralgaster, Teradeus"));
 	}
 }
 
