@@ -89,6 +89,7 @@ variables
 		8: PLAYERS_Tried_This_Round
 		9: REAL_Checkpoint_Radius
 		10: EFFECT_Current_Checkpoint
+		11: EFFECT_Current_Checkpoint_2
 		15: REAL_Time_Remaining
 		16: REAL_Time_Limit
 		17: REAL_Allowed_Delay_Seconds
@@ -700,11 +701,6 @@ rule("SUBR: TURN_Next")
 		If(Entity Exists(Global.PLAYER_Follower));
 			"Add to list of followers this round."
 			Modify Global Variable(PLAYERS_Tried_This_Round, Append To Array, Global.PLAYER_Follower);
-			"Reset current-checkpoint effect."
-			Destroy Effect(Global.EFFECT_Current_Checkpoint);
-			Create Effect(Global.PLAYERS_All, Sphere, Orange, Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0],
-				Global.REAL_Checkpoint_Radius / 2, Visible To Position and Radius);
-			Global.EFFECT_Current_Checkpoint = Last Created Entity;
 			"Announce."
 			Small Message(All Players(All Teams), Custom String("{0}'s turn to follow", Global.PLAYER_Follower));
 			Small Message(Global.PLAYER_Follower, Custom String("Your turn!  Go to checkpoint #1 and start wallriding!", Input Binding String(
@@ -723,6 +719,16 @@ rule("SUBR: TURN_Next")
 			Set Match Time(Global.REAL_Allowed_Delay_Seconds);
 			Global.REAL_Time_Remaining = Global.REAL_Allowed_Delay_Seconds;
 			Chase Global Variable At Rate(REAL_Time_Remaining, 0, 1, None);
+			"Reset current-checkpoint effect."
+			Destroy Effect(Global.EFFECT_Current_Checkpoint);
+			Create Effect(Global.PLAYERS_All, Sphere, Orange, Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0],
+				Global.REAL_Checkpoint_Radius / 2, Visible To Position and Radius);
+			Global.EFFECT_Current_Checkpoint = Last Created Entity;
+			"Reset current-checkpoint effect #2."
+			Destroy Effect(Global.EFFECT_Current_Checkpoint_2);
+			Create Effect(Global.PLAYERS_All, Good Aura, Orange, Global.VECTORS_EFFECTS_Checkpoints[Global.INT_Checkpoints_Completed][0],
+				Global.REAL_Checkpoint_Radius / 2, Visible To Position and Radius);
+			Global.EFFECT_Current_Checkpoint_2 = Last Created Entity;
 			Unpause Match Time;
 		"No more followers.  Next round."
 		Else;
