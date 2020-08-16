@@ -31,8 +31,9 @@ settings
 				Hanamura Winter
 				Havana
 				Hollywood
-				Temple of Anubis
 				Lijiang Control Center
+				Nepal Sanctum
+				Temple of Anubis
 			}
 		}
 
@@ -331,6 +332,54 @@ rule("MAP: Lijiang Control Center")
 	}
 }
 
+rule("MAP: Necropolis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		Current Map == Map(Necropolis);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(1.142, 4.617, -26.952);
+		Global.VECTOR_Arena_Center = Vector(1.823, 13.340, -16.557);
+		Global.VECTOR_Goal = Vector(1.823, 13.340, -16.557);
+		Global.VECTOR_Jump_Pad = Vector(-11.655, 4.618, -22.937);
+		Global.VECTORS_Barriers = Array();
+		Global.REAL_Arena_Sphere_Radius = 35;
+	}
+}
+
+rule("MAP: Nepal Sanctum")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.VECTOR_Spawn == Null;
+		Current Map == Map(Nepal Sanctum);
+	}
+
+	actions
+	{
+		Global.VECTOR_Spawn = Vector(51.231, 131.325, 0.252);
+		Global.VECTOR_Arena_Center = Vector(68.432, 133.618, -0.023);
+		Global.VECTOR_Goal = Vector(83.141, 130.071, -0.002);
+		Global.VECTOR_Jump_Pad = Null;
+		Global.VECTORS_Barriers = Array();
+		Global.REAL_Arena_Sphere_Radius = 35;
+	}
+}
+
 rule("MAP: Temple of Anubis")
 {
 	event
@@ -524,8 +573,9 @@ rule("PLAYER: Uses jump pad")
 
 	conditions
 	{
-		Distance Between(Event Player, Global.VECTOR_Jump_Pad) <= 1.500;
+		Global.VECTOR_Jump_Pad != Null;
 		Is Jumping(Event Player) == True;
+		Distance Between(Event Player, Global.VECTOR_Jump_Pad) <= 1.500;
 	}
 
 	actions
