@@ -628,6 +628,8 @@ rule("PLAYER: Teleports to #1")
 		Else;
 			Small Message(Event Player, Custom String("Teleporting to checkpoint #1"));
 			Teleport(Event Player, Nearest Walkable Position(First Of(First Of(Global.VECTORS_EFFECTS_Checkpoints))));
+			Set Facing(Event Player, Direction Towards(Eye Position(Event Player), First Of(First Of(Global.VECTORS_EFFECTS_Checkpoints))),
+				To World);
 		End;
 	}
 }
