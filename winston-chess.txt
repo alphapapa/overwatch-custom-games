@@ -1,0 +1,357 @@
+settings
+{
+	main
+	{
+		Description: "Turn-based Winston knockback mode.  (By nobody#1774.) (WIP)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: Paused
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+			Self Initiated Respawn: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Winston
+			{
+				Barrier Projector: Off
+				Jump Pack Knockback Scalar: 200%
+				Primary Fire: Off
+				Quick Melee: Off
+				Ultimate Ability Primal Rage: Off
+			}
+
+			enabled heroes
+			{
+				Winston
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: PLAYERS_All
+		1: PLAYER_Jumper
+		2: PLAYERS_Jumped
+		3: INT_Loop_Control
+		4: EFFECT_Jumper
+		5: PLAYER_Last_Turn
+
+	player:
+		0: BOOL_Jumped
+		1: VECTOR_Position
+		2: REAL_Gravity
+}
+
+subroutines
+{
+	0: TURN_Next
+	1: Credits
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		"HUD"
+		Create HUD Text(Global.PLAYERS_All, Custom String("SHARE CODE"), Custom String("https://workshop.codes/winston-chess"),
+			Custom String("DP6NK"), Left, -1, White, Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("JUMPER"), Custom String("Current turn"), Global.PLAYER_Jumper, Left, 0, White,
+			Turquoise, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("GLOBAL: Game starts")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+		"Initialize variables."
+		Global.PLAYERS_Jumped = Empty Array;
+		"Create effect."
+		Create Effect(Global.PLAYERS_All, Good Aura, Aqua, Global.PLAYER_Jumper, 1, Visible To Position and Radius);
+		Global.EFFECT_Jumper = Last Created Entity;
+		"Start turns."
+		Call Subroutine(TURN_Next);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		"Initialize player."
+		Set Ability 1 Enabled(Event Player, False);
+		disabled Disable Built-In Game Mode Respawning(Event Player);
+		Event Player.BOOL_Jumped = False;
+		"Show credits."
+		Wait(5, Ignore Condition);
+		Call Subroutine(Credits);
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.PLAYER_Jumper;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Jumper left.  Next turn..."));
+		Call Subroutine(TURN_Next);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.VECTOR_Position = Position Of(Event Player);
+		Start Forcing Player Position(Event Player, Event Player.VECTOR_Position, False);
+		Event Player.REAL_Gravity = 100;
+		Set Gravity(Event Player, Event Player.REAL_Gravity);
+	}
+}
+
+rule("GLOBAL: Jumper uses jump pack")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Jumper.BOOL_Jumped == False;
+		Is Button Held(Global.PLAYER_Jumper, Ability 1) == True;
+		Ability Cooldown(Global.PLAYER_Jumper, Button(Ability 1)) == 0;
+	}
+
+	actions
+	{
+		Stop Forcing Player Position(Global.PLAYER_Jumper);
+		disabled Wait(0.050, Ignore Condition);
+		Clear Status(Global.PLAYER_Jumper, Rooted);
+		Set Ability 1 Enabled(Global.PLAYER_Jumper, True);
+	}
+}
+
+rule("GLOBAL: Jumper in air")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Jumper.BOOL_Jumped == False;
+		Altitude Of(Global.PLAYER_Jumper) >= 0.500;
+	}
+
+	actions
+	{
+		Global.PLAYER_Jumper.BOOL_Jumped = True;
+	}
+}
+
+rule("GLOBAL: Jumper lands on ground")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Jumper.BOOL_Jumped == True;
+		Is On Ground(Global.PLAYER_Jumper) == True;
+	}
+
+	actions
+	{
+		Global.PLAYER_Jumper.VECTOR_Position = Position Of(Global.PLAYER_Jumper) * Vector(1, 0, 1);
+		Start Forcing Player Position(Global.PLAYER_Jumper, Global.PLAYER_Jumper.VECTOR_Position, False);
+		Set Ability 1 Enabled(Global.PLAYER_Jumper, False);
+		Global.PLAYER_Jumper.BOOL_Jumped = False;
+		"Decrease gravity."
+		Global.PLAYER_Jumper.REAL_Gravity *= 0.750;
+		Set Gravity(Global.PLAYER_Jumper, Global.PLAYER_Jumper.REAL_Gravity);
+		Call Subroutine(TURN_Next);
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, -1);
+		"Last player standing: next round."
+		If(Count Of(All Living Players(All Teams)) <= 1);
+			Small Message(All Players(All Teams), Custom String("Next round!"));
+			"Respawn players."
+			For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
+				Respawn(Global.PLAYERS_All[Global.INT_Loop_Control]);
+			End;
+			"Next turn."
+			Call Subroutine(TURN_Next);
+		Else If(Event Player == Global.PLAYER_Jumper);
+			"Next turn."
+			Call Subroutine(TURN_Next);
+		End;
+	}
+}
+
+rule("SUBR: TURN_Next")
+{
+	event
+	{
+		Subroutine;
+		TURN_Next;
+	}
+
+	actions
+	{
+		"Wait long enough for a knocked-back player to potentially die."
+		Wait(3, Ignore Condition);
+		"Select next jumper."
+		Global.PLAYER_Jumper = Random Value In Array(Filtered Array(All Living Players(All Teams), !Array Contains(Global.PLAYERS_Jumped,
+			Current Array Element) && Current Array Element != Global.PLAYER_Last_Turn));
+		"All players have jumped this round: clear jumped list and restart."
+		If(!Entity Exists(Global.PLAYER_Jumper));
+			Global.PLAYERS_Jumped = Empty Array;
+			Loop;
+		"New jumper selected."
+		Else;
+			Global.PLAYER_Last_Turn = Global.PLAYER_Jumper;
+			"Set movement and ability status for non-jumpers."
+			For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
+				If(Global.PLAYERS_All[Global.INT_Loop_Control] != Global.PLAYER_Jumper);
+					Set Status(Global.PLAYERS_All[Global.INT_Loop_Control], Null, Rooted, 9999);
+					Stop Forcing Player Position(Global.PLAYERS_All[Global.INT_Loop_Control]);
+				End;
+			End;
+			"Jumper."
+			Modify Global Variable(PLAYERS_Jumped, Append To Array, Global.PLAYER_Jumper);
+			Global.PLAYER_Jumper.BOOL_Jumped = False;
+			Global.PLAYER_Jumper.VECTOR_Position = Position Of(Global.PLAYER_Jumper) * Vector(1, 0, 1);
+			Start Forcing Player Position(Global.PLAYER_Jumper, Position Of(Global.PLAYER_Jumper.VECTOR_Position), False);
+			Small Message(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Jumper), Custom String("{0}'s turn",
+				Global.PLAYER_Jumper));
+			Small Message(Global.PLAYER_Jumper, Custom String("Your turn!  Jump at other players to knock them off the island!"));
+			Wait(0.250, Ignore Condition);
+	}
+}
+
+rule("SUBR: Credits")
+{
+	event
+	{
+		Subroutine;
+		Credits;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Custom String("Thanks to these players for their help playtesting:"));
+		Small Message(Event Player, Custom String("mattmobes, CFWarfare, SuperCripple, Pheonix050"));
+		Small Message(Event Player, Custom String("GoulouGoulou, VentedShark, evilBox42"));
+	}
+}
+
+rule("PLAYER: Kills")
+{
+	event
+	{
+		Player Earned Elimination;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}
