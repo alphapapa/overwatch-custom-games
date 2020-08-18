@@ -65,6 +65,7 @@ variables
 		3: INT_Loop_Control
 		4: EFFECT_Jumper
 		5: PLAYER_Last_Turn
+		6: PLAYERS_When_Jumper_Jumped
 
 	player:
 		0: BOOL_Jumped
@@ -92,6 +93,9 @@ rule("INIT")
 			Custom String("DP6NK"), Left, -1, White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("JUMPER"), Custom String("Current turn"), Global.PLAYER_Jumper, Left, 0, White,
 			Turquoise, White, Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("JUMP PACK"), Custom String("The cooldown looks disabled"), Custom String(
+			"When it's your turn, press {0} anyway", Input Binding String(Button(Ability 1))), Right, 0, White, Turquoise, White,
+			Visible To and String, Default Visibility);
 	}
 }
 
@@ -112,6 +116,7 @@ rule("GLOBAL: Game starts")
 		Disable Built-In Game Mode Scoring;
 		"Initialize variables."
 		Global.PLAYERS_Jumped = Empty Array;
+		Global.PLAYERS_When_Jumper_Jumped = Empty Array;
 		"Create effect."
 		Create Effect(Global.PLAYERS_All, Good Aura, Aqua, Global.PLAYER_Jumper, 1, Visible To Position and Radius);
 		Global.EFFECT_Jumper = Last Created Entity;
@@ -134,10 +139,12 @@ rule("PLAYER: Joins")
 		Global.PLAYERS_All = All Players(All Teams);
 		"Initialize player."
 		Set Ability 1 Enabled(Event Player, False);
-		disabled Disable Built-In Game Mode Respawning(Event Player);
-		Event Player.BOOL_Jumped = False;
 		Create In-World Text(Global.PLAYERS_All, String("{0}%", Event Player.REAL_Gravity), Event Player, 1, Clip Against Surfaces,
 			Visible To Position and String, White, Visible Always);
+		"Start game if not started."
+		If(Global.PLAYER_Jumper == Null);
+			Call Subroutine(TURN_Next);
+		End;
 		"Show credits."
 		Wait(5, Ignore Condition);
 		Call Subroutine(Credits);
@@ -183,6 +190,7 @@ rule("PLAYER: Spawns")
 
 	actions
 	{
+		Event Player.BOOL_Jumped = False;
 		Event Player.VECTOR_Position = Position Of(Event Player);
 		Start Forcing Player Position(Event Player, Event Player.VECTOR_Position, False);
 		Event Player.REAL_Gravity = 100;
@@ -206,8 +214,8 @@ rule("GLOBAL: Jumper uses jump pack")
 
 	actions
 	{
+		Global.PLAYERS_When_Jumper_Jumped = All Living Players(All Teams);
 		Stop Forcing Player Position(Global.PLAYER_Jumper);
-		disabled Wait(0.050, Ignore Condition);
 		Clear Status(Global.PLAYER_Jumper, Rooted);
 		Set Ability 1 Enabled(Global.PLAYER_Jumper, True);
 	}
@@ -250,11 +258,24 @@ rule("GLOBAL: Jumper lands on ground")
 		Global.PLAYER_Jumper.VECTOR_Position = Position Of(Global.PLAYER_Jumper) * Vector(1, 0, 1);
 		Start Forcing Player Position(Global.PLAYER_Jumper, Global.PLAYER_Jumper.VECTOR_Position, False);
 		Set Ability 1 Enabled(Global.PLAYER_Jumper, False);
-		Global.PLAYER_Jumper.BOOL_Jumped = False;
 		"Decrease gravity."
 		Global.PLAYER_Jumper.REAL_Gravity *= 0.750;
 		Set Gravity(Global.PLAYER_Jumper, Global.PLAYER_Jumper.REAL_Gravity);
-		Call Subroutine(TURN_Next);
+	}
+}
+
+disabled rule("PLAYER: Kills")
+{
+	event
+	{
+		Player Earned Elimination;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
 	}
 }
 
@@ -276,6 +297,7 @@ rule("PLAYER: Dies")
 			"Respawn players."
 			For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
 				Respawn(Global.PLAYERS_All[Global.INT_Loop_Control]);
+				Global.PLAYERS_All[Global.INT_Loop_Control].VECTOR_Position = Position Of(Global.PLAYERS_All[Global.INT_Loop_Control]);
 			End;
 			"Next turn."
 			Call Subroutine(TURN_Next);
@@ -283,6 +305,30 @@ rule("PLAYER: Dies")
 			"Next turn."
 			Call Subroutine(TURN_Next);
 		End;
+	}
+}
+
+rule("GLOBAL: Trigger next turn")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		"Jumper has jumped."
+		Global.PLAYER_Jumper.BOOL_Jumped == True;
+		"All players who existed when jumper jumped are either dead, on ground, not spawned yet, or left the game."
+		Is True For All(Global.PLAYERS_When_Jumper_Jumped, Is Dead(Current Array Element) || Is On Ground(Current Array Element)
+			|| !Has Spawned(Current Array Element) || !Entity Exists(Current Array Element)) == True;
+	}
+
+	actions
+	{
+		"Without this wait, the rule might trigger before another player gets knocked into the air.  But this wait also causes problems in other rules.  Trying to make this work is like a game of Jenga where all the pieces are interconnected."
+		Wait(0.250, Abort When False);
+		Call Subroutine(TURN_Next);
 	}
 }
 
@@ -296,8 +342,9 @@ rule("SUBR: TURN_Next")
 
 	actions
 	{
-		"Wait long enough for a knocked-back player to potentially die."
-		Wait(3, Ignore Condition);
+		"Avoid excessive-load shutdowns when waiting on more players (I guess?)."
+		Abort If(Count Of(Global.PLAYERS_All) < 2);
+		Global.PLAYER_Jumper.BOOL_Jumped = False;
 		"Select next jumper."
 		Global.PLAYER_Jumper = Random Value In Array(Filtered Array(All Living Players(All Teams), !Array Contains(Global.PLAYERS_Jumped,
 			Current Array Element) && Current Array Element != Global.PLAYER_Last_Turn));
@@ -323,7 +370,7 @@ rule("SUBR: TURN_Next")
 			Small Message(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Jumper), Custom String("{0}'s turn",
 				Global.PLAYER_Jumper));
 			Small Message(Global.PLAYER_Jumper, Custom String("Your turn!  Jump at other players to knock them off the island!"));
-			Wait(0.250, Ignore Condition);
+			disabled Wait(0.250, Ignore Condition);
 	}
 }
 
@@ -339,21 +386,7 @@ rule("SUBR: Credits")
 	{
 		Small Message(Event Player, Custom String("Thanks to these players for their help playtesting:"));
 		Small Message(Event Player, Custom String("mattmobes, CFWarfare, SuperCripple, Pheonix050"));
-		Small Message(Event Player, Custom String("GoulouGoulou, VentedShark, evilBox42"));
-	}
-}
-
-rule("PLAYER: Kills")
-{
-	event
-	{
-		Player Earned Elimination;
-		All;
-		All;
-	}
-
-	actions
-	{
-		Modify Player Score(Event Player, 1);
+		Small Message(Event Player, Custom String("GoulouGoulou, VentedShark, evilBox42, Spiralgaster"));
+		Small Message(Event Player, Custom String("ProbiusRules"));
 	}
 }
