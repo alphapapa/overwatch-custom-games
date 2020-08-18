@@ -32,6 +32,7 @@ settings
 				Eichenwalde Halloween
 				Hanamura
 				Hanamura Winter
+				Route 66
 			}
 		}
 
@@ -1209,5 +1210,32 @@ rule("MAP: Hanamura (designed with help from AuggieStyle)")
 			Vector(-32.320, 1, -60.400), Vector(-0.408, -0.140, -74.268), Vector(30.883, 1.796, -59.677), Vector(20.615, -1.979, -34.485),
 			Vector(45.346, -1.979, -72.268), Vector(5.919, -1.716, -41.135), Vector(13.052, 6.739, -21.685), Vector(11.921, 11.336,
 			21.019));
+	}
+}
+
+rule("MAP: Route 66")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Route 66);
+	}
+
+	actions
+	{
+		Global.VECTORS_Tee_Positions = Array(Vector(49.702, 3.684, 62.752), Vector(41.075, 2.476, 58.004), Vector(55.982, 0.293, 47.178),
+			Vector(33.467, 0.317, 40.581), Vector(63.072, 9.350, 12.438), Vector(48.335, 2.418, 8.774), Vector(23.715, 7.246, 20.019),
+			Vector(30.318, 8.304, -7.563), Vector(0.622, 2.469, -12.262), Vector(-13.441, 4.048, -56.081), Vector(-12.508, 8.542, -10.442),
+			Vector(-33.568, 8.826, -2.364), Vector(-22.944, 7.962, -43.413), Vector(-49.489, 4.644, 0.928), Vector(-67.298, 12.623,
+			23.649), Vector(-80.248, 10.959, -9.320), Vector(-105.090, 8.592, -17.257), Vector(-107.106, 12.592, -28.341));
+		Global.VECTORS_Hole_Positions = Array(Null, Vector(63.767, 0.035, 52.646), Vector(35.130, 0.311, 56.140), Vector(55.306, 5.179,
+			43.296), Vector(43.857, 2.067, -4.208), Vector(18.313, 7.507, 21.990), Vector(38.506, 8.313, -3.341), Vector(-0.607, 7.033,
+			-21.453), Vector(-13.493, 3.488, -44.602), Vector(-26.643, 8.430, -29.665), Vector(-33.589, 10.588, 6.066), Vector(-41.085,
+			9.678, -43.813), Vector(-54.131, 3.332, -11.838), Vector(-71.933, 12.531, 18.500), Vector(-92.434, 6.530, -23.371), Vector(
+			-107.562, 8.599, -10.355), Vector(-82.307, 6.508, -33.843), Vector(-32.809, 12.598, -15.141));
 	}
 }
