@@ -130,6 +130,7 @@ variables
 		31: EFFECT_Holding_Disc
 		32: EFFECT_Disc_Inner_Orb
 		33: EFFECT_Disc_Outer_Orb
+		34: VECTOR_Current_POI
 }
 
 subroutines
@@ -253,6 +254,8 @@ rule("PLAYER: Joins (create tee/hole effects, etc.)")
 		Set Status(Event Player.ENTITY_Disc, Null, Phased Out, 9999);
 		"Move dummy bot to player's position."
 		Teleport(Event Player.ENTITY_Disc, Position Of(Event Player));
+		Create Icon(Event Player, Event Player.VECTOR_Current_POI, Flag, Visible To and Position, Lime Green, True);
+		Event Player.VECTOR_Current_POI = Global.VECTORS_Tee_Positions[1];
 	}
 }
 
@@ -343,10 +346,14 @@ rule("PLAYER: Spawn disc / Begin hole")
 				Event Player.INTS_Scores_by_Hole = Empty Array;
 				Event Player.INT_Course_Score = 0;
 			End;
+			"Set POI."
+			Event Player.VECTOR_Current_POI = Global.VECTORS_Hole_Positions[Event Player.INT_Current_Hole];
 		"Not at a tee: Stop playing hole and spawn \"free\" disc."
 		Else;
 			Event Player.STRING_Playing_Hole = Custom String("None");
 			Event Player.INT_Current_Strokes = 0;
+			"Set POI."
+			Event Player.VECTOR_Current_POI = Global.VECTORS_Tee_Positions[Event Player.INT_Current_Hole];
 			Small Message(Event Player, Custom String("Spawned free disc, not playing a hole"));
 		End;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc spawned"), Custom String("Now you can"), Custom String(
@@ -612,6 +619,8 @@ rule("DISC: Came to rest")
 				Event Player.PLAYER_Disc_Owner.INT_Course_Score += Event Player.PLAYER_Disc_Owner.INT_Current_Strokes;
 				Event Player.PLAYER_Disc_Owner.STRING_Playing_Hole = Custom String("None");
 				Event Player.PLAYER_Disc_Owner.INT_Current_Strokes = 0;
+				"Set POI."
+				Event Player.PLAYER_Disc_Owner.VECTOR_Current_POI = Global.VECTORS_Tee_Positions[1 + Event Player.PLAYER_Disc_Owner.INT_Current_Hole];
 				"\"Address the ball.\""
 				If(Random Real(0, 1) >= Global.REAL_Disc_Speak_Probability);
 					Global.INT_Temp = Random Integer(0, 4);
