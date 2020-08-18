@@ -136,6 +136,8 @@ rule("PLAYER: Joins")
 		Set Ability 1 Enabled(Event Player, False);
 		disabled Disable Built-In Game Mode Respawning(Event Player);
 		Event Player.BOOL_Jumped = False;
+		Create In-World Text(Global.PLAYERS_All, String("{0}%", Event Player.REAL_Gravity), Event Player, 1, Clip Against Surfaces,
+			Visible To Position and String, White, Visible Always);
 		"Show credits."
 		Wait(5, Ignore Condition);
 		Call Subroutine(Credits);
