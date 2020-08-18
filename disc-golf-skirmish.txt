@@ -2,7 +2,7 @@ settings
 {
 	main
 	{
-		Description: "Disc Golf in Overwatch!  Place a tee and a hole, spawn in your disc, pick it up, and throw it!  Use angles to make it curve like a real disc!  (Early alpha version by nobody#1774.  Latest version at: https://workshop.codes/disc-golf)"
+		Description: "Disc Golf in Overwatch!  Place a tee and a hole, spawn in your disc, pick it up, and throw it!  Use angles to make it curve like a real disc!  (By nobody#1774.  Latest version at: https://workshop.codes/disc-golf)"
 	}
 
 	lobby
