@@ -200,7 +200,7 @@ rule("HUD: Instructions")
 			Custom String("{0} + {1}", Input Binding String(Button(Interact)), Input Binding String(Button(Primary Fire))), Right, 0,
 			White, Turquoise, White, Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("Share code"), Custom String("https://workshop.codes/disc-golf"), Custom String(
-			"V337X"), Left, 0, White, White, White, Visible To and String, Default Visibility);
+			"V337X"), Left, 0, White, Turquoise, White, Visible To and String, Default Visibility);
 	}
 }
 
