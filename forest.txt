@@ -1,0 +1,417 @@
+settings
+{
+	main
+	{
+		Description: "The Forest, a game mode by nobody#1774."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Eichenwalde
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+			Respawn Time Scalar: 0%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Echo
+			{
+				Focusing Beam: Off
+				Primary Fire: Off
+				Quick Melee: Off
+				Sticky Bombs: Off
+			}
+
+			enabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: PLAYERS_All
+		1: VECTORS_Materials
+		2: INT_Material_World_Max
+		3: TEMP
+		4: INT_Material_Player_Max
+		5: INT_Material_Min
+		6: VECTOR_Material_Bounds
+		7: VECTORS_Nests
+		8: EFFECTS_Materials
+		9: EFFECTS_Nests
+		10: INTS_Nests_Materials
+		11: INT_Nest_Min_Separation
+
+	player:
+		0: INT_Materials
+}
+
+subroutines
+{
+	0: MATERIALS_Spawn
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.INT_Nest_Min_Separation = 10;
+		Global.INT_Material_World_Max = 10;
+		Global.INT_Material_Player_Max = 2000;
+		Global.VECTORS_Nests = Empty Array;
+		Global.EFFECTS_Nests = Empty Array;
+		Global.VECTORS_Materials = Empty Array;
+		Global.EFFECTS_Materials = Empty Array;
+		"HUD: Controls."
+		Create HUD Text(Global.PLAYERS_All, Custom String("BUILD NEST"), Custom String("Or add material to existing nest"), Custom String(
+			"Press: {0} + {1}", Input Binding String(Button(Interact)), Input Binding String(Button(Crouch))), Right, 0, Orange, Turquoise,
+			White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		"HUD"
+		Create HUD Text(Event Player, Custom String("MATERIALS"), Custom String("Used for building nest"), String("{0} / {1}",
+			Event Player.INT_Materials, Global.INT_Material_Player_Max), Left, 0, Orange, Turquoise, White, String, Visible Always);
+		Create HUD Text(Event Player, Custom String("NEST"), Custom String("Nearest nest"), Custom String("Materials: {0}",
+			Global.INTS_Nests_Materials[Index Of Array Value(Global.VECTORS_Nests, First Of(Sorted Array(Global.VECTORS_Nests,
+			Distance Between(Position Of(Event Player), Current Array Element))))]), Top, 0, Orange, Turquoise, White, String,
+			Visible Always);
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+	}
+}
+
+rule("ECHO: Flaps wings")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Echo;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Vector(0, 1, 0.500), 4, To Player, Incorporate Contrary Motion);
+	}
+}
+
+rule("ECHO: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Echo;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 50);
+		Set Move Speed(Event Player, 50);
+	}
+}
+
+rule("GLOBAL: Game starts")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Wait(5, Ignore Condition);
+		Call Subroutine(MATERIALS_Spawn);
+	}
+}
+
+rule("SUBR: MATERIALS_Spawn")
+{
+	event
+	{
+		Subroutine;
+		MATERIALS_Spawn;
+	}
+
+	actions
+	{
+		While(Count Of(Global.VECTORS_Materials) < Global.INT_Material_World_Max);
+			Global.TEMP = Nearest Walkable Position(Vector(Random Real(X Component Of(Global.VECTOR_Material_Bounds) * -1, X Component Of(
+				Global.VECTOR_Material_Bounds)) / Random Real(1, 10), Random Real(-1000, 1000), Random Real(Z Component Of(
+				Global.VECTOR_Material_Bounds) * -1, Z Component Of(Global.VECTOR_Material_Bounds)) / Random Real(1, 10)));
+			Modify Global Variable(VECTORS_Materials, Append To Array, Global.TEMP);
+			Create Effect(Global.PLAYERS_All, Orb, Orange, Global.TEMP, 1, Visible To);
+			Modify Global Variable(EFFECTS_Materials, Append To Array, Last Created Entity);
+			Small Message(Host Player, Custom String("Added material: ({0}, {1})", Last Of(Global.VECTORS_Materials), Last Of(
+				Global.EFFECTS_Materials)));
+			Wait(0.016, Ignore Condition);
+		End;
+	}
+}
+
+disabled rule("DEBUG: Teleport to first material")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Random Value In Array(Global.VECTORS_Materials));
+	}
+}
+
+rule("GLOBAL: Expire materials randomly")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Wait(Random Integer(120, 180), Ignore Condition);
+		Global.TEMP = Random Integer(0, Count Of(Global.VECTORS_Materials) - 1);
+		Modify Global Variable(VECTORS_Materials, Remove From Array By Index, Global.TEMP);
+		Destroy Effect(Global.EFFECTS_Materials[Global.TEMP]);
+		Modify Global Variable(EFFECTS_Materials, Remove From Array By Index, Global.TEMP);
+		Call Subroutine(MATERIALS_Spawn);
+		Loop;
+	}
+}
+
+rule("PLAYER: Gathers material")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is True For Any(Global.VECTORS_Materials, Distance Between(Current Array Element, Event Player) <= 0.500) == True;
+	}
+
+	actions
+	{
+		"Ensure the player isn't at max capacity."
+		If(Event Player.INT_Materials >= Global.INT_Material_Player_Max);
+			Small Message(Event Player, Custom String("Carrying as much as possible"));
+			Abort;
+		End;
+		"Increment the player's load."
+		Event Player.INT_Materials += 1;
+		"Remove material from world."
+		Global.TEMP = Index Of Array Value(Global.VECTORS_Materials, First Of(Sorted Array(Global.VECTORS_Materials, Distance Between(
+			Current Array Element, Position Of(Event Player)))));
+		Modify Global Variable(VECTORS_Materials, Remove From Array By Index, Global.TEMP);
+		Destroy Effect(Global.EFFECTS_Materials[Global.TEMP]);
+		Wait(0.016, Ignore Condition);
+		Modify Global Variable(EFFECTS_Materials, Remove From Array By Index, Global.TEMP);
+		"Announce."
+		Small Message(Event Player, Custom String("Gathered material"));
+		"Spawn new materials if necessary."
+		If(Count Of(Global.VECTORS_Materials) < Global.INT_Material_Min);
+			Call Subroutine(MATERIALS_Spawn);
+		End;
+	}
+}
+
+rule("MAP: Eichenwalde")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Eichenwalde);
+	}
+
+	actions
+	{
+		Global.VECTOR_Material_Bounds = Vector(150, 0, 150);
+	}
+}
+
+rule("DEBUG: Position HUD")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+	}
+
+	actions
+	{
+		Create HUD Text(Host Player, Custom String("POSITION"), Null, Position Of(Host Player), Left, 0, White, White, White, String,
+			Default Visibility);
+	}
+}
+
+rule("PLAYER: Places nest")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Event Player.INT_Materials > 0;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		"Ensure not too close to another nest."
+		If(Is True For Any(Global.VECTORS_Nests, Distance Between(Position Of(Event Player), Current Array Element)
+			< Global.INT_Nest_Min_Separation));
+			Small Message(Event Player, Custom String("Too close to another nest to build new one"));
+			Abort;
+		End;
+		"Add new nest."
+		Modify Global Variable(VECTORS_Nests, Append To Array, Position Of(Event Player));
+		Create Effect(Global.PLAYERS_All, Ring, Orange, Last Of(Global.VECTORS_Nests), 1, Visible To);
+		Modify Global Variable(EFFECTS_Nests, Append To Array, Last Created Entity);
+		"Announce."
+		Small Message(Event Player, Custom String("Placed new nest"));
+	}
+}
+
+rule("PLAYER: Adds material to nest")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Crouch) == True;
+		Is True For Any(Global.VECTORS_Nests, Distance Between(Position Of(Event Player), Current Array Element) < 1) == True;
+		Event Player.INT_Materials > 0;
+	}
+
+	actions
+	{
+		Global.INTS_Nests_Materials[Index Of Array Value(Global.VECTORS_Nests, First Of(Sorted Array(Global.VECTORS_Nests,
+			Distance Between(Current Array Element, Position Of(Event Player)))))] += 1;
+		Event Player.INT_Materials -= 1;
+		Small Message(Event Player, Custom String("Added material to nest"));
+	}
+}
