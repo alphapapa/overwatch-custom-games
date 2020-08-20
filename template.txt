@@ -1,0 +1,66 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: PLAYERS_All
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+	}
+}
