@@ -332,12 +332,12 @@ rule("MAP: Lijiang Control Center")
 
 	actions
 	{
-		Global.VECTOR_Spawn = Vector(54.349, 266.615, 328.987);
+		Global.VECTOR_Spawn = Vector(25.542, 268.624, 301.097);
 		Global.VECTOR_Arena_Center = Vector(42.905, 266.625, 339.701);
 		Global.VECTOR_Goal = Vector(28.953, 271.628, 356.135);
 		Global.VECTOR_Jump_Pad = Vector(42.905, 266.625, 339.701);
 		Global.VECTORS_Barriers = Array();
-		Global.REAL_Arena_Sphere_Radius = 35;
+		Global.REAL_Arena_Sphere_Radius = 45;
 	}
 }
 
