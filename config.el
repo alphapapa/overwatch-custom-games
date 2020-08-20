@@ -39,11 +39,11 @@ the inspector as rules."
     (search-backward "Global.VECTORS_Tee_Positions = Array(")
     (search-forward ");")
     (backward-char 2)
-    (insert "," tee)
+    (insert ", " tee)
     (search-forward "Global.VECTORS_Hole_Positions = Array(")
     (search-forward ");")
     (backward-char 2)
-    (insert "," hole)))
+    (insert ", " hole)))
 
 ;; Settings I use when not using my main config.
 
