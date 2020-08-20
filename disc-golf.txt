@@ -696,6 +696,8 @@ rule("PLAYER: Begin throwing (holding disc and pressing primary fire)")
 	actions
 	{
 		Event Player.BOOL_Throwing_Disc = True;
+		Event Player.REAL_Turn_Rate_Degrees = 0;
+		Event Player.VECTOR_Last_Facing = Facing Direction Of(Event Player);
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Throwing disc"), Custom String("Now you can"), Custom String(
 			"Aim up slightly, and release the disc while turning slowly"));
 	}
