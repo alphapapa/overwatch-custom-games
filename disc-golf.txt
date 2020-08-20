@@ -491,6 +491,8 @@ rule("PLAYER: Throw disc")
 		"Apply impulse to disc (uncapped speed)."
 		disabled Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Absolute Value(Event Player.REAL_Turn_Rate_Degrees) * 2,
 			To World, Incorporate Contrary Motion);
+		"Teleport the disc to roughly the hand position of the throwing player before applying impulse."
+		Teleport(Event Player.ENTITY_Disc, Eye Position(Event Player) - Vector(0, 1, 0));
 		"Apply impulse to disc (capped to 40)."
 		Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Min(40, Absolute Value(
 			Event Player.REAL_Turn_Rate_Degrees) * 2), To World, Incorporate Contrary Motion);
