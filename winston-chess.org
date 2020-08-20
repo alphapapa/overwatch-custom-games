@@ -1,0 +1,9 @@
+#+TITLE: Winston Chess
+
+Notes and tasks about this Overwatch Workshop custom game mode.
+
+* Tasks
+
+** TODO Use ~Start Forcing Throttle~ to keep players from moving
+
+Likely would work better than using ~Rooted~, and make the code simpler.
