@@ -497,8 +497,10 @@ rule("PLAYER: Throw disc")
 		Apply Impulse(Event Player.ENTITY_Disc, Facing Direction Of(Event Player), Min(40, Absolute Value(
 			Event Player.REAL_Turn_Rate_Degrees) * 2), To World, Incorporate Contrary Motion);
 		Clear Status(Event Player, Rooted);
-		"Increment stroke counter."
-		Event Player.INT_Current_Strokes += 1;
+		"Playing a hole: increment stroke counter."
+		If(!(Event Player.STRING_Playing_Hole == Custom String("None")));
+			Event Player.INT_Current_Strokes += 1;
+		End;
 		Event Player.STRINGS_Disc_Status = Array(Custom String("Disc thrown"), Custom String("Now you can"), Custom String(
 			"Go pick it up or spawn a new one"));
 	}
