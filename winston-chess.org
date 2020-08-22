@@ -4,6 +4,8 @@ Notes and tasks about this Overwatch Workshop custom game mode.
 
 * Tasks
 
-** TODO Use ~Start Forcing Throttle~ to keep players from moving
+** DONE Use ~Start Forcing Throttle~ to keep players from moving
 
 Likely would work better than using ~Rooted~, and make the code simpler.
+
+Yep, seems to work better.  Gives better feedback to the player as well, because the cooldown appears usable when it is.

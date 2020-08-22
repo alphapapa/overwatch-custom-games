@@ -68,7 +68,6 @@ variables
 
 	player:
 		0: BOOL_Jumped
-		1: VECTOR_Position
 		2: REAL_Gravity
 }
 
@@ -132,8 +131,6 @@ rule("PLAYER: Joins")
 	actions
 	{
 		Global.PLAYERS_All = All Players(All Teams);
-		"Initialize player."
-		Set Ability 1 Enabled(Event Player, False);
 		disabled Disable Built-In Game Mode Respawning(Event Player);
 		Event Player.BOOL_Jumped = False;
 		Create In-World Text(Global.PLAYERS_All, String("{0}%", Event Player.REAL_Gravity), Event Player, 1, Clip Against Surfaces,
@@ -183,10 +180,10 @@ rule("PLAYER: Spawns")
 
 	actions
 	{
-		Event Player.VECTOR_Position = Position Of(Event Player);
-		Start Forcing Player Position(Event Player, Event Player.VECTOR_Position, False);
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Event Player.REAL_Gravity = 100;
 		Set Gravity(Event Player, Event Player.REAL_Gravity);
+		Set Ability Cooldown(Event Player, Button(Ability 1), 1000);
 	}
 }
 
@@ -206,10 +203,8 @@ rule("GLOBAL: Jumper uses jump pack")
 
 	actions
 	{
-		Stop Forcing Player Position(Global.PLAYER_Jumper);
+		Stop Forcing Throttle(Global.PLAYER_Jumper);
 		disabled Wait(0.050, Ignore Condition);
-		Clear Status(Global.PLAYER_Jumper, Rooted);
-		Set Ability 1 Enabled(Global.PLAYER_Jumper, True);
 	}
 }
 
@@ -247,9 +242,8 @@ rule("GLOBAL: Jumper lands on ground")
 
 	actions
 	{
-		Global.PLAYER_Jumper.VECTOR_Position = Position Of(Global.PLAYER_Jumper) * Vector(1, 0, 1);
-		Start Forcing Player Position(Global.PLAYER_Jumper, Global.PLAYER_Jumper.VECTOR_Position, False);
-		Set Ability 1 Enabled(Global.PLAYER_Jumper, False);
+		Start Forcing Throttle(Global.PLAYER_Jumper, 0, 0, 0, 0, 0, 0);
+		Set Ability Cooldown(Global.PLAYER_Jumper, Button(Ability 1), 1000);
 		Global.PLAYER_Jumper.BOOL_Jumped = False;
 		"Decrease gravity."
 		Global.PLAYER_Jumper.REAL_Gravity *= 0.750;
@@ -311,15 +305,14 @@ rule("SUBR: TURN_Next")
 			"Set movement and ability status for non-jumpers."
 			For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
 				If(Global.PLAYERS_All[Global.INT_Loop_Control] != Global.PLAYER_Jumper);
-					Set Status(Global.PLAYERS_All[Global.INT_Loop_Control], Null, Rooted, 9999);
-					Stop Forcing Player Position(Global.PLAYERS_All[Global.INT_Loop_Control]);
+					Start Forcing Throttle(Global.PLAYERS_All[Global.INT_Loop_Control], 0, 0, 0, 0, 0, 0);
 				End;
 			End;
 			"Jumper."
 			Modify Global Variable(PLAYERS_Jumped, Append To Array, Global.PLAYER_Jumper);
 			Global.PLAYER_Jumper.BOOL_Jumped = False;
-			Global.PLAYER_Jumper.VECTOR_Position = Position Of(Global.PLAYER_Jumper) * Vector(1, 0, 1);
-			Start Forcing Player Position(Global.PLAYER_Jumper, Position Of(Global.PLAYER_Jumper.VECTOR_Position), False);
+			Start Forcing Throttle(Global.PLAYER_Jumper, 0, 0, 0, 0, 0, 0);
+			Set Ability Cooldown(Global.PLAYER_Jumper, Button(Ability 1), 0);
 			Small Message(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Jumper), Custom String("{0}'s turn",
 				Global.PLAYER_Jumper));
 			Small Message(Global.PLAYER_Jumper, Custom String("Your turn!  Jump at other players to knock them off the island!"));
