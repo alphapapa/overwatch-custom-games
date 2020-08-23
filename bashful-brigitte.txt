@@ -1,0 +1,272 @@
+settings
+{
+	main
+	{
+		Description: "Prototyping new game mode (by nobody#1774)."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		disabled Deathmatch
+		{
+			Self Initiated Respawn: Off
+		}
+
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Island
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Brigitte
+			{
+				Barrier Shield Cooldown Time: 50%
+				Damage Dealt: 250%
+				Damage Received: 10%
+				Primary Fire: Off
+				Quick Melee: Off
+				Repair Pack: Off
+				Shield Bash Cooldown Time: 50%
+				Shield Bash Knockback Scalar: 125%
+				Ultimate Ability Rally: Off
+				Whip Shot Knockback Scalar: 125%
+			}
+
+			enabled heroes
+			{
+				Brigitte
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: PLAYERS_All
+		1: VECTOR_Arena_Center
+		2: REAL_Arena_Radius
+		3: REAL_Respawn_Seconds
+		4: VECTOR_Spawn
+		5: INT_Loop_Control
+}
+
+rule("MAP: Workshop Island")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Workshop Island);
+	}
+
+	actions
+	{
+		Global.VECTOR_Arena_Center = Vector(0, 0, 0);
+		Global.REAL_Arena_Radius = 40;
+		Global.VECTOR_Spawn = Vector(0, 20, 0);
+		Global.REAL_Respawn_Seconds = 2;
+	}
+}
+
+rule("MAP: Blizz4rd World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Blizzard World);
+	}
+
+	actions
+	{
+		Global.VECTOR_Arena_Center = Vector(5.719, 7.324, 86.709);
+		Global.REAL_Arena_Radius = 15;
+		Global.VECTOR_Spawn = Vector(5.719, 17, 86.709);
+		Global.REAL_Respawn_Seconds = 2;
+	}
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create Effect(Global.PLAYERS_All, Sphere, Blue, Global.VECTOR_Arena_Center, Global.REAL_Arena_Radius, Visible To);
+		Disable Built-In Game Mode Scoring;
+		disabled Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Disable Built-In Game Mode Respawning(Event Player);
+		Set Gravity(Event Player, 50);
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+	}
+}
+
+rule("PLAYER: Out of bounds")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Distance Between(Position Of(Event Player), Global.VECTOR_Arena_Center) >= Global.REAL_Arena_Radius;
+	}
+
+	actions
+	{
+		Kill(Event Player, Event Player);
+		Wait(Global.REAL_Respawn_Seconds, Ignore Condition);
+		Respawn(Event Player);
+		Wait(0.250, Ignore Condition);
+		Teleport(Event Player, Global.VECTOR_Spawn);
+	}
+}
+
+rule("GLOBAL: Game starts")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(50);
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
+			Teleport(Global.PLAYERS_All[Global.INT_Loop_Control], Global.VECTOR_Spawn);
+		End;
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.250, Ignore Condition);
+		Teleport(Event Player, Global.VECTOR_Spawn);
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Wait(Global.REAL_Respawn_Seconds, Ignore Condition);
+		Respawn(Event Player);
+		Modify Team Score(Opposite Team Of(Team Of(Event Player)), 1);
+	}
+}
+
+rule("PLAYER: Kills")
+{
+	event
+	{
+		Player Earned Elimination;
+		All;
+		All;
+	}
+
+	actions
+	{
+		disabled Modify Team Score(Team Of(Event Player), 1);
+	}
+}
