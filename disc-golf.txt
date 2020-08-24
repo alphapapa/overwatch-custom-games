@@ -28,6 +28,7 @@ settings
 			{
 				Blizzard World
 				Blizzard World Winter
+				Dorado
 				Eichenwalde
 				Eichenwalde Halloween
 				Hanamura
@@ -1141,6 +1142,30 @@ disabled rule("DEBUG: Serverload HUD")
 	{
 		Create HUD Text(Event Player, Custom String("LOAD"), Custom String("Current / Average / Peak"), String("{0} : {1} : {2}",
 			Server Load, Server Load Average, Server Load Peak), Left, 99, White, White, White, String, Visible Never);
+	}
+}
+
+rule("MAP: Dorado")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Dorado);
+	}
+
+	actions
+	{
+		Global.VECTORS_Tee_Positions = Array(Vector(-1.492, -0.680, 19.732), Vector(-1.166, -1.889, 24.040), Vector(28.838, 1.116, 18.921),
+			Vector(36.410, 9.092, 2.298), Vector(26.070, 5.190, -41.127), Vector(36.355, 4.046, -17.963), Vector(70.951, 11.104, -29.791),
+			Vector(84.598, 7.092, 7.655), Vector(118.021, 11.092, -30.043), Vector(130.506, 9.107, -26.606), Vector(95.992, 13.104,
+			22.838), Vector(87.090, 12.842, 38.563));
+		Global.VECTORS_Hole_Positions = Array(Null, Vector(23.854, -1.980, 23.635), Vector(60.379, 9, 8.961), Vector(36.240, 10, -33.251),
+			Vector(38.090, 3, -6.985), Vector(79.034, 8.776, -50.874), Vector(76.328, 8, 7.698), Vector(90.790, 9, -26.256), Vector(
+			134.247, 11, -9.773), Vector(105.815, 11.012, 5.227), Vector(76.309, 20, 28.702), Vector(119.806, 11, 50.665));
 	}
 }
 
