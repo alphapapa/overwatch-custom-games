@@ -18,6 +18,7 @@ settings
 		{
 			enabled maps
 			{
+				Dorado
 				Lijiang Tower
 			}
 		}
