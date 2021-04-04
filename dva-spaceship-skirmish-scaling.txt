@@ -284,10 +284,8 @@ rule("PLAYER: Joins")
 		Start Scaling Player(Event Player, 0.100, False);
 		"Overhead text for other players to see."
 		Create In-World Text(Team Of(Event Player) == Team 1 ? Global.PLAYERS_Team_1 : Global.PLAYERS_Team_2, Custom String("{0}",
-		Create In-World Text(Global.PLAYERS_All, Custom String("{0}", Event Player.STRING_Cargo_Status), Event Player, 1,
 			Event Player.STRING_Team_Status), Event Player, 1, Do Not Clip, Visible To Position and String, Color(White),
 			Default Visibility);
-			Clip Against Surfaces, Visible To Position and String, Color(Turquoise), Default Visibility);
 		"Center HUD"
 		Create HUD Text(Event Player, Custom String("STATUS"), Event Player.STRING_HUD_Status_Subheader, Event Player.STRING_HUD_Status,
 			Top, 1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
