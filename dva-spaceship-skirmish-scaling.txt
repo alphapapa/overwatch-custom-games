@@ -33,7 +33,6 @@ settings
 
 	workshop
 	{
-		Reactor Max HP: 50.000
 		Rescue Distance: 0.300
 	}
 }
