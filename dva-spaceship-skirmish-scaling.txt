@@ -1448,7 +1448,6 @@ rule("PLAYER: Jump drive: Start targeting")
 
 	conditions
 	{
-		Event Player.INT_Jump_Drive_Charge_Percent > 0;
 		Is Button Held(Event Player, Button(Ultimate)) == True;
 		Event Player.BOOL_Warp_Targeting == False;
 		Event Player.BOOL_Jump_Drive_Activated == False;
@@ -1544,6 +1543,10 @@ rule("PLAYER: Jump drive: Activated.")
 	actions
 	{
 		Stop Holding Button(Event Player, Button(Primary Fire));
+		If(!(Event Player.INT_Jump_Drive_Charge_Percent >= 25));
+			Small Message(Event Player, Custom String("Jump drive requires at least 25% charge"));
+			Abort;
+		End;
 		If(!Is In Line of Sight(Eye Position(Event Player), Event Player.VECTOR_Warp_Target, Barriers Do Not Block LOS));
 			Small Message(Event Player, Custom String("Jump target requires line of sight."));
 			Abort;
