@@ -18,6 +18,7 @@ settings
 		{
 			enabled maps
 			{
+				Blizzard World Winter
 				Dorado
 				Lijiang Tower
 			}
@@ -103,6 +104,34 @@ variables
 subroutines
 {
 	1: New_Cargo
+}
+
+rule("MAP: Blizz World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Blizzard World Winter);
+	}
+
+	actions
+	{
+		Global.VECTOR_Depot_Team_1 = Vector(-85.891, -1.077, 111.216);
+		Global.VECTOR_Depot_Team_2 = Vector(2.840, -4.926, 16.941);
+		Global.VECTOR_Reactor_Team_1 = Vector(-122.044, 0.021, 110.501);
+		Global.VECTOR_Reactor_Team_2 = Vector(-26.406, -1.826, 19.976);
+		Global.VECTORS_Cargo = Array(Vector(24.495, 1.297, 25.878), Vector(32.271, 0.673, 35.461), Vector(15.879, 2.670, 37.480), Vector(
+			-6.203, 0.692, 48.656), Vector(-37.505, 5.165, 51.295), Vector(-24.490, 8.099, 54.962), Vector(-31.070, 7.294, 59.045), Vector(
+			27.685, 2.173, 50.350), Vector(31.762, 2.683, 60.403), Vector(29.872, 4.411, 79.229), Vector(5.094, -0.798, 88.875), Vector(
+			0.748, 7.295, 89.243), Vector(-11.373, 0.124, 101.374), Vector(-32.200, 1.180, 59.257), Vector(-23.923, 4.750, 71.909), Vector(
+			-43.268, 1.924, 55.704), Vector(-49.056, 1.301, 67.920), Vector(-74.766, 1.044, 68.587), Vector(-42.275, -0.032, 134.805),
+			Vector(-70.242, 2.646, 147.862), Vector(-51.384, 0.973, 89.417), Vector(-25.151, 1.504, 113.830), Vector(-88.931, 1.226,
+			149.855));
+	}
 }
 
 rule("MAP: Dorado")
