@@ -517,9 +517,10 @@ rule("PLAYER: Shooting Primary")
 	actions
 	{
 		disabled Set Move Speed(Event Player, 200);
-		If(Is On Ground(Event Player));
-			Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1000,
-				Global.REAL_Maneuvering_Thruster_Power * Event Player.REAL_Accel_Factor, To World, Incorporate Contrary Motion);
+		If(Is In Air(Event Player));
+			"Apply reverse impulse (half of maneuvering thrusters' power)."
+			Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1000, Global.REAL_Maneuvering_Thruster_Power * (
+				Event Player.REAL_Accel_Factor / 2), To World, Incorporate Contrary Motion);
 		End;
 		If(!Is In Alternate Form(Event Player));
 			Event Player.INT_Ammo -= 1;
