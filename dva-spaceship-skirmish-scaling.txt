@@ -719,6 +719,7 @@ rule("PLAYER: Out of ammo")
 	actions
 	{
 		Set Primary Fire Enabled(Event Player, False);
+		Small Message(Event Player, Custom String("Out of ammo!  Rearm at base!"));
 	}
 }
 
