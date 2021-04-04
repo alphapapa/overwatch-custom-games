@@ -981,6 +981,7 @@ rule("DEBUG: All stop")
 	{
 		Is Button Held(Event Player, Button(Interact)) == True;
 		Is Button Held(Event Player, Button(Crouch)) == True;
+		Event Player == Host Player;
 	}
 
 	actions
