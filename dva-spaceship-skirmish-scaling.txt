@@ -70,6 +70,9 @@ variables
 		24: REAL_Collision_Damage_Factor
 		25: REAL_Rescue_Distance
 		26: REAL_Low_Altitude
+		29: DEBUG_INT_Loop_Control
+		30: DEBUG_EFFECT_Cargo
+		31: DEBUG_ICON_Cargo
 
 	player:
 		0: STRING_Team_Status
@@ -1665,5 +1668,38 @@ rule("PLAYER: Jump drive: Charging.")
 		End;
 		Wait(1, Ignore Condition);
 		Loop If Condition Is True;
+	}
+}
+
+rule("DEBUG: Show host all cargo drop points")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Is Button Held(Event Player, Button(Melee)) == True;
+	}
+
+	actions
+	{
+		Global.DEBUG_INT_Loop_Control += 1;
+		If(Global.DEBUG_INT_Loop_Control >= Count Of(Global.VECTORS_Cargo));
+			Global.DEBUG_INT_Loop_Control = 0;
+		End;
+		Destroy Effect(Global.DEBUG_EFFECT_Cargo);
+		Destroy Icon(Global.DEBUG_ICON_Cargo);
+		Create Effect(Host Player, Sphere, Color(Orange), Global.VECTORS_Cargo[Global.DEBUG_INT_Loop_Control], 1, None);
+		Global.DEBUG_EFFECT_Cargo = Last Created Entity;
+		Create Icon(Host Player, Global.VECTORS_Cargo[Global.DEBUG_INT_Loop_Control], Arrow: Down, None, Color(Orange), True);
+		Global.DEBUG_ICON_Cargo = Last Created Entity;
+		Small Message(Host Player, Custom String("Showing cargo drop #{0}/{1}", 1 + Global.DEBUG_INT_Loop_Control, Count Of(
+			Global.VECTORS_Cargo)));
 	}
 }
