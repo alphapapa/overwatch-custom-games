@@ -190,7 +190,8 @@ rule("INIT (after map rules)")
 			"Maneuvering thruster power (meters/second x 10)"), 0.100, 0, 100, 0);
 		Global.INT_Cargo_Sphere_Radius = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String(
 			"Cargo Sphere Radius (meters)"), 1.500, 0.100, 5, 0);
-		Global.INT_Max_Ammo = Workshop Setting Integer(Custom String("D.Va Spaceship Skirmish"), Custom String("Max Ammo"), 500, 0, 1000, 0);
+		Global.INT_Max_Ammo = Workshop Setting Integer(Custom String("D.Va Spaceship Skirmish"), Custom String("Max Ammo"), 500, 0, 1000,
+			0);
 		Global.REAL_Max_Shields = Workshop Setting Real(Custom String("D.Va Spaceship Skirmish"), Custom String("Max Shields"), 100, 0,
 			1000, 0);
 		Global.INT_Reactor_HP_Team_1 = Global.REAL_Reactor_Max_HP;
@@ -216,8 +217,8 @@ rule("INIT (after map rules)")
 		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/dva-spaceship"),
 			Custom String("NPF92"), Left, -1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
 		"Create cargo drop effect and text."
-		Create Effect(Global.PLAYERS_Cargo_Drop_Visible_To, Sphere, Color(Yellow), Global.VECTOR_Current_Cargo, Global.INT_Cargo_Sphere_Radius,
-			Visible To Position and Radius);
+		Create Effect(Global.PLAYERS_Cargo_Drop_Visible_To, Sphere, Color(Yellow), Global.VECTOR_Current_Cargo,
+			Global.INT_Cargo_Sphere_Radius, Visible To Position and Radius);
 		Create In-World Text(Global.PLAYERS_Cargo_Drop_Visible_To, Custom String("Cargo Drop"), Global.VECTOR_Current_Cargo, 1,
 			Do Not Clip, Visible To Position and String, Color(Yellow), Default Visibility);
 		"Make initial cargo drop after 15 seconds."
@@ -249,8 +250,9 @@ rule("PLAYER: Joins")
 		Start Scaling Player(Event Player, 0.100, False);
 		"Overhead text for other players to see."
 		Create In-World Text(Team Of(Event Player) == Team 1 ? Global.PLAYERS_Team_1 : Global.PLAYERS_Team_2, Custom String("{0}",
-			Event Player.STRING_Team_Status), Event Player, 1, Do Not Clip, Visible To Position and String, Color(White), Default Visibility);
 		Create In-World Text(Global.PLAYERS_All, Custom String("{0}", Event Player.STRING_Cargo_Status), Event Player, 1,
+			Event Player.STRING_Team_Status), Event Player, 1, Do Not Clip, Visible To Position and String, Color(White),
+			Default Visibility);
 			Clip Against Surfaces, Visible To Position and String, Color(Turquoise), Default Visibility);
 		"Center HUD"
 		Create HUD Text(Event Player, Custom String("STATUS"), Event Player.STRING_HUD_Status_Subheader, Event Player.STRING_HUD_Status,
@@ -279,15 +281,17 @@ rule("PLAYER: Joins")
 		Create HUD Text(Event Player, Custom String("CARGO"), Event Player.STRING_HUD_Cargo_Status, Custom String("{0} / 2",
 			Event Player.INT_Cargo), Left, 8, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("PASSENGER"), Custom String("Rescue a pilot when needed"),
-			Event Player.PLAYER_Passenger, Left, 7, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+			Event Player.PLAYER_Passenger, Left, 7, Color(White), Color(Turquoise), Color(White), Visible To and String,
+			Default Visibility);
 		Create HUD Text(Event Player, Custom String("AMMO"), Custom String("Rearm at base"), Custom String("{0} / {1}",
-			Event Player.INT_Ammo, Global.INT_Max_Ammo), Left, 9, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+			Event Player.INT_Ammo, Global.INT_Max_Ammo), Left, 9, Color(White), Color(Turquoise), Color(White), Visible To and String,
+			Default Visibility);
 		Create HUD Text(Event Player, Custom String("speed"), Custom String("In looking direction: {0}", Speed Of In Direction(
 			Event Player, Facing Direction Of(Event Player))), Custom String("Total: {0}", Speed Of(Event Player)), Left, 9, Color(White),
 			Color(Turquoise), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Custom String("Jump Drive"), Custom String("Max distance increases with charge"), Custom String(
-			"Charge: {0}%  Target: {1}", Event Player.INT_Jump_Drive_Charge_Percent, Event Player.STRING_HUD_Jump_Target), Left, 0, Color(White),
-			Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+			"Charge: {0}%  Target: {1}", Event Player.INT_Jump_Drive_Charge_Percent, Event Player.STRING_HUD_Jump_Target), Left, 0, Color(
+			White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
 		Event Player.STRING_HUD_Jump_Target = Custom String("None");
 	}
 }
@@ -366,8 +370,8 @@ rule("PLAYER: Forward")
 		Apply Impulse(Event Player, Facing Direction Of(Event Player), Global.REAL_Main_Thruster_Power * Event Player.REAL_Accel_Factor,
 			To World, Incorporate Contrary Motion);
 		Play Effect(All Players(All Teams), Explosion Sound, Color(White), Event Player, 5);
-		Play Effect(All Players(All Teams), Good Explosion, Color(Orange), Position Of(Event Player) + Facing Direction Of(Event Player) * -0.200,
-			0.001);
+		Play Effect(All Players(All Teams), Good Explosion, Color(Orange), Position Of(Event Player) + Facing Direction Of(Event Player)
+			* -0.200, 0.001);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
@@ -1562,8 +1566,8 @@ rule("PLAYER: Jump drive: Activated.")
 		Event Player.EFFECT_Jumping = Last Created Entity;
 		"Create jump portal effect at target."
 		Event Player.REAL_Jump_Drive_Countdown = 0;
-		Create Effect(All Players(All Teams), Good Aura, Color(Sky Blue), Event Player.VECTOR_Warp_Target, Event Player.REAL_Jump_Drive_Countdown,
-			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Good Aura, Color(Sky Blue), Event Player.VECTOR_Warp_Target,
+			Event Player.REAL_Jump_Drive_Countdown, Visible To Position and Radius);
 		Event Player.EFFECT_Warp_Target = Last Created Entity;
 		"Animate the opening of the jump portal."
 		While(Event Player.REAL_Jump_Drive_Countdown < Global.REAL_Jump_Drive_Countdown / 4);
