@@ -289,26 +289,6 @@ rule("PLAYER: Joins")
 		"Center HUD"
 		Create HUD Text(Event Player, Custom String("STATUS"), Event Player.STRING_HUD_Status_Subheader, Event Player.STRING_HUD_Status,
 			Top, 1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("Reactor"), Custom String("Enemy: {0}", Team Of(Event Player)
-			== Team 1 ? Global.INT_Reactor_HP_Team_2 : Global.INT_Reactor_HP_Team_1), Custom String("Friendly: {0}", Team Of(Event Player)
-			== Team 1 ? Global.INT_Reactor_HP_Team_1 : Global.INT_Reactor_HP_Team_2), Top, 0, Color(Yellow), Color(Red), Color(Blue), Visible To and String,
-			Default Visibility);
-		Create HUD Text(Event Player, Custom String("Camera"), Custom String("Cycle modes"), Custom String("{0} + {1}",
-			Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Right, 0, Color(White), Color(Turquoise), Color(White),
-			Visible To and String, Default Visibility);
-		"Right HUD"
-		Create HUD Text(Event Player, Custom String("Thrusters"), Custom String("Down: {0}          ", Input Binding String(Button(
-			Crouch))), Custom String("Up: {0}", Input Binding String(Button(Jump))), Right, 1, Color(White), Color(White), Color(White), Visible To and String,
-			Default Visibility);
-		Create HUD Text(Event Player, Custom String("Thrusters"), Custom String("Backward: {0} + {1}", Input Binding String(Button(
-			Interact)), Input Binding String(Button(Ability 1))), Custom String("Forward: {0}", Input Binding String(Button(Ability 1))),
-			Right, 2, Color(Green), Color(White), Color(White), Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("Brake"), Custom String("Omnidirectional"), Custom String("{0} + {1}",
-			Input Binding String(Button(Interact)), Input Binding String(Button(Jump))), Right, 3, Color(Red), Color(Turquoise), Color(White),
-			Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Custom String("Jump drive"), Custom String("Activate targeting", Input Binding String(Button(
-			Crouch))), Custom String("{0}", Input Binding String(Button(Ultimate))), Right, 1, Color(White), Color(Turquoise), Color(White),
-			Visible To and String, Default Visibility);
 		"Left HUD"
 		Create HUD Text(Event Player, Custom String("CARGO"), Event Player.STRING_HUD_Cargo_Status, Custom String("{0} / 2",
 			Event Player.INT_Cargo), Left, 8, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
@@ -1699,5 +1679,45 @@ rule("DEBUG: Show host all cargo drop points")
 		Global.DEBUG_ICON_Cargo = Last Created Entity;
 		Small Message(Host Player, Custom String("Showing cargo drop #{0}/{1}", 1 + Global.DEBUG_INT_Loop_Control, Count Of(
 			Global.VECTORS_Cargo)));
+	}
+}
+
+rule("INIT: Global HUD elements")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+                "Top HUD"
+		Create HUD Text(Global.PLAYERS_Team_1, Custom String("REACTOR"), Custom String("ENEMY: {0}", Global.INT_Reactor_HP_Team_2),
+			Custom String("FRIENDLY: {0}", Global.INT_Reactor_HP_Team_1), Top, 0, Color(Yellow), Color(Team 2), Color(Team 1),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_Team_2, Custom String("REACTOR"), Custom String("ENEMY: {0}", Global.INT_Reactor_HP_Team_1),
+			Custom String("FRIENDLY: {0}", Global.INT_Reactor_HP_Team_2), Top, 0, Color(Yellow), Color(Team 1), Color(Team 2),
+			Visible To and String, Default Visibility);
+		"Right HUD"
+		Create HUD Text(Global.PLAYERS_All, Custom String("Thrusters"), Custom String("Down: {0}          ", Input Binding String(Button(
+			Crouch))), Custom String("Up: {0}", Input Binding String(Button(Jump))), Right, 1, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Camera"), Custom String("Cycle modes"), Custom String("{0} + {1}",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Right, 0, Color(White), Color(Turquoise), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Thrusters"), Custom String("Backward: {0} + {1}", Input Binding String(
+			Button(Interact)), Input Binding String(Button(Ability 1))), Custom String("Forward: {0}", Input Binding String(Button(
+			Ability 1))), Right, 2, Color(Green), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Brake"), Custom String("Omnidirectional"), Custom String("{0} + {1}",
+			Input Binding String(Button(Interact)), Input Binding String(Button(Jump))), Right, 3, Color(Red), Color(Turquoise), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Jump drive"), Custom String("Activate targeting", Input Binding String(Button(
+			Crouch))), Custom String("{0}", Input Binding String(Button(Ultimate))), Right, 1, Color(White), Color(Turquoise), Color(
+			White), Visible To and String, Default Visibility);
 	}
 }
