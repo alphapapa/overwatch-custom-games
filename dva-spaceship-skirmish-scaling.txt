@@ -29,11 +29,13 @@ settings
 			Hero Limit: Off
 			Limit Valid Control Points: Second
 			Respawn As Random Hero: On
+			Spawn Health Packs: Disabled
 		}
 	}
 
 	workshop
 	{
+		Collision Damage Factor: 20.000
 		Main thruster power meterssecond x 10: 0.200
 		Maneuvering thruster power meterssecond x 10: 0.100
 		Rescue Distance: 0.300
@@ -773,6 +775,7 @@ rule("PLAYER: Rearm")
 	conditions
 	{
 		Is In Spawn Room(Event Player) == True;
+		Is On Ground(Event Player) == True;
 	}
 
 	actions
@@ -1135,6 +1138,7 @@ rule("PLAYER: Low altitude")
 	conditions
 	{
 		Altitude Of(Event Player) <= Global.REAL_Low_Altitude;
+		Speed Of(Event Player) < 0.500;
 	}
 
 	actions
