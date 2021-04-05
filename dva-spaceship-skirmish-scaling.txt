@@ -1710,9 +1710,9 @@ rule("INIT: Global HUD elements")
 		Create HUD Text(Global.PLAYERS_All, Custom String("Camera"), Custom String("Cycle modes"), Custom String("{0} + {1}",
 			Input Binding String(Button(Interact)), Input Binding String(Button(Reload))), Right, 0, Color(White), Color(Turquoise), Color(
 			White), Visible To and String, Default Visibility);
-		Create HUD Text(Global.PLAYERS_All, Custom String("Thrusters"), Custom String("Backward: {0} + {1}", Input Binding String(
-			Button(Interact)), Input Binding String(Button(Ability 1))), Custom String("Forward: {0}", Input Binding String(Button(
-			Ability 1))), Right, 2, Color(Green), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Global.PLAYERS_All, Custom String("Thrusters"), Custom String("Backward: {0} + {1}", Input Binding String(Button(
+			Interact)), Input Binding String(Button(Ability 1))), Custom String("Forward: {0}", Input Binding String(Button(Ability 1))),
+			Right, 2, Color(Green), Color(White), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Global.PLAYERS_All, Custom String("Brake"), Custom String("Omnidirectional"), Custom String("{0} + {1}",
 			Input Binding String(Button(Interact)), Input Binding String(Button(Jump))), Right, 3, Color(Red), Color(Turquoise), Color(
 			White), Visible To and String, Default Visibility);
