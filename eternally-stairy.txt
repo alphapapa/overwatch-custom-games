@@ -1,0 +1,677 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max FFA Players: 10
+		Max Spectators: 12
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Horizon Lunar Colony
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 500%
+			Movement Speed: 50%
+
+			Ana
+			{
+				Sleep Dart: Off
+			}
+
+			Baptiste
+			{
+				Immortality Field: Off
+			}
+
+			Bastion
+			{
+				Self-Repair: Off
+			}
+
+			Brigitte
+			{
+				Barrier Shield: Off
+			}
+
+			D.Va
+			{
+				Boosters: Off
+				Defense Matrix: Off
+			}
+
+			Doomfist
+			{
+				Rising Uppercut: Off
+				Rocket Punch: Off
+				Seismic Slam: Off
+			}
+
+			Genji
+			{
+				Deflect: Off
+				Swift Strike: Off
+			}
+
+			Hanzo
+			{
+				Lunge: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine: Off
+			}
+
+			Lúcio
+			{
+				Movement Speed: 50%
+			}
+
+			McCree
+			{
+				Combat Roll: Off
+			}
+
+			Mei
+			{
+				Cryo-Freeze: Off
+				Ice Wall: Off
+			}
+
+			Moira
+			{
+				Biotic Orb: Off
+				Fade: Off
+			}
+
+			Orisa
+			{
+				Fortify: Off
+				Protective Barrier: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+			}
+
+			Reaper
+			{
+				Shadow Step: Off
+				Wraith Form: Off
+			}
+
+			Reinhardt
+			{
+				Barrier Field: Off
+				Charge: Off
+			}
+
+			Sigma
+			{
+				Accretion: Off
+				Experimental Barrier: Off
+				Kinetic Grasp: Off
+			}
+
+			Soldier: 76
+			{
+				Biotic Field: Off
+				Sprint: Off
+			}
+
+			Sombra
+			{
+				Hack: Off
+				Stealth: Off
+				Translocator: Off
+			}
+
+			Symmetra
+			{
+				Teleporter: Off
+			}
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+				Overload: Off
+			}
+
+			Tracer
+			{
+				Blink: Off
+				Recall: Off
+			}
+
+			Widowmaker
+			{
+				Grappling Hook: Off
+			}
+
+			Winston
+			{
+				Barrier Projector: Off
+				Jump Pack: Off
+			}
+
+			Zarya
+			{
+				Particle Barrier: Off
+				Projected Barrier: Off
+			}
+
+			disabled heroes
+			{
+				Roadhog
+				Wrecking Ball
+			}
+		}
+	}
+
+	extensions
+	{
+		Spawn More Dummy Bots
+	}
+}
+
+variables
+{
+	global:
+		0: VECTORS_Stairs_Starts_Exits
+		1: STRINGS_Stairs_Completed
+		2: INT_Loop_Control
+		4: PLAYERS_Trolls
+		5: PLAYERS_All
+
+	player:
+		0: INT_Current_Stairs_Index
+		1: INT_Troll_Number
+		2: PLAYERS_Honest
+		4: PLAYER_Testing
+		5: PLAYERS_Passed_Closely
+}
+
+rule("MAP: Horizon")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Horizon Lunar Colony);
+	}
+
+	actions
+	{
+		Global.VECTORS_Stairs_Starts_Exits = Array(Array(Vector(73.015, 7.455, -48.076), Vector(78.969, 10.455, -54.928), Vector(78.016,
+			14.455, -65.086)), Array(Vector(15.682, 9.465, -42.577), Vector(7.557, 12.319, -48.689), Vector(11.096, 13.455, -39.107)),
+			Array(Vector(26.490, 8.455, -81.288), Vector(35.339, 12.676, -79.511), Vector(41.156, 14.455, -80.823)));
+	}
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.STRINGS_Stairs_Completed = Array(Custom String("There's a life lesson in here somewhere."), Custom String("You did it!"));
+		Global.PLAYERS_Trolls = Empty Array;
+	}
+}
+
+rule("INIT: Create exit effects")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.VECTORS_Stairs_Starts_Exits), 1);
+			Create Effect(Global.PLAYERS_All, Good Aura, Color(Green), Last Of(Global.VECTORS_Stairs_Starts_Exits[Global.INT_Loop_Control]), 1,
+				Visible To);
+		End;
+	}
+}
+
+rule("GAME: Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("GAME: Spawn trolls")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.VECTORS_Stairs_Starts_Exits), 1);
+			Create Dummy Bot(Hero(Roadhog), All Teams, Global.INT_Loop_Control + 12,
+				Global.VECTORS_Stairs_Starts_Exits[Global.INT_Loop_Control][1], Vector(0, 0, 0));
+			Set Status(Last Created Entity, Null, Invincible, 9999);
+			Set Status(Last Created Entity, Null, Phased Out, 9999);
+			Last Created Entity.INT_Troll_Number = Global.INT_Loop_Control;
+			Modify Global Variable(PLAYERS_Trolls, Append To Array, Last Created Entity);
+		End;
+	}
+}
+
+rule("GAME: Shorten setup time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Is In Setup || Is Assembling Heroes) == True;
+	}
+
+	actions
+	{
+		Set Match Time(3);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.INT_Current_Stairs_Index = 0;
+		Global.PLAYERS_All = All Players(All Teams);
+		Create Icon(Event Player, Last Of(Global.VECTORS_Stairs_Starts_Exits[Event Player.INT_Current_Stairs_Index]), Flag,
+			Visible To and Position, Color(Green), True);
+		Set Damage Dealt(Event Player, 25);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Teleport(Event Player, First Of(First Of(Global.VECTORS_Stairs_Starts_Exits[Event Player.INT_Current_Stairs_Index])));
+		Set Objective Description(All Players(All Teams), Custom String("Ascend the stairs"), None);
+		Small Message(Event Player, Custom String("Ascend the stairs"));
+	}
+}
+
+rule("PLAYER: Exits stairs")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Distance Between(Event Player, Last Of(Global.VECTORS_Stairs_Starts_Exits[Event Player.INT_Current_Stairs_Index])) < 1;
+	}
+
+	actions
+	{
+		If(!Array Contains(Global.PLAYERS_Trolls[Event Player.INT_Current_Stairs_Index].PLAYERS_Passed_Closely, Event Player));
+			Kill(Event Player, Null);
+			Small Message(Event Player, Custom String("Nice try."));
+		Else;
+			Small Message(Event Player, Random Value In Array(Global.STRINGS_Stairs_Completed));
+			Modify Player Variable(Global.PLAYERS_Trolls[Event Player.INT_Current_Stairs_Index], PLAYERS_Honest, Remove From Array By Value,
+				Event Player);
+			Modify Player Variable(Global.PLAYERS_Trolls[Event Player.INT_Current_Stairs_Index], PLAYERS_Passed_Closely,
+				Remove From Array By Value, Event Player);
+			Event Player.INT_Current_Stairs_Index += 1;
+			If(Event Player.INT_Current_Stairs_Index > Count Of(Global.VECTORS_Stairs_Starts_Exits) - 1);
+				Big Message(All Players(All Teams), Custom String("{0} ascended all of the stairs!", Event Player));
+				Event Player.INT_Current_Stairs_Index = 0;
+				Modify Player Score(Event Player, 1);
+			End;
+			Teleport(Event Player, First Of(Global.VECTORS_Stairs_Starts_Exits[Event Player.INT_Current_Stairs_Index]));
+		End;
+	}
+}
+
+rule("TROLL: Sees player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is True For Any(All Living Players(All Teams), !Is Dummy Bot(Current Array Element) && Is In Line of Sight(Event Player,
+			Current Array Element, Barriers Do Not Block LOS)) == True;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Direction Towards(Event Player, Random Value In Array(Filtered Array(All Living Players(All Teams),
+			!Is Dummy Bot(Current Array Element) && Is In Line of Sight(Event Player, Current Array Element, Barriers Do Not Block LOS)))),
+			120, To World, Direction and Turn Rate);
+	}
+}
+
+rule("TROLL 0: Clue (hello)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.INT_Troll_Number == 0;
+	}
+
+	actions
+	{
+		Wait(Random Real(1, 5), Ignore Condition);
+		Communicate(Event Player, Hello);
+		Loop If Condition Is True;
+	}
+}
+
+rule("TROLL 0: Player follows rule (says hello)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.INT_Troll_Number == 0;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Testing = Random Value In Array(Filtered Array(All Living Players(All Teams), !Is Dummy Bot(
+			Current Array Element) && Current Array Element.INT_Current_Stairs_Index == Event Player.INT_Troll_Number));
+		If(Angle Between Vectors(Facing Direction Of(Event Player.PLAYER_Testing), Direction Towards(Eye Position(
+			Event Player.PLAYER_Testing), Eye Position(Event Player))) < 3 && Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Event Player.PLAYER_Testing), Barriers Do Not Block LOS) && Is Communicating(Event Player.PLAYER_Testing, Hello));
+			Modify Player Variable(Event Player, PLAYERS_Honest, Append To Array, Event Player.PLAYER_Testing);
+			disabled Small Message(Host Player, Custom String("Added {0}", Last Of(Event Player.PLAYERS_Honest)));
+		End;
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("TROLL 0: Player breaks rule (doesn't say hello)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is True For Any(All Living Players(All Teams), !Is Dummy Bot(Current Array Element) && Is In Line of Sight(Event Player,
+			Current Array Element, Barriers Do Not Block LOS) && !Array Contains(Event Player.PLAYERS_Honest, Current Array Element))
+			== True;
+		Event Player.INT_Troll_Number == 0;
+	}
+
+	actions
+	{
+		Wait(Random Real(1, 2), Abort When False);
+		Press Button(Event Player, Random Value In Array(Array(Button(Primary Fire), Button(Secondary Fire))));
+		Loop If Condition Is True;
+	}
+}
+
+rule("TROLL 1: Player breaks rule (doesn't jump)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is True For Any(All Living Players(All Teams), !Is Dummy Bot(Current Array Element) && Is In Line of Sight(Event Player,
+			Current Array Element, Barriers Do Not Block LOS) && !Is In Air(Current Array Element)) == True;
+		Event Player.INT_Troll_Number == 1;
+	}
+
+	actions
+	{
+		Wait(Random Real(1, 2), Abort When False);
+		Press Button(Event Player, Random Value In Array(Array(Button(Primary Fire), Button(Secondary Fire))));
+		Loop If Condition Is True;
+	}
+}
+
+rule("TROLL 1: Clue")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.INT_Troll_Number == 1;
+	}
+
+	actions
+	{
+		Wait(Random Real(1, 5), Ignore Condition);
+		Press Button(Event Player, Button(Jump));
+		Loop If Condition Is True;
+	}
+}
+
+rule("TROLL 2: Clue")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.INT_Troll_Number == 2;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player, Button(Crouch));
+		Wait(Random Real(1, 3), Ignore Condition);
+		Stop Holding Button(Event Player, Button(Crouch));
+		Wait(Random Real(1, 5), Ignore Condition);
+		Loop;
+	}
+}
+
+rule("TROLL 2: Player breaks rule (doesn't crouch)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is True For Any(All Living Players(All Teams), !Is Dummy Bot(Current Array Element) && Is In Line of Sight(Event Player,
+			Current Array Element, Barriers Do Not Block LOS) && !Is Button Held(Current Array Element, Button(Crouch))) == True;
+		Event Player.INT_Troll_Number == 2;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Random Value In Array(Array(Button(Primary Fire), Button(Secondary Fire))));
+		Wait(Random Real(0.500, 2), Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("DEBUG: HUD")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Testing = First Of(Sorted Array(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element)),
+			Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player),
+			Player Closest To Reticle(Event Player, All Teams)))));
+		If(Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(
+			Global.PLAYERS_Trolls[Event Player.INT_Current_Stairs_Index]))) > 3);
+			Event Player.PLAYER_Testing = Null;
+		End;
+		Wait(0.250, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("TROLLS: Player passes closely")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Testing = First Of(Sorted Array(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element)),
+			Distance Between(Position Of(Event Player), Position Of(Current Array Element))));
+		If(Distance Between(Position Of(Event Player), Position Of(Event Player.PLAYER_Testing)) < 2 && !Array Contains(
+			Event Player.PLAYERS_Passed_Closely, Event Player.PLAYER_Testing));
+			Modify Player Variable(Event Player, PLAYERS_Passed_Closely, Append To Array, Event Player.PLAYER_Testing);
+		End;
+		Wait(0.250, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}

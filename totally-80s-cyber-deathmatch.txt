@@ -1,0 +1,181 @@
+settings
+{
+	main
+	{
+		Description: "Rainbow Overwatch by andygmb | Youtube.com/andyb | workshop.codes/andygmb"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Spectators: 12
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 50
+
+			enabled maps
+			{
+				King's Row
+				King's Row Winter
+			}
+		}
+
+		General
+		{
+			Hero Limit: Off
+			Respawn Time Scalar: 50%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 60%
+			Movement Gravity: 25%
+			No Ammunition Requirement: On
+			Ultimate Generation: 300%
+
+			Sombra
+			{
+				Hack: Off
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.B = Array(Color(Blue));
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		For Global Variable(A, 0, 128, 2);
+			Create Effect(Local Player, Sphere, Random Value In Array(Array(Color(Rose), Color(Sky Blue))), Update Every Frame(Position Of(
+				Local Player) + Vector(0, 0.500, 0)), Evaluate Once(Global.A * 0.200), Visible To Position and Radius);
+			Start Forcing Player Outlines(All Players(All Teams), All Players(All Teams), False, Color(White), Default);
+			Global.C += 1;
+			If(Global.C == 6);
+				Global.C = 0;
+			End;
+			Wait(0.016, Ignore Condition);
+		End;
+		Global.A = 0;
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is In Setup || Is Assembling Heroes) == True;
+	}
+
+	actions
+	{
+		Set Match Time(3);
+	}
+}
+
+rule("Hud Text for code")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Rainbow Overwatch\r\nyoutube/andy bohan\r\nCode: VOYYY"), Top,
+			0, Color(Black), Color(Black), Custom Color(127.500 * (True + Cosine From Degrees(180 * Sine From Radians(
+			Total Time Elapsed))), 127.500 * (True + Cosine From Degrees(180 * Sine From Radians(2.094 + Total Time Elapsed))), 127.500 * (
+			True + Cosine From Degrees(180 * Sine From Radians(1.050 + Total Time Elapsed))), 254), Visible To Sort Order String and Color,
+			Default Visibility);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Forcing Player Outlines(All Players(All Teams), All Players(All Teams), False, Color(White), Default);
+	}
+}
+
+rule("Rule 6")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Forcing Player Outlines(All Players(All Teams), All Players(All Teams), False, Color(White), Default);
+	}
+}
+
+rule("GAME: Starts")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Slow Motion(50);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Disable Nameplates(Event Player, All Players(All Teams));
+	}
+}

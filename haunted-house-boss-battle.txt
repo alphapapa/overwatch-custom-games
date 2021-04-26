@@ -1,0 +1,232 @@
+settings
+{
+	main
+	{
+		Description: "Rainbow Overwatch by andygmb | Youtube.com/andyb | workshop.codes/andygmb"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Spectators: 12
+		Max Team 1 Players: 1
+		Max Team 2 Players: 10
+	}
+
+	modes
+	{
+		disabled Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 50
+		}
+
+		Team Deathmatch
+		{
+			Game Length In Minutes: 15
+
+			enabled maps
+			{
+				Château Guillard Halloween
+				Eichenwalde Halloween
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn Time Scalar: 50%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Healing Received: 50%
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: INT_Darkness_Spheres
+		1: REAL_Initial_Darkness_Radius
+		2: REAL_Darkness_Radius_Factor
+		3: INT_Loop_Control
+}
+
+rule("CREDITS: Based on Rainbow Overwatch by andygmb and ideas from TimeBomb")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		disabled Create HUD Text(All Players(All Teams), Null, Null, Custom String("Rainbow Overwatch\r\nyoutube/andy bohan\r\nCode: VOYYY"), Top,
+			0, Color(Black), Color(Black), Custom Color(127.500 * (True + Cosine From Degrees(180 * Sine From Radians(
+			Total Time Elapsed))), 127.500 * (True + Cosine From Degrees(180 * Sine From Radians(2.094 + Total Time Elapsed))), 127.500 * (
+			True + Cosine From Degrees(180 * Sine From Radians(1.050 + Total Time Elapsed))), 254), Visible To Sort Order String and Color,
+			Default Visibility);
+		disabled Small Message(Event Player, Custom String("By \"nobody\""));
+		disabled Small Message(Event Player, Custom String("Based on ideas from Rainbow Overwatch by andygmb, and other ideas from TimeBomb"));
+		Wait Until(Has Spawned(Event Player), 99999);
+		Small Message(Event Player, Custom String("It's dark out here.  Better stick together..."));
+	}
+}
+
+rule("INIT: Variables")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.INT_Darkness_Spheres = 48;
+		Global.REAL_Initial_Darkness_Radius = 0.125;
+		Global.REAL_Darkness_Radius_Factor = 1.100;
+	}
+}
+
+rule("INIT: Darkness effects")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Global.INT_Darkness_Spheres, 1);
+			Create Effect(Local Player, Sphere, Color(Black), Update Every Frame(Position Of(Local Player)), Evaluate Once(
+				Global.REAL_Initial_Darkness_Radius * Global.INT_Loop_Control * Global.REAL_Darkness_Radius_Factor),
+				Visible To Position and Radius);
+			Wait(0.016, Ignore Condition);
+		End;
+	}
+}
+
+rule("INIT: Shorten setup time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Is In Setup || Is Assembling Heroes) == True;
+	}
+
+	actions
+	{
+		Set Match Time(3);
+	}
+}
+
+rule("PLAYER: The one spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 300);
+	}
+}
+
+rule("PLAYER: Outlines and nameplates")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Forcing Player Outlines(All Players(Team 1), All Players(Team 2), False, Color(Red), Occluded);
+		Start Forcing Player Outlines(All Players(Team 2), All Players(Team 1), True, Color(Red), Occluded);
+		Start Forcing Player Outlines(All Players(Team 2), All Players(Team 2), True, Color(Blue), Always);
+		Enable Nameplates(All Players(Team 2), All Players(All Teams));
+		Disable Nameplates(All Players(Team 1), All Players(All Teams));
+	}
+}
+
+rule("PLAYER: The one dies: Swap teams with killer")
+{
+	event
+	{
+		Player Died;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Move Player to Team(Event Player, Team 2, -1);
+		Move Player to Team(Attacker, Team 1, -1);
+	}
+}
+
+rule("GLOBAL: Keep someone on team 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(All Players(Team 1)) < 1;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Move Player to Team(Random Value In Array(All Players(Team 2)), Team 1, -1);
+	}
+}

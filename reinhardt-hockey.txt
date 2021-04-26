@@ -1,0 +1,1524 @@
+settings
+{
+	main
+	{
+		Description: "Reinhardt is the real hockey player in Overwatch.  (by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Max Team 2 Players: 0
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse Night
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Mercy Resurrect Counteracts Kills: Off
+			Respawn As Random Hero: On
+			Respawn Time Scalar: 10%
+			Score To Win: 7
+			Self Initiated Respawn: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Lúcio
+			{
+				Damage Dealt: 10%
+				Damage Received: 10%
+				Primary Fire: Off
+				Ultimate Ability Sound Barrier: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast Cooldown Time: 50%
+				Damage Dealt: 10%
+				Hover Jets: Off
+				Movement Speed: 75%
+				Primary Fire: Off
+				Projectile Speed: 50%
+				Quick Melee: Off
+				Ultimate Ability Barrage: Off
+			}
+
+			Reinhardt
+			{
+				Barrier Field: Off
+				Charge Cooldown Time: 200%
+				Damage Dealt: 10%
+				Damage Received: 10%
+				Fire Strike: Off
+				Movement Speed: 75%
+				Rocket Hammer Knockback Scalar: 200%
+				Ultimate Generation - Passive Earthshatter: 500%
+			}
+
+			Roadhog
+			{
+				Chain Hook Cooldown Time: 50%
+				Damage Dealt: 10%
+				Damage Received: 10%
+				Health: 500%
+				Movement Gravity: 25%
+				Primary Fire: Off
+				Quick Melee: Off
+				Secondary Fire: Off
+				Take a Breather: Off
+				Ultimate Ability Whole Hog: Off
+			}
+
+			Wrecking Ball
+			{
+				Damage Received: 10%
+				Health: 500%
+				Movement Gravity: 75%
+				Projectile Gravity: 75%
+				Roll Always Active: On
+			}
+
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+	}
+
+	extensions
+	{
+		Buff Status Effects
+		Debuff Status Effects
+	}
+}
+
+variables
+{
+	global:
+		0: BOOL_Initialized
+		1: VECTOR_Ball_Spawn
+		2: PLAYER_Ball
+		3: VECTOR_Goal_1
+		4: VECTOR_Goal_2
+		5: PLAYERS_Team_1
+		6: PLAYERS_Team_2
+		7: REAL_Goal_Radius
+		8: REAL_Ball_Scale
+		9: VECTOR_Spawn_Team_1
+		10: VECTOR_Spawn_Team_2
+		12: INT_Three_Pointer_Distance
+		13: VECTOR_Last_Shot_From
+		16: STRINGS_Scored_2
+		17: STRINGS_Scored_3
+		18: REAL_Map_Scale_Factor
+		19: REAL_Player_Scale
+		20: PLAYERS_All
+		21: REAL_Wind
+		22: REAL_Wind_Bounds
+		23: VECTOR_Ball_Last_Position
+		24: INT_Movement_Speed_Max
+		25: INT_Movement_Speed_Min
+		26: INT_Loop_Control
+		27: INT_Max_Turn_Degrees
+		28: REAL_Decel_Factor
+		29: REAL_Accel_Factor
+		30: STRINGS_Tips
+		31: BOOL_Goal_Just_Scored
+		32: PLAYER_Last_Touched
+		33: VECTORS_Spawns
+		34: COLOR_Red
+		35: COLOR_Blue
+		36: LINES_Bounds
+		37: REAL_Wind_Y
+		38: LINES_Red_Blue
+		39: LINES_Outer_Bounds
+		40: BOOL_Boards
+		41: VECTORS_Portals
+		42: REAL_Portal_Radius
+		43: LOCAL_VECTOR_Portal
+		44: COLORS_Portals
+		45: VECTORS_Antigravity
+		46: VECTOR_Bounds_Center
+		47: REAL_Bounds_Radius
+		48: REAL_Accel_Ratio
+		49: REAL_Accel_Time
+		50: BOOL_Ball_In_Play
+		51: BOOL_Ball_Trail_Effect
+		52: BOOL_Ball_Hit_Effect
+		53: REAL_Ball_Trail_Effect_Min_Speed
+		54: BOOL_Player_Speed_Effect
+
+	player:
+		0: INT_Team
+		1: BOOL_Spawned
+		2: BOOL_Welcomed
+		3: VECTOR_Movement
+		4: INT_Move_Speed
+		5: BOOL_Decelerating
+		6: VECTOR_Last_Position
+		7: INT_Movement_Angle
+		8: REAL_Decel_Factor
+		10: REAL_Accel_Start_Time
+		11: REAL_Accel_Elapsed
+		12: DEBUG
+}
+
+subroutines
+{
+	0: Reset
+	1: Reassign_Teams
+	2: Teleport_Players
+	3: Set_Team_Player_Lists
+	4: Create_Effects
+}
+
+rule("MAP: Castillo")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Map(Castillo)), Current Map) == True;
+	}
+
+	actions
+	{
+		Global.LINES_Red_Blue = Array(Array(Vector(0.003, 267.500, 288.499), Vector(-0.016, 267.500, 268)), Array(Vector(-10, 267.250,
+			288.499), Vector(-10, 267.250, 260)), Array(Vector(10, 267.250, 288.499), Vector(10, 267.250, 260)));
+		Global.VECTOR_Ball_Spawn = Vector(-100, 35, 57.985);
+		Global.VECTORS_Spawns = Array(Array(Vector(-99.110, 33.735, 45.075), Vector(-105.654, 33.735, 46.079), Vector(-111.413, 33.735,
+			46.707)), Array(Vector(-106.139, 33.735, 71.778), Vector(-100.285, 33.735, 70.444), Vector(-93.761, 33.735, 69.193)));
+		Global.VECTOR_Goal_1 = Vector(-96.808, 32.735, 73.677);
+		Global.VECTOR_Goal_2 = Vector(-102.897, 32.735, 41.998);
+		Global.REAL_Goal_Radius = 2;
+		Global.REAL_Player_Scale = 0.650;
+		Global.COLOR_Red = Color(Orange);
+		Global.COLOR_Blue = Color(Sky Blue);
+		Global.BOOL_Boards = False;
+		Global.VECTOR_Bounds_Center = Vector(-99.713, 33.508, 58.058);
+		Global.REAL_Bounds_Radius = 16;
+	}
+}
+
+rule("MAP: Horizon")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Map(Horizon Lunar Colony)), Current Map) == True;
+	}
+
+	actions
+	{
+		Global.LINES_Red_Blue = Array(Array(Vector(0.003, 267.500, 288.499), Vector(-0.016, 267.500, 268)), Array(Vector(-10, 267.250,
+			288.499), Vector(-10, 267.250, 260)), Array(Vector(10, 267.250, 288.499), Vector(10, 267.250, 260)));
+		Global.VECTOR_Ball_Spawn = Vector(-15.537, 9.086, 5.254);
+		Global.VECTORS_Spawns = Array(Array(Vector(3.701, 8.900, 9.372), Vector(3.701, 8.900, 9.372), Vector(3.701, 8.900, 9.372)), Array(
+			Vector(-34.161, 8.900, 0.603), Vector(-34.161, 8.900, 0.603), Vector(-34.161, 8.900, 0.603)));
+		Global.VECTOR_Goal_1 = Vector(-34.235, 8.899, 2.176);
+		Global.VECTOR_Goal_2 = Vector(3.701, 8.900, 9.372);
+		Global.REAL_Goal_Radius = 1.500;
+		Global.REAL_Player_Scale = 0.500;
+		Global.COLOR_Red = Color(Orange);
+		Global.COLOR_Blue = Color(Sky Blue);
+		Global.BOOL_Boards = False;
+		Global.VECTOR_Bounds_Center = Vector(-99.713, 33.508, 58.058);
+		Global.REAL_Bounds_Radius = 16;
+	}
+}
+
+rule("MAP: Lijiang Control Center")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Map(Lijiang Control Center), Map(Lijiang Control Center Lunar New Year)), Current Map) == True;
+	}
+
+	actions
+	{
+		disabled Global.LINES_Bounds = Array(Array(Vector(30, 0, 15), Vector(-30, 0, 15)), Array(Vector(-30, 0, 15), Vector(-30, 0, -15)), Array(
+			Vector(-30, 0, -15), Vector(30, 0, -15)), Array(Vector(30, 0, -15), Vector(30, 0, 15)));
+		"If the ball crosses these lines, it's destroyed (a failsafe, because people can't be trusted to bring the ball back in-bounds)."
+		disabled Global.LINES_Outer_Bounds = Array(Array(Vector(35, 0, 20), Vector(-35, 0, 20)), Array(Vector(-35, 0, 20), Vector(-35, 0, -20)),
+			Array(Vector(-35, 0, -20), Vector(35, 0, -25)), Array(Vector(35, 0, -20), Vector(35, 0, 20)));
+		Global.LINES_Red_Blue = Array(Array(Vector(0.003, 267.500, 288.499), Vector(-0.016, 267.500, 268)), Array(Vector(-10, 267.250,
+			288.499), Vector(-10, 267.250, 260)), Array(Vector(10, 267.250, 288.499), Vector(10, 267.250, 260)));
+		Global.VECTOR_Ball_Spawn = Vector(0.002, 270.681, 292.822);
+		"NOTE: Chamber and Island have coordinates rotated 90 degrees from each other.  A bit confusing."
+		Global.VECTORS_Spawns = Array(Array(Vector(-16.718, 267.900, 283.257), Vector(-16.718, 267.900, 283.257), Vector(-16.718, 267.900,
+			283.257)), Array(Vector(16.820, 267.900, 283.390), Vector(16.820, 267.900, 283.390), Vector(16.820, 267.900, 283.390)));
+		Global.VECTOR_Goal_1 = Vector(18.321, 267.900, 272.532);
+		Global.VECTOR_Goal_2 = Vector(-18.403, 267.900, 272.557);
+		Global.REAL_Goal_Radius = 2;
+		Global.VECTOR_Spawn_Team_1 = Vector(-18, 0, -18);
+		Global.VECTOR_Spawn_Team_2 = Vector(18, 0, 18);
+		Global.REAL_Player_Scale = 0.500;
+		Global.REAL_Wind = 0.375;
+		Global.REAL_Wind_Bounds = 21;
+		Global.COLOR_Red = Color(Purple);
+		Global.COLOR_Blue = Color(Aqua);
+		Global.REAL_Wind_Y = 0;
+		Global.BOOL_Boards = False;
+		Global.VECTOR_Bounds_Center = Vector(0.028, 272.955, 280.085);
+		Global.REAL_Bounds_Radius = 22;
+	}
+}
+
+rule("MAP: Expanse")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Map(Workshop Expanse), Map(Workshop Expanse Night)), Current Map) == True;
+	}
+
+	actions
+	{
+		Global.LINES_Bounds = Array(Array(Vector(30, 0, 15), Vector(-30, 0, 15)), Array(Vector(-30, 0, 15), Vector(-30, 0, -15)), Array(
+			Vector(-30, 0, -15), Vector(30, 0, -15)), Array(Vector(30, 0, -15), Vector(30, 0, 15)));
+		"If the ball crosses these lines, it's destroyed (a failsafe, because people can't be trusted to bring the ball back in-bounds)."
+		Global.LINES_Outer_Bounds = Array(Array(Vector(35, 0, 20), Vector(-35, 0, 20)), Array(Vector(-35, 0, 20), Vector(-35, 0, -20)),
+			Array(Vector(-35, 0, -20), Vector(35, 0, -25)), Array(Vector(35, 0, -20), Vector(35, 0, 20)));
+		Global.LINES_Red_Blue = Array(Array(Vector(0, 0, -15), Vector(0, 0, 15)), Array(Vector(7.500, 0, -15), Vector(7.500, 0, 15)),
+			Array(Vector(-7.500, 0, -15), Vector(-7.500, 0, 15)));
+		Global.VECTOR_Ball_Spawn = Vector(0, 5, 0);
+		"NOTE: Chamber and Island have coordinates rotated 90 degrees from each other.  A bit confusing."
+		Global.VECTORS_Spawns = Array(Array(Vector(-10, 0, -10), Vector(-10, 0, 0), Vector(-10, 0, 10)), Array(Vector(10, 0, -10), Vector(
+			10, 0, 0), Vector(10, 0, 10)));
+		Global.VECTOR_Goal_1 = Vector(26, 0, 0);
+		Global.VECTOR_Goal_2 = Vector(-26, 0, 0);
+		Global.REAL_Goal_Radius = 2;
+		Global.VECTOR_Spawn_Team_1 = Vector(-18, 0, -18);
+		Global.VECTOR_Spawn_Team_2 = Vector(18, 0, 18);
+		Global.REAL_Player_Scale = 0.750;
+		Global.REAL_Wind = 0.375;
+		Global.REAL_Wind_Bounds = 21;
+		Global.COLOR_Red = Color(Purple);
+		Global.COLOR_Blue = Color(Aqua);
+		Global.REAL_Wind_Y = 0;
+		Global.BOOL_Boards = True;
+	}
+}
+
+rule("MAP: Island")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Map(Workshop Island), Map(Workshop Island Night)), Current Map) == True;
+	}
+
+	actions
+	{
+		Global.LINES_Red_Blue = Array(Array(Vector(0, 0, -20), Vector(0, 0, 20)), Array(Vector(7.500, 0, -20), Vector(7.500, 0, 20)),
+			Array(Vector(-7.500, 0, -20), Vector(-7.500, 0, 20)));
+		Global.LINES_Bounds = Array(Array(Vector(20, 0, 20), Vector(-20, 0, 20)), Array(Vector(-20, 0, 20), Vector(-20, 0, -20)), Array(
+			Vector(-20, 0, -20), Vector(20, 0, -20)), Array(Vector(20, 0, -20), Vector(20, 0, 20)));
+		Global.VECTOR_Ball_Spawn = Vector(0, 20, 0);
+		"NOTE: Chamber and Island have coordinates rotated 90 degrees from each other.  A bit confusing."
+		Global.VECTORS_Spawns = Array(Array(Vector(-15, 0, -15), Vector(-15, 0, 0), Vector(-15, 0, 15)), Array(Vector(15, 0, -15), Vector(
+			15, 0, 0), Vector(15, 0, 15)));
+		Global.VECTOR_Goal_1 = Vector(20, 0, 0);
+		Global.VECTOR_Goal_2 = Vector(-20, 0, 0);
+		Global.VECTOR_Spawn_Team_1 = Vector(-18, 0, -18);
+		Global.VECTOR_Spawn_Team_2 = Vector(18, 0, 18);
+		Global.REAL_Player_Scale = 0.750;
+		Global.REAL_Wind = 0.375;
+		Global.REAL_Wind_Bounds = 21;
+		Global.COLOR_Red = Color(Purple);
+		Global.COLOR_Blue = Color(Aqua);
+		Global.REAL_Wind_Y = 0.500;
+		Global.BOOL_Boards = False;
+	}
+}
+
+rule("MAP: Chamber")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Workshop Chamber);
+	}
+
+	actions
+	{
+		"NOTE: Chamber and Island have coordinates rotated 90 degrees from each other.  A bit confusing."
+		Global.VECTORS_Spawns = Array(Array(Vector(-15, 0, -15), Vector(-15, 0, 0), Vector(-15, 0, 15)), Array(Vector(15, 0, -15), Vector(
+			15, 0, 0), Vector(15, 0, 15)));
+		Global.LINES_Red_Blue = Array(Array(Vector(0, 0, -20), Vector(0, 0, 20)), Array(Vector(7.500, 0, -20), Vector(7.500, 0, 20)),
+			Array(Vector(-7.500, 0, -20), Vector(-7.500, 0, 20)));
+		Global.LINES_Bounds = Array(Array(Vector(20, 0, 20), Vector(-20, 0, 20)), Array(Vector(-20, 0, 20), Vector(-20, 0, -20)), Array(
+			Vector(-20, 0, -20), Vector(20, 0, -20)), Array(Vector(20, 0, -20), Vector(20, 0, 20)));
+		Global.VECTOR_Ball_Spawn = Vector(0, 0, 0);
+		"NOTE: Chamber and Island have coordinates rotated 90 degrees from each other.  A bit confusing."
+		disabled Global.VECTORS_Spawns = Array(Array(Vector(-15, 0, -15), Vector(-15, 0, 0), Vector(-15, 0, 15)), Array(Vector(15, 0, -15), Vector(
+			15, 0, 0), Vector(15, 0, 15)));
+		Global.VECTOR_Goal_1 = Vector(20, 0, 0);
+		Global.VECTOR_Goal_2 = Vector(-20, 0, 0);
+		Global.VECTOR_Spawn_Team_1 = Vector(19, 0, 19);
+		Global.VECTOR_Spawn_Team_2 = Vector(-19, 0, -19);
+		Global.REAL_Player_Scale = 0.750;
+		Global.COLOR_Red = Color(Red);
+		Global.COLOR_Blue = Color(Blue);
+		Global.VECTORS_Portals = Array(Vector(20, 0, 20), Vector(-20, 0, -20));
+		Global.COLORS_Portals = Array(Color(Aqua), Color(Orange));
+		Global.REAL_Portal_Radius = 2;
+		Global.VECTORS_Antigravity = Array(Vector(-20, 0, 20), Vector(20, 0, -20));
+	}
+}
+
+rule("INIT:")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Initialized != True;
+	}
+
+	actions
+	{
+		If(Global.REAL_Goal_Radius == 0);
+			Global.REAL_Goal_Radius = Workshop Setting Real(Custom String("Settings"), Custom String("Goal radius (meters)"), 3, 1, 10, 0);
+		End;
+		Global.STRINGS_Tips = Array(Custom String("Keep your momentum by turning slowly."), Custom String(
+			"Slow is smooth, smooth is fast."), Custom String("Speed is life."), Custom String("Skate not to where the puck is."),
+			Custom String("Skate to where the puck will be."), Custom String("You miss 100% of the shots you don't take."), Custom String(
+			"Fun fact: Hockey was invented by a penguin rancher in 1782."), Custom String("Don't be a ball hog.  Pass it!"), Custom String(
+			"There's no jumping in hockey!"), Custom String("Gotta go fast!"));
+		Global.REAL_Accel_Factor = Workshop Setting Real(Custom String("Movement"), Custom String(
+			"Acceleration factor (when not turning sharply)"), 1.045, 1, 1.100, 0);
+		Global.INT_Max_Turn_Degrees = Workshop Setting Integer(Custom String("Movement"), Custom String(
+			"Max turn (degrees) (speed reduces with sharper turns)"), 2, 0, 360, 0);
+		Global.INT_Movement_Speed_Max = Workshop Setting Integer(Custom String("Movement"), Custom String("Max movement speed (percent)"),
+			300, 10, 500, 0);
+		Global.INT_Movement_Speed_Min = Workshop Setting Integer(Custom String("Movement"), Custom String("Min movement speed (percent)"),
+			50, 10, 200, 0);
+		Global.STRINGS_Scored_2 = Array(Custom String("Score!"), Custom String("Boom, shakalaka!"), Custom String("Nothing but net!"),
+			Custom String("He shoots, he scores!"), Custom String("Swish!"));
+		Global.REAL_Ball_Scale = Workshop Setting Real(Custom String("Settings"), Custom String("Ball scale (factor)"), 0.200, 0.100, 100,
+			0);
+		disabled Global.REAL_Decel_Factor = Workshop Setting Real(Custom String("Movement"), Custom String(
+			"Deceleration factor (when turning sharply)"), 0.027, 0, 0.050, 0);
+		"FIXME: If Workshop real number sliders are changed to allow 3 decimal digits, move this setting back to one."
+		Global.REAL_Decel_Factor = 0.020;
+		Global.PLAYERS_Team_1 = Empty Array;
+		Global.PLAYERS_Team_2 = Empty Array;
+		"Dummy bot (basketball)."
+		Create Dummy Bot(Hero(Wrecking Ball), Team 2, -1, Global.VECTOR_Ball_Spawn, Vector(0, 0, 0));
+		Global.PLAYER_Ball = Last Created Entity;
+		Create Icon(All Players(All Teams), Global.PLAYER_Ball, Circle, Visible To and Position, Color(Black), True);
+		Start Forcing Dummy Bot Name(Global.PLAYER_Ball, Custom String("Ball"));
+		Start Forcing Player Outlines(Global.PLAYER_Ball, All Players(Team 1), True, Color(Yellow), Always);
+		Start Scaling Player(Global.PLAYER_Ball, Global.REAL_Map_Scale_Factor * 0.500, False);
+		"Goals."
+		Create Effect(All Players(All Teams), Sphere, Global.COLOR_Red, Global.VECTOR_Goal_1, Global.REAL_Goal_Radius, Visible To);
+		Create Effect(All Players(All Teams), Sphere, Global.COLOR_Blue, Global.VECTOR_Goal_2, Global.REAL_Goal_Radius, Visible To);
+		disabled Create Effect(All Players(All Teams), Sphere, Color(Gray), Global.VECTOR_Goal_1, Global.INT_Three_Pointer_Distance,
+			Visible To Position and Radius);
+		disabled Create Effect(All Players(All Teams), Sphere, Color(Gray), Global.VECTOR_Goal_2, Global.INT_Three_Pointer_Distance,
+			Visible To Position and Radius);
+		Create In-World Text(Global.PLAYERS_Team_1, Custom String("DEFEND"), Global.VECTOR_Goal_2, 1, Do Not Clip, Visible To, Color(
+			White), Visible Never);
+		Create In-World Text(Global.PLAYERS_Team_1, Custom String("SCORE"), Global.VECTOR_Goal_1, 1, Do Not Clip, Visible To, Color(White),
+			Visible Never);
+		Create In-World Text(Global.PLAYERS_Team_2, Custom String("DEFEND"), Global.VECTOR_Goal_1, 1, Do Not Clip, Visible To, Color(
+			White), Visible Never);
+		Create In-World Text(Global.PLAYERS_Team_2, Custom String("SCORE"), Global.VECTOR_Goal_2, 1, Do Not Clip, Visible To, Color(White),
+			Visible Never);
+		"HUD."
+		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/reinhardt-hockey"),
+			Custom String("QBHWR"), Left, -1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("TEAM COLOR"), Null, Null, Top, 0,
+			Local Player.INT_Team == 1 ? Global.COLOR_Blue : Global.COLOR_Red, Color(White), Null, Visible To String and Color,
+			Default Visibility);
+		Create HUD Text(All Players(Team 1), Custom String("SPEED"), Custom String("Turning sharply slows down"), Custom String(
+			"{0} ({2}%)", Local Player.BOOL_Decelerating ? Custom String("Decreasing") : (Is Moving(Local Player) ? Custom String(
+			"Increasing") : Custom String("")), Local Player.INT_Movement_Angle, Local Player.INT_Move_Speed), Left, 0,
+			Local Player.BOOL_Decelerating ? Color(Red) : (Is Moving(Local Player) ? Color(Green) : Color(White)), Color(Turquoise), Color(
+			White), Visible To String and Color, Default Visibility);
+		Set Objective Description(All Players(All Teams), Custom String("Reinhardt Hockey"), Visible To and String);
+		Disable Built-In Game Mode Scoring;
+		disabled Call Subroutine(Reset);
+		"Lines (decorative)"
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.LINES_Red_Blue[0][0], Global.LINES_Red_Blue[0][1], Global.COLOR_Red,
+			Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.LINES_Red_Blue[1][0], Global.LINES_Red_Blue[1][1], Global.COLOR_Blue,
+			Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.LINES_Red_Blue[2][0], Global.LINES_Red_Blue[2][1], Global.COLOR_Blue,
+			Visible To);
+		"Center-ice ring."
+		Create Effect(All Players(All Teams), Ring, Global.COLOR_Red, Vector(0, 0, 0), 3, Visible To);
+		"Face-off rings (decorative)"
+		disabled Create Effect(All Players(All Teams), Ring, Color(Red), Vector(-10, 0, 10), 2, Visible To);
+		disabled Create Effect(All Players(All Teams), Ring, Color(Red), Vector(10, 0, -10), 2, Visible To);
+		disabled Create Effect(All Players(All Teams), Ring, Color(Red), Vector(10, 0, 10), 2, Visible To);
+		disabled Create Effect(All Players(All Teams), Ring, Color(Red), Vector(-10, 0, -10), 2, Visible To);
+		Call Subroutine(Create_Effects);
+		Global.REAL_Accel_Time = 5;
+		Global.REAL_Accel_Ratio = Global.INT_Movement_Speed_Max / Global.INT_Movement_Speed_Min;
+		Global.BOOL_Initialized = True;
+		Global.BOOL_Ball_Trail_Effect = Workshop Setting Toggle(Custom String("Ball"), Custom String("Trail effect"), True, 0);
+		Global.BOOL_Ball_Hit_Effect = Workshop Setting Toggle(Custom String("Ball"), Custom String("Hit effect"), True, 0);
+		Global.REAL_Ball_Trail_Effect_Min_Speed = Workshop Setting Real(Custom String("Ball"), Custom String("Trail effect minimum speed"),
+			7.500, 0, 100, 0);
+		Global.BOOL_Player_Speed_Effect = Workshop Setting Toggle(Custom String("Players"), Custom String("Speed effect"), True, 0);
+	}
+}
+
+rule("PLAYER: Joins (assign to team)")
+{
+	event
+	{
+		Player Joined Match;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Global.BOOL_Initialized == True;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(Team 1);
+		Event Player.BOOL_Spawned = False;
+		If(Count Of(Global.PLAYERS_Team_1) <= Count Of(Global.PLAYERS_Team_2));
+			Event Player.INT_Team = 1;
+		Else;
+			Event Player.INT_Team = 2;
+		End;
+		Call Subroutine(Set_Team_Player_Lists);
+		Start Scaling Player(Event Player, Global.REAL_Player_Scale, False);
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(Team 1);
+		Call Subroutine(Set_Team_Player_Lists);
+	}
+}
+
+rule("PLAYER: Welcome")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Event Player.BOOL_Welcomed != True;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Big Message(Event Player, Custom String("Welcome to Reinhardt Hockey!"));
+		Event Player.BOOL_Welcomed = True;
+	}
+}
+
+rule("GAME: Begins (for TDM maps)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(75);
+		disabled Call Subroutine(Reassign_Teams);
+		Call Subroutine(Reset);
+		disabled Small Message(Host Player, Custom String("Begin"));
+	}
+}
+
+rule("BALL: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Event Player == Global.PLAYER_Ball;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Global.VECTOR_Ball_Spawn);
+		Start Scaling Player(Event Player, Global.REAL_Ball_Scale, True);
+		Start Forcing Player Outlines(Event Player, All Players(All Teams), True, Color(Black), Always);
+		Disable Nameplates(Event Player, All Players(All Teams));
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Event Player.BOOL_Spawned == False;
+		Has Spawned(Event Player) == True;
+		disabled Global.BOOL_Ball_In_Play == True;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Spawned = True;
+		Start Forcing Player Outlines(Event Player, All Players(All Teams), True,
+			Event Player.INT_Team == 1 ? Global.COLOR_Blue : Global.COLOR_Red, Always);
+		Set Ability Cooldown(Event Player, Button(Ability 1), 4);
+		Event Player.REAL_Accel_Start_Time = Null;
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Spawned = False;
+	}
+}
+
+disabled rule("PLAYER: Skating (new, movement vector-based) (non-polynomial)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.INT_Movement_Angle = Angle Between Vectors(Direction Towards(Event Player.VECTOR_Last_Position, Position Of(
+			Event Player)), Event Player.VECTOR_Movement);
+		disabled Event Player.INT_Movement_Angle = Angle Between Vectors(Event Player.VECTOR_Movement, Direction Towards(
+			Event Player.VECTOR_Last_Position, Position Of(Event Player)));
+		"Reset when not moving."
+		If(!Is Moving(Event Player));
+			Event Player.INT_Move_Speed = Global.INT_Movement_Speed_Min;
+			Event Player.BOOL_Decelerating = False;
+		Else;
+			"Reduce speed if turn too sharp."
+			If(Event Player.INT_Movement_Angle > Global.INT_Max_Turn_Degrees);
+				Event Player.REAL_Decel_Factor = 1 - Event Player.INT_Movement_Angle * Global.REAL_Decel_Factor;
+				disabled Event Player.REAL_Decel_Factor = Event Player.INT_Movement_Angle * Global.REAL_Decel_Factor;
+				Event Player.INT_Move_Speed = Max(Global.INT_Movement_Speed_Min, Event Player.INT_Move_Speed * Event Player.REAL_Decel_Factor);
+				Event Player.BOOL_Decelerating = True;
+			"Increase speed."
+			Else;
+				Event Player.INT_Move_Speed = Min(Global.INT_Movement_Speed_Max, Event Player.INT_Move_Speed * Global.REAL_Accel_Factor);
+				Event Player.BOOL_Decelerating = False;
+			End;
+		End;
+		"Update move speed."
+		Set Move Speed(Event Player, Event Player.INT_Move_Speed);
+		Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
+		"Finally, update variables."
+		Event Player.VECTOR_Last_Position = Position Of(Event Player);
+		"Loop while alive."
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("BALL: Pinned")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Stunned) == True;
+	}
+
+	actions
+	{
+		Global.PLAYER_Last_Touched = Closest Player To(Position Of(Event Player), Team 1);
+		Wait(0.250, Ignore Condition);
+		"Don't cancel swinging of Reinhardt who just shattered."
+		If(Ultimate Charge Percent(Global.PLAYER_Last_Touched) != 0);
+			Cancel Primary Action(Global.PLAYER_Last_Touched);
+		End;
+		Loop If Condition Is True;
+	}
+}
+
+rule("BALL: Shattered")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Attacker) == True;
+	}
+
+	actions
+	{
+		Global.PLAYER_Last_Touched = Closest Player To(Position Of(Event Player), Team 1);
+		Apply Impulse(Event Player, Vector(0, 1, 0), 10, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("BALL: Gets hit")
+{
+	event
+	{
+		Player Took Damage;
+		Team 2;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Global.BOOL_Ball_Hit_Effect == True;
+	}
+
+	actions
+	{
+		Global.PLAYER_Last_Touched = Attacker;
+		Play Effect(All Players(All Teams), Good Explosion,
+			Global.PLAYER_Last_Touched.INT_Team == 1 ? Global.COLOR_Blue : Global.COLOR_Red, Global.PLAYER_Ball, 0.250);
+	}
+}
+
+rule("BALL: Team 1 scores (disable when setting up new map)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Goal_1) < Global.REAL_Goal_Radius;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("{0} scored!", Global.PLAYER_Last_Touched));
+		Disable Built-In Game Mode Respawning(Global.PLAYER_Ball);
+		Kill(Global.PLAYER_Ball, Null);
+		Play Effect(All Players(All Teams), Ring Explosion Sound, Color(Turquoise), Global.VECTOR_Goal_1, 10);
+		Play Effect(All Players(All Teams), Ring Explosion, Global.COLOR_Blue, Global.VECTOR_Goal_1, 10);
+		Modify Team Score(Team 1, Distance Between(Global.VECTOR_Last_Shot_From, Global.VECTOR_Goal_1)
+			> Global.INT_Three_Pointer_Distance ? 2 : 1);
+		Big Message(All Players(All Teams), Random Value In Array(Distance Between(Global.VECTOR_Goal_1, Global.VECTOR_Last_Shot_From)
+			> Global.INT_Three_Pointer_Distance ? Global.STRINGS_Scored_3 : Global.STRINGS_Scored_2));
+		Global.BOOL_Goal_Just_Scored = True;
+		Wait(3, Ignore Condition);
+		Call Subroutine(Reset);
+	}
+}
+
+rule("BALL: Team 2 scores (disable when setting up new map)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Goal_2) < Global.REAL_Goal_Radius;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("{0} scored!", Global.PLAYER_Last_Touched));
+		Disable Built-In Game Mode Respawning(Global.PLAYER_Ball);
+		Kill(Global.PLAYER_Ball, Null);
+		Play Effect(All Players(All Teams), Ring Explosion Sound, Color(Turquoise), Global.VECTOR_Goal_2, 10);
+		Play Effect(All Players(All Teams), Ring Explosion, Global.COLOR_Red, Global.VECTOR_Goal_2, 10);
+		Modify Team Score(Team 2, Distance Between(Global.VECTOR_Last_Shot_From, Global.VECTOR_Goal_2)
+			> Global.INT_Three_Pointer_Distance ? 2 : 1);
+		Big Message(All Players(All Teams), Random Value In Array(Distance Between(Global.VECTOR_Goal_2, Global.VECTOR_Last_Shot_From)
+			> Global.INT_Three_Pointer_Distance ? Global.STRINGS_Scored_3 : Global.STRINGS_Scored_2));
+		Global.BOOL_Goal_Just_Scored = True;
+		Wait(3, Ignore Condition);
+		Call Subroutine(Reset);
+	}
+}
+
+rule("GLOBAL: Reassign teams when uneven")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		(Absolute Value(Count Of(Filtered Array(All Players(Team 1), Current Array Element.INT_Team == 1)) - Count Of(Filtered Array(
+			All Players(Team 1), Current Array Element.INT_Team == 2))) != 1 && Absolute Value(Count Of(Filtered Array(All Players(Team 1),
+			Current Array Element.INT_Team == 1)) - Count Of(Filtered Array(All Players(Team 1), Current Array Element.INT_Team == 2)))
+			!= 0) == True;
+		Global.BOOL_Goal_Just_Scored == True;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Player left.  Reassigning teams..."));
+		Wait(2, Ignore Condition);
+		Call Subroutine(Reassign_Teams);
+		Call Subroutine(Reset);
+		disabled Small Message(Host Player, Custom String("argh: {0} {1}", Absolute Value(Count Of(Filtered Array(All Players(Team 1),
+			Current Array Element.INT_Team == 1)) - Count Of(Filtered Array(All Players(Team 1), Current Array Element.INT_Team == 2))),
+			Absolute Value(Count Of(Filtered Array(All Players(Team 1), Current Array Element.INT_Team == 1)) - Count Of(Filtered Array(
+			All Players(Team 1), Current Array Element.INT_Team == 2)))));
+	}
+}
+
+rule("BALL: Wind (keep it in bounds on Island) (DO NOT MOVE THIS RULE, WHO KNOWS WHY BUT THE ORDER SEEMS TO MATTER)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.REAL_Wind_Bounds != 0;
+		Global.BOOL_Boards == False;
+		"OLD: Hard-coded."
+		disabled (X Component Of(Position Of(Global.PLAYER_Ball)) > 20 || X Component Of(Position Of(Global.PLAYER_Ball)) < -20 || Z Component Of(
+			Position Of(Global.PLAYER_Ball)) > 20 || Z Component Of(Position Of(Global.PLAYER_Ball)) < -20) == True;
+		"NEW: Per-map."
+		(X Component Of(Position Of(Global.PLAYER_Ball)) > X Component Of(Global.LINES_Bounds[3][0]) || X Component Of(Position Of(
+			Global.PLAYER_Ball)) < X Component Of(Global.LINES_Bounds[1][0]) || Z Component Of(Position Of(Global.PLAYER_Ball))
+			> Z Component Of(Global.LINES_Bounds[0][0]) || Z Component Of(Position Of(Global.PLAYER_Ball)) < Z Component Of(
+			Global.LINES_Bounds[2][0])) == True;
+	}
+
+	actions
+	{
+		disabled Wait(1, Ignore Condition);
+		disabled Loop If Condition Is True;
+		Apply Impulse(Global.PLAYER_Ball, Vector(0, Global.REAL_Wind_Y, 0) + Direction Towards(Position Of(Global.PLAYER_Ball),
+			Global.VECTOR_Ball_Last_Position), Speed Of(Global.PLAYER_Ball) / 2, To World, Cancel Contrary Motion XYZ);
+	}
+}
+
+rule("BALL: Boards (keep it in bounds on Expanse) (DO NOT MOVE THIS RULE, WHO KNOWS WHY BUT THE ORDER SEEMS TO MATTER)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.BOOL_Boards == True;
+		"NEW: Per-map."
+		(X Component Of(Position Of(Global.PLAYER_Ball)) > X Component Of(Global.LINES_Bounds[3][0]) || X Component Of(Position Of(
+			Global.PLAYER_Ball)) < X Component Of(Global.LINES_Bounds[1][0]) || Z Component Of(Position Of(Global.PLAYER_Ball))
+			> Z Component Of(Global.LINES_Bounds[0][0]) || Z Component Of(Position Of(Global.PLAYER_Ball)) < Z Component Of(
+			Global.LINES_Bounds[2][0])) == True;
+	}
+
+	actions
+	{
+		disabled Wait(1, Ignore Condition);
+		disabled Loop If Condition Is True;
+		disabled Apply Impulse(Global.PLAYER_Ball, Vector(0, Global.REAL_Wind_Y, 0) + Direction Towards(Position Of(Global.PLAYER_Ball),
+			Global.VECTOR_Ball_Last_Position), Speed Of(Global.PLAYER_Ball) / 2, To World, Incorporate Contrary Motion);
+		If(X Component Of(Position Of(Global.PLAYER_Ball)) > X Component Of(Global.LINES_Bounds[3][0]));
+			Apply Impulse(Global.PLAYER_Ball, Vector(-1, 0, 0), Speed Of(Global.PLAYER_Ball), To World, Incorporate Contrary Motion);
+		Else If(X Component Of(Position Of(Global.PLAYER_Ball)) < X Component Of(Global.LINES_Bounds[1][0]));
+			Apply Impulse(Global.PLAYER_Ball, Vector(1, 0, 0), Speed Of(Global.PLAYER_Ball), To World, Incorporate Contrary Motion);
+		Else If(Z Component Of(Position Of(Global.PLAYER_Ball)) > Z Component Of(Global.LINES_Bounds[0][0]));
+			Apply Impulse(Global.PLAYER_Ball, Vector(0, 0, -1), Speed Of(Global.PLAYER_Ball), To World, Incorporate Contrary Motion);
+		Else If(Z Component Of(Position Of(Global.PLAYER_Ball)) < Z Component Of(Global.LINES_Bounds[2][0]));
+			Apply Impulse(Global.PLAYER_Ball, Vector(0, 0, 1), Speed Of(Global.PLAYER_Ball), To World, Incorporate Contrary Motion);
+		End;
+	}
+}
+
+rule("BALL: Failsafe (keep it in bounds on Expanse) (DO NOT MOVE THIS RULE, WHO KNOWS WHY BUT THE ORDER SEEMS TO MATTER)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Boards == True;
+		Is Game In Progress == True;
+		Is Alive(Global.PLAYER_Ball) == True;
+		Has Spawned(Global.PLAYER_Ball) == True;
+		Is On Ground(Global.PLAYER_Ball) == True;
+		"NEW: Per-map."
+		(X Component Of(Position Of(Global.PLAYER_Ball)) > X Component Of(Global.LINES_Outer_Bounds[3][0]) || X Component Of(Position Of(
+			Global.PLAYER_Ball)) < X Component Of(Global.LINES_Outer_Bounds[1][0]) || Z Component Of(Position Of(Global.PLAYER_Ball))
+			> Z Component Of(Global.LINES_Outer_Bounds[0][0]) || Z Component Of(Position Of(Global.PLAYER_Ball)) < Z Component Of(
+			Global.LINES_Outer_Bounds[2][0])) == True;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Kill(Global.PLAYER_Ball, Null);
+		disabled Respawn(Global.PLAYER_Ball);
+	}
+}
+
+rule("BALL: Update last position (DO NOT MOVE THIS RULE, WHO KNOWS WHY BUT THE ORDER SEEMS TO MATTER)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Disable Inspector Recording;
+		Global.VECTOR_Ball_Last_Position = Position Of(Global.PLAYER_Ball);
+		Wait(0.016, Ignore Condition);
+		Enable Inspector Recording;
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: Reset (disable when setting up new map)")
+{
+	event
+	{
+		Subroutine;
+		Reset;
+	}
+
+	actions
+	{
+		Global.PLAYER_Last_Touched = Null;
+		Global.BOOL_Goal_Just_Scored = False;
+		Global.PLAYERS_All.BOOL_Spawned = False;
+		Respawn(Filtered Array(All Players(Team 1), Is Dead(Current Array Element)));
+		Enable Built-In Game Mode Respawning(Global.PLAYER_Ball);
+		Wait Until(Is True For All(All Players(All Teams), Is Alive(Current Array Element) && Has Spawned(Current Array Element)), 99999);
+		Set Ability Cooldown(All Players(Team 1), Button(Ability 1), 4);
+		Small Message(All Players(Team 1), Random Value In Array(Global.STRINGS_Tips));
+		Call Subroutine(Teleport_Players);
+		Teleport(Global.PLAYER_Ball, Global.VECTOR_Ball_Spawn);
+	}
+}
+
+rule("SUBR: Teleport_Players")
+{
+	event
+	{
+		Subroutine;
+		Teleport_Players;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_Team_1), 1);
+			Teleport(Global.PLAYERS_Team_1[Global.INT_Loop_Control], Global.VECTORS_Spawns[0][Global.INT_Loop_Control]);
+			Set Facing(Global.PLAYERS_Team_1[Global.INT_Loop_Control], Direction Towards(Position Of(
+				Global.PLAYERS_Team_1[Global.INT_Loop_Control]), Global.VECTOR_Ball_Spawn), To World);
+		End;
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_Team_2), 1);
+			Teleport(Global.PLAYERS_Team_2[Global.INT_Loop_Control], Global.VECTORS_Spawns[1][Global.INT_Loop_Control]);
+			Set Facing(Global.PLAYERS_Team_2[Global.INT_Loop_Control], Direction Towards(Position Of(
+				Global.PLAYERS_Team_2[Global.INT_Loop_Control]), Global.VECTOR_Ball_Spawn), To World);
+		End;
+		disabled Small Message(Host Player, Custom String("Teleported"));
+	}
+}
+
+rule("SUBR: Reassign Teams")
+{
+	event
+	{
+		Subroutine;
+		Reassign_Teams;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(Team 1);
+		disabled Global.PLAYERS_Team_1 = Empty Array;
+		disabled Global.PLAYERS_Team_2 = Empty Array;
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
+			If(Count Of(Filtered Array(Global.PLAYERS_All, Current Array Element.INT_Team == 1)) <= Count Of(Filtered Array(Global.PLAYERS_All,
+				Current Array Element.INT_Team == 2)));
+				Global.PLAYERS_All[Global.INT_Loop_Control].INT_Team = 1;
+			Else;
+				Global.PLAYERS_All[Global.INT_Loop_Control].INT_Team = 2;
+			End;
+		End;
+		Call Subroutine(Set_Team_Player_Lists);
+		Small Message(Global.PLAYERS_Team_1, Custom String("You're on blue team."));
+		Small Message(Global.PLAYERS_Team_2, Custom String("You're on red team."));
+	}
+}
+
+disabled rule("DEBUG: Current vector")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Host Player, Custom String("POSITION"), Null, Position Of(Host Player), Right, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+	}
+}
+
+disabled rule("DEBUG: Corner effect (WIP)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Ring, Color(White), Vector(15, 0, 15), 5, Visible To);
+	}
+}
+
+disabled rule("BALL: In corners (pretend they're rounded) (WIP)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		X Component Of(Position Of(Global.PLAYER_Ball)) > 15;
+		Z Component Of(Position Of(Global.PLAYER_Ball)) > 15;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Direction Towards(Position Of(Event Player), Vector(15, 0, 15)), 0.100 * Speed Of In Direction(
+			Event Player, Direction Towards(Position Of(Event Player), Vector(15, 0, 15))), To World, Incorporate Contrary Motion);
+		disabled Apply Impulse(Event Player, Direction Towards(Position Of(Event Player), Vector(15, 0, 15)), Speed Of In Direction(Event Player,
+			Direction Towards(Position Of(Event Player), Vector(15, 0, 15))), To World, Incorporate Contrary Motion);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: Set_Team_Player_Lists")
+{
+	event
+	{
+		Subroutine;
+		Set_Team_Player_Lists;
+	}
+
+	actions
+	{
+		Global.PLAYERS_Team_1 = Empty Array;
+		Global.PLAYERS_Team_2 = Empty Array;
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.PLAYERS_All), 1);
+			If(Global.PLAYERS_All[Global.INT_Loop_Control].INT_Team == 1);
+				Modify Global Variable(PLAYERS_Team_1, Append To Array, Global.PLAYERS_All[Global.INT_Loop_Control]);
+			Else;
+				Modify Global Variable(PLAYERS_Team_2, Append To Array, Global.PLAYERS_All[Global.INT_Loop_Control]);
+			End;
+		End;
+	}
+}
+
+rule("SUBR: Create_Effects")
+{
+	event
+	{
+		Subroutine;
+		Create_Effects;
+	}
+
+	actions
+	{
+		If(Global.LINES_Bounds != 0);
+			For Global Variable(INT_Loop_Control, 0, Count Of(Global.LINES_Bounds), 1);
+				Create Beam Effect(All Players(All Teams), Good Beam, Global.LINES_Bounds[Global.INT_Loop_Control][0],
+					Global.LINES_Bounds[Global.INT_Loop_Control][1], Color(Yellow), Visible To);
+			End;
+		End;
+	}
+}
+
+rule("INIT: Draw portals")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.VECTORS_Portals != 0;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.VECTORS_Portals), 1);
+			Create Effect(All Players(All Teams), Sphere, Global.COLORS_Portals[Global.INT_Loop_Control],
+				Global.VECTORS_Portals[Global.INT_Loop_Control], Global.REAL_Portal_Radius, Visible To);
+		End;
+	}
+}
+
+rule("BALL: Portal")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is True For Any(Global.VECTORS_Portals, Distance Between(Position Of(Global.PLAYER_Ball), Current Array Element)
+			< Global.REAL_Portal_Radius) == True;
+	}
+
+	actions
+	{
+		Global.LOCAL_VECTOR_Portal = Distance Between(Position Of(Global.PLAYER_Ball), Global.VECTORS_Portals[0])
+			< Global.REAL_Portal_Radius ? Global.VECTORS_Portals[0] : Global.VECTORS_Portals[1];
+		Play Effect(All Players(All Teams), Ring Explosion, Global.COLORS_Portals[0], Global.VECTORS_Portals[0],
+			5 * Global.REAL_Portal_Radius);
+		Play Effect(All Players(All Teams), Ring Explosion, Global.COLORS_Portals[1], Global.VECTORS_Portals[1],
+			5 * Global.REAL_Portal_Radius);
+		Teleport(Global.PLAYER_Ball, First Of(Filtered Array(Global.VECTORS_Portals, Current Array Element != Global.LOCAL_VECTOR_Portal))
+			+ Vector(1.500, 0, 1.500) * Direction Towards(Position Of(Global.PLAYER_Ball), Global.LOCAL_VECTOR_Portal));
+	}
+}
+
+rule("BALL: Antigravity")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.VECTORS_Antigravity != 0;
+		Is True For Any(Global.VECTORS_Antigravity, Distance Between(Position Of(Global.PLAYER_Ball), Current Array Element)
+			< Global.REAL_Portal_Radius) == True;
+	}
+
+	actions
+	{
+		Global.LOCAL_VECTOR_Portal = First Of(Sorted Array(Global.VECTORS_Antigravity, Distance Between(Position Of(Global.PLAYER_Ball),
+			Current Array Element)));
+		Apply Impulse(Global.PLAYER_Ball, Direction Towards(Global.LOCAL_VECTOR_Portal, Position Of(Global.PLAYER_Ball)), 1, To World,
+			Incorporate Contrary Motion);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("INIT: Draw antigravity")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.VECTORS_Antigravity != 0;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.VECTORS_Antigravity), 1);
+			Create Effect(All Players(All Teams), Sphere, Color(Gray), Global.VECTORS_Antigravity[Global.INT_Loop_Control],
+				Global.REAL_Portal_Radius, Visible To);
+		End;
+	}
+}
+
+disabled rule("DEBUG: Teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Host Player;
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Position Of(Event Player) + Facing Direction Of(Event Player) * 5);
+	}
+}
+
+rule("BALL: Spherical bounds")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.VECTOR_Bounds_Center != 0;
+		Distance Between(Position Of(Global.PLAYER_Ball), Global.VECTOR_Bounds_Center) > Global.REAL_Bounds_Radius;
+	}
+
+	actions
+	{
+		Apply Impulse(Global.PLAYER_Ball, Direction Towards(Position Of(Global.PLAYER_Ball), Global.VECTOR_Bounds_Center), 1, To World,
+			Incorporate Contrary Motion);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("INIT: Draw spherical bounds")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.VECTOR_Bounds_Center != 0;
+	}
+
+	actions
+	{
+		Create Effect(Global.PLAYERS_All, Sphere, Color(Black), Global.VECTOR_Bounds_Center, Global.REAL_Bounds_Radius, Visible To);
+	}
+}
+
+rule("BALL: Spherical failsafe")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Global.PLAYER_Ball) == True;
+		Has Spawned(Global.PLAYER_Ball) == True;
+		Is On Ground(Global.PLAYER_Ball) == True;
+		Global.VECTOR_Bounds_Center != 0;
+		Distance Between(Position Of(Global.PLAYER_Ball), Global.VECTOR_Bounds_Center) > Global.REAL_Bounds_Radius + 5;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Kill(Global.PLAYER_Ball, Null);
+		disabled Respawn(Global.PLAYER_Ball);
+	}
+}
+
+rule("PLAYER: Skating (new, movement vector-based) (polynomial)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Disable Inspector Recording;
+		Event Player.INT_Movement_Angle = Angle Between Vectors(Direction Towards(Event Player.VECTOR_Last_Position, Position Of(
+			Event Player)), Event Player.VECTOR_Movement);
+		"Reset when not moving."
+		If(!Is Moving(Event Player));
+			disabled Event Player.INT_Move_Speed = Global.INT_Movement_Speed_Min;
+			Event Player.REAL_Accel_Elapsed = 0;
+			Event Player.BOOL_Decelerating = False;
+		Else;
+			"Reduce speed if turn too sharp."
+			If(Event Player.INT_Movement_Angle > Global.INT_Max_Turn_Degrees);
+				Event Player.REAL_Decel_Factor = Event Player.INT_Movement_Angle * Global.REAL_Decel_Factor;
+				Event Player.REAL_Accel_Elapsed = Max(0, Event Player.REAL_Accel_Elapsed - Event Player.REAL_Decel_Factor);
+				disabled Event Player.REAL_Decel_Factor = 1 - Event Player.INT_Movement_Angle * Global.REAL_Decel_Factor;
+				Event Player.BOOL_Decelerating = True;
+			"Increase speed."
+			Else;
+				Event Player.REAL_Accel_Elapsed = Min(5, 0.016 + Event Player.REAL_Accel_Elapsed);
+				disabled Event Player.INT_Move_Speed = Min(Global.INT_Movement_Speed_Max, Event Player.INT_Move_Speed * Global.REAL_Accel_Factor);
+				Event Player.BOOL_Decelerating = False;
+			End;
+		End;
+		Event Player.INT_Move_Speed = Min(Global.INT_Movement_Speed_Max,
+			Global.INT_Movement_Speed_Min + Event Player.REAL_Accel_Elapsed ^ 0.400 * 130);
+		"Update move speed."
+		Set Move Speed(Event Player, Event Player.INT_Move_Speed);
+		Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
+		Event Player.DEBUG = Global.INT_Movement_Speed_Min + Event Player.REAL_Accel_Elapsed ^ 0.400 * 130;
+		"Finally, update variables."
+		Event Player.VECTOR_Last_Position = Position Of(Event Player);
+		"Loop while alive."
+		Wait(0.016, Ignore Condition);
+		Enable Inspector Recording;
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("DEBUG: Speed")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create HUD Text(Host Player, Custom String("SPEED"), Null, Host Player.DEBUG, Right, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("BALL: Trail effect")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Moving(Global.PLAYER_Ball) == True;
+		Global.BOOL_Ball_Trail_Effect == True;
+		Speed Of(Global.PLAYER_Ball) >= Global.REAL_Ball_Trail_Effect_Min_Speed;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Good Explosion,
+			Global.PLAYER_Last_Touched.INT_Team == 1 ? Global.COLOR_Blue : Global.COLOR_Red, Global.PLAYER_Ball, 0.001);
+		Wait(0.025, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Speed effect")
+{
+	event
+	{
+		Player Joined Match;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Global.BOOL_Player_Speed_Effect == True;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Soldier: 76 Sprinting Effect, Array(Global.COLOR_Blue, Global.COLOR_Red)
+			[Event Player.INT_Team - 1], Event Player, Min(Max(0, Event Player.INT_Move_Speed / 300) * 20, 2),
+			Visible To Position Radius and Color);
+	}
+}
+
+rule("BALL: Glow effect")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Good Aura, Array(Color(Black), Global.COLOR_Blue, Global.COLOR_Red)
+			[Global.PLAYER_Last_Touched.INT_Team], Global.PLAYER_Ball, Evaluate Once(0.100), Visible To Position Radius and Color);
+	}
+}
+
+rule("PLAYER: Team effect")
+{
+	event
+	{
+		Player Joined Match;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		disabled Create Effect(All Players(All Teams), Soldier: 76 Sprinting Effect, Array(Global.COLOR_Blue, Global.COLOR_Red)
+			[Event Player.INT_Team - 1], Event Player, Min(Max(0, Event Player.INT_Move_Speed / 300) * 20, 2),
+			Visible To Position Radius and Color);
+	}
+}

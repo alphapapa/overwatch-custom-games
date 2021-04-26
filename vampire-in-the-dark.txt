@@ -1,0 +1,861 @@
+settings
+{
+	main
+	{
+		Description: "Beware the menace, or quench your thirst, whichever applies to you... (by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max FFA Players: 6
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 10
+			Self Initiated Respawn: Off
+
+			enabled maps
+			{
+				Château Guillard Halloween
+				Dorado
+				Eichenwalde Halloween
+				Hollywood Halloween
+				Kanezaka
+				King's Row
+				Petra
+			}
+		}
+
+		disabled Elimination
+		{
+			Score To Win: 9
+		}
+
+		disabled Team Deathmatch
+		{
+			Game Length In Minutes: 15
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: 1 Per Game
+			Kill Cam: Off
+			Respawn Time Scalar: 50%
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			No Ammunition Requirement: On
+			Ultimate Generation: 300%
+
+			Ana
+			{
+				Biotic Grenade: Off
+				Primary Fire: Off
+				Ultimate Ability Nano Boost: Off
+			}
+
+			Ashe
+			{
+				Dynamite: Off
+				Primary Fire: Off
+				Ultimate Ability B.O.B.: Off
+			}
+
+			Baptiste
+			{
+				Immortality Field: Off
+				Primary Fire: Off
+				Regenerative Burst: Off
+				Secondary Fire: Off
+				Ultimate Ability Amplification Matrix: Off
+			}
+
+			Brigitte
+			{
+				Barrier Shield: Off
+				Damage Dealt: 50%
+				Repair Pack: Off
+				Ultimate Ability Rally: Off
+			}
+
+			D.Va
+			{
+				Primary Fire: Off
+				Spawn Without Mech: On
+				Ultimate Ability Self-Destruct: Off
+			}
+
+			Doomfist
+			{
+				Primary Fire: Off
+				Rising Uppercut: Off
+				Rocket Punch: Off
+				Seismic Slam: Off
+				Ultimate Ability Meteor Strike: Off
+			}
+
+			Genji
+			{
+				Deflect: Off
+				Primary Fire: Off
+				Secondary Fire: Off
+				Swift Strike: Off
+				Ultimate Ability Dragonblade: Off
+			}
+
+			Hanzo
+			{
+				Primary Fire: Off
+				Sonic Arrow: Off
+				Storm Arrows: Off
+				Ultimate Ability Dragonstrike: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine: Off
+				Primary Fire: Off
+				Ultimate Ability RIP-Tire: Off
+			}
+
+			McCree
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+				Ultimate Ability Deadeye: Off
+			}
+
+			Mei
+			{
+				Cryo-Freeze: Off
+				Primary Fire: Off
+				Secondary Fire: Off
+				Ultimate Ability Blizzard: Off
+			}
+
+			Mercy
+			{
+				Primary Fire: Off
+				Regeneration: Off
+				Resurrect: Off
+				Secondary Fire: Off
+				Weapons Enabled: Caduceus Staff Only
+			}
+
+			Moira
+			{
+				Biotic Orb: Off
+				Primary Fire: Off
+				Secondary Fire: Off
+				Ultimate Ability Coalescence: Off
+			}
+
+			Pharah
+			{
+				Hover Jets: Off
+				Primary Fire: Off
+				Ultimate Ability Barrage: Off
+			}
+
+			Reaper
+			{
+				Primary Fire: Off
+				Ultimate Ability Death Blossom: Off
+			}
+
+			Reinhardt
+			{
+				Barrier Field: Off
+				Damage Dealt: 40%
+				Fire Strike: Off
+				Ultimate Ability Earthshatter: Off
+			}
+
+			Roadhog
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+				Take a Breather: Off
+				Ultimate Ability Whole Hog: Off
+			}
+
+			Sigma
+			{
+				Experimental Barrier: Off
+				Kinetic Grasp: Off
+				Primary Fire: Off
+				Ultimate Ability Gravitic Flux: Off
+			}
+
+			Soldier: 76
+			{
+				Biotic Field: Off
+				Helix Rockets: Off
+				Primary Fire: Off
+				Ultimate Ability Tactical Visor: Off
+			}
+
+			Sombra
+			{
+				Hack: Off
+				Primary Fire: Off
+				Stealth: Off
+				Ultimate Ability EMP: Off
+			}
+
+			Symmetra
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+				Sentry Turret: Off
+				Ultimate Ability Photon Barrier: Off
+			}
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+				Secondary Fire: Off
+				Ultimate Ability Molten Core: Off
+				Weapons Enabled: Forge Hammer Only
+			}
+
+			Tracer
+			{
+				Blink: Off
+				Primary Fire: Off
+				Ultimate Ability Pulse Bomb: Off
+			}
+
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 50%
+				Primary Fire: Off
+				Venom Mine: Off
+			}
+
+			Winston
+			{
+				Barrier Projector: Off
+				Primary Fire: Off
+				Ultimate Ability Primal Rage: Off
+			}
+
+			Wrecking Ball
+			{
+				Adaptive Shield: Off
+			}
+
+			Zarya
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+				Ultimate Ability Graviton Surge: Off
+			}
+
+			disabled heroes
+			{
+				Bastion
+				Echo
+				Lúcio
+				Mei
+				Mercy
+				Moira
+				Orisa
+				Reaper
+				Roadhog
+				Soldier: 76
+				Sombra
+				Widowmaker
+				Wrecking Ball
+				Zenyatta
+			}
+		}
+	}
+
+	extensions
+	{
+		Play More Effects
+	}
+}
+
+variables
+{
+	global:
+		0: INT_Darkness_Spheres
+		1: REAL_Initial_Darkness_Radius
+		2: REAL_Darkness_Radius_Factor
+		3: INT_Loop_Control
+		4: PLAYER_Vampire
+		5: STRINGS_Spawn
+		6: REAL_Rescue_Radius
+		7: PLAYERS_All
+		8: REAL_Rescue_Time
+		9: STRINGS_Quenched
+		10: REAL_Darkness_Radius_Factor_Vamp
+		11: PLAYER_Setting_Up
+		12: BOOL_Vampire_Spawned
+		13: STRINGS_Someone_Bitten
+		14: STRINGS_Becoming_Vampire
+		15: PLAYERS_Bitten
+		16: STRINGS_Bites
+		17: STRINGS_Killed_Player
+		18: HEROES_Vampires
+		19: HEROES_Players
+		20: BOOL_Auto_Voice_Lines
+
+	player:
+		0: BOOL_Bitten
+		1: EFFECT_Bitten
+		2: PLAYER_Being_Rescued
+		3: PLAYER_Rescuer
+		4: INT_Loop_Control
+		5: INT_Bites
+}
+
+subroutines
+{
+	3: Reset
+}
+
+rule("CREDITS: Based on Rainbow Overwatch by andygmb and ideas from TimeBomb")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		disabled Create HUD Text(All Players(All Teams), Null, Null, Custom String("Rainbow Overwatch\r\nyoutube/andy bohan\r\nCode: VOYYY"), Top,
+			0, Color(Black), Color(Black), Custom Color(127.500 * (True + Cosine From Degrees(180 * Sine From Radians(
+			Total Time Elapsed))), 127.500 * (True + Cosine From Degrees(180 * Sine From Radians(2.094 + Total Time Elapsed))), 127.500 * (
+			True + Cosine From Degrees(180 * Sine From Radians(1.050 + Total Time Elapsed))), 254), Visible To Sort Order String and Color,
+			Default Visibility);
+		disabled Small Message(Event Player, Custom String("By \"nobody\""));
+		disabled Small Message(Event Player, Custom String("Based on ideas from Rainbow Overwatch by andygmb, and other ideas from TimeBomb"));
+		Wait Until(Has Spawned(Event Player), 99999);
+	}
+}
+
+rule("INIT: Variables")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.INT_Darkness_Spheres = 48;
+		Global.REAL_Initial_Darkness_Radius = 0.125;
+		Global.REAL_Darkness_Radius_Factor = 2;
+		Global.STRINGS_Spawn = Array(Custom String("Shh.  There's someone creeping around here.  Or something..."));
+		Global.REAL_Rescue_Radius = 1;
+		Global.STRINGS_Quenched = Array(Custom String("Mmm..."), Custom String("Ahh..."), Custom String("A bit salty..."), Custom String(
+			"Hmm...iron deficiency?"));
+		Global.REAL_Darkness_Radius_Factor_Vamp = 4;
+		Global.BOOL_Vampire_Spawned = False;
+		Global.PLAYER_Vampire = Null;
+		Global.STRINGS_Someone_Bitten = Array(Custom String("You feel like someone needs your help..."), Custom String(
+			"You hear someone cry out in pain..."), Custom String("You hear the dull thud of a body hitting the ground..."));
+		Global.REAL_Rescue_Time = 5;
+		Global.STRINGS_Becoming_Vampire = Array(Custom String("Something's coming over you..."), Custom String("You feel...thirsty..."),
+			Custom String("What is this strange feeling...?"), Custom String("What is happening to you...?"), Custom String(
+			"Well, this feels different..."));
+		Global.STRINGS_Bites = Array(Custom String("That tickled..."), Custom String("That felt sharp..."), Custom String(
+			"You feel a sharp pain in your neck, and your body goes limp..."));
+		Global.STRINGS_Killed_Player = Array(Custom String("You didn't have to do that..."), Custom String(
+			"The vampire won't be drinking that one's blood..."), Custom String("You can't be too careful..."));
+		Create HUD Text(Global.PLAYERS_All, Custom String("SHARE CODE"), Custom String("https://workshop.codes/vampire-in-the-dark"),
+			Custom String("1zxbsd"), Left, 0, Color(White), Color(Turquoise), Color(White), Visible To and String, Visible Always);
+		Global.HEROES_Vampires = Array(Hero(Mei), Hero(Reaper), Hero(Roadhog), Hero(Sombra), Hero(Moira), Hero(Widowmaker), Hero(Mercy));
+		Global.HEROES_Players = Array(Hero(Ana), Hero(Ashe), Hero(Baptiste), Hero(Brigitte), Hero(D.Va), Hero(Doomfist), Hero(Genji), Hero(
+			Hanzo), Hero(Junkrat), Hero(McCree), Hero(Pharah), Hero(Sigma), Hero(Symmetra), Hero(Torbjörn), Hero(Tracer), Hero(Winston),
+			Hero(Zarya));
+		Global.BOOL_Auto_Voice_Lines = Workshop Setting Toggle(Custom String("Settings"), Custom String("Automatically say voice lines"),
+			True, 0);
+	}
+}
+
+rule("INIT: Setup time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Is In Setup || Is Assembling Heroes) == True;
+	}
+
+	actions
+	{
+		Set Match Time(3);
+	}
+}
+
+rule("GAME: Begins")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		disabled Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Disable Built-In Game Mode Respawning(Event Player);
+		Disable Nameplates(All Players(All Teams), All Players(All Teams));
+		Start Forcing Player Outlines(All Players(All Teams), All Players(All Teams), False, Color(White), Default);
+		Wait(2, Ignore Condition);
+		Small Message(Event Player, Custom String("Thanks to these players for their help testing:"));
+		Wait(1, Ignore Condition);
+		Small Message(Event Player, Custom String("TimeBomb, enemyspider"));
+	}
+}
+
+rule("VAMPIRE: Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.PLAYER_Vampire == Null;
+		Count Of(Filtered Array(All Players(All Teams), Is Alive(Current Array Element) && Has Spawned(Current Array Element))) > 1;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Global.PLAYER_Vampire = Random Value In Array(Filtered Array(All Players(All Teams), Is Alive(Current Array Element)
+			&& Has Spawned(Current Array Element)));
+		Global.PLAYERS_Bitten = Array(Global.PLAYER_Vampire);
+		Global.PLAYER_Setting_Up = Global.PLAYER_Vampire;
+		Small Message(Global.PLAYER_Vampire, Random Value In Array(Global.STRINGS_Becoming_Vampire));
+		For Player Variable(Global.PLAYER_Vampire, INT_Loop_Control, Global.INT_Darkness_Spheres, 0, -1);
+			Create Effect(Global.PLAYERS_Bitten, Sphere, Color(Black), Update Every Frame(Position Of(Global.PLAYER_Vampire)), Evaluate Once(
+				Global.REAL_Initial_Darkness_Radius * Global.PLAYER_Vampire.INT_Loop_Control * Global.REAL_Darkness_Radius_Factor_Vamp),
+				Visible To Position and Radius);
+			Wait(0.096, Ignore Condition);
+		End;
+		Start Forcing Player To Be Hero(Global.PLAYER_Vampire, Random Value In Array(Global.HEROES_Vampires));
+		Global.BOOL_Vampire_Spawned = True;
+		Small Message(Global.PLAYER_Vampire, Custom String("Quench your thirst."));
+		Set Objective Description(Global.PLAYER_Vampire, Custom String("Quench your thirst"), Visible To and String);
+		Disallow Button(Global.PLAYER_Vampire, Button(Crouch));
+		disabled Set Match Time(180);
+		Set Player Health(Global.PLAYER_Vampire, 180);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Global.PLAYER_Vampire != Null;
+		Global.PLAYER_Vampire != Event Player;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(Event Player);
+		Event Player.INT_Bites = 0;
+		Event Player.BOOL_Bitten = False;
+		Event Player.PLAYER_Being_Rescued = Null;
+		Event Player.PLAYER_Rescuer = Null;
+		Small Message(Event Player, Random Value In Array(Global.STRINGS_Spawn));
+		For Player Variable(Event Player, INT_Loop_Control, 0, Global.INT_Darkness_Spheres, 1);
+			Create Effect(Event Player, Sphere, Color(Black), Update Every Frame(Position Of(Event Player)), Evaluate Once(
+				Global.REAL_Initial_Darkness_Radius * Event Player.INT_Loop_Control * Global.REAL_Darkness_Radius_Factor),
+				Position and Radius);
+			Wait(0.096, Ignore Condition);
+		End;
+		Disallow Button(Event Player, Button(Crouch));
+	}
+}
+
+rule("PLAYER: Damaged")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player != Global.PLAYER_Vampire;
+		Event Player.BOOL_Bitten != True;
+		disabled Attacker != Global.PLAYER_Vampire;
+	}
+
+	actions
+	{
+		If(Attacker == Global.PLAYER_Vampire);
+			Event Player.INT_Bites += 1;
+			Small Message(Event Player, Global.STRINGS_Bites[Event Player.INT_Bites - 1]);
+		End;
+		Heal(Event Player, Null, Event Damage);
+	}
+}
+
+rule("PLAYER: Bitten")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Event Player != Global.PLAYER_Vampire;
+		disabled Health(Event Player) < 2;
+		Event Player.BOOL_Bitten == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.INT_Bites >= 3;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Bitten = True;
+		Modify Player Score(Global.PLAYER_Vampire, 1);
+		Set Status(Event Player, Null, Knocked Down, 9999);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Heal(Global.PLAYER_Vampire, Null, 45);
+		Create Effect(Global.PLAYERS_All, Sparkles, Color(Red), Position Of(Event Player), 2, Visible To Position and Radius);
+		Event Player.EFFECT_Bitten = Last Created Entity;
+		Small Message(Global.PLAYER_Vampire, Random Value In Array(Global.STRINGS_Quenched));
+		Small Message(Filtered Array(All Players(All Teams),
+			Current Array Element != Global.PLAYER_Vampire && Current Array Element != Event Player), Random Value In Array(
+			Global.STRINGS_Someone_Bitten));
+		Wait(2, Ignore Condition);
+		Start Camera(Event Player, Eye Position(Global.PLAYER_Vampire), First Of(Sorted Array(Filtered Array(All Players(All Teams),
+			Current Array Element != Global.PLAYER_Vampire), Distance Between(Current Array Element, Position Of(Global.PLAYER_Vampire)))),
+			30);
+		Small Message(Event Player, Custom String("Maybe someone will come and save you..."));
+		Modify Global Variable(PLAYERS_Bitten, Append To Array, Event Player);
+	}
+}
+
+rule("PLAYER: Rescuing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Event Player != Global.PLAYER_Vampire;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.BOOL_Bitten == False;
+		Is True For Any(Filtered Array(All Players(All Teams),
+			Current Array Element != Event Player && Current Array Element != Global.PLAYER_Vampire && Current Array Element.BOOL_Bitten && Is Alive(
+			Current Array Element) && Has Spawned(Current Array Element)), Distance Between(Position Of(Event Player), Position Of(
+			Current Array Element)) <= Global.REAL_Rescue_Radius) == True;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Being_Rescued = First Of(Sorted Array(Filtered Array(All Living Players(All Teams),
+			Current Array Element != Global.PLAYER_Vampire && Current Array Element.BOOL_Bitten), Distance Between(Position Of(
+			Event Player), Position Of(Current Array Element))));
+		Event Player.PLAYER_Being_Rescued.PLAYER_Rescuer = Event Player;
+		Small Message(Event Player, Custom String("Rescuing {0}...", Event Player.PLAYER_Being_Rescued));
+		Small Message(Event Player.PLAYER_Being_Rescued, Custom String("{0} is rescuing you...", Event Player));
+		Wait(Global.REAL_Rescue_Time, Abort When False);
+		Event Player.PLAYER_Being_Rescued.BOOL_Bitten = False;
+		Event Player.PLAYER_Being_Rescued.INT_Bites = 0;
+		Clear Status(Event Player.PLAYER_Being_Rescued, Knocked Down);
+		Clear Status(Event Player.PLAYER_Being_Rescued, Phased Out);
+		Stop Camera(Event Player.PLAYER_Being_Rescued);
+		Destroy Effect(Event Player.PLAYER_Being_Rescued.EFFECT_Bitten);
+		Small Message(Event Player, Custom String("Rescued {0}!", Event Player.PLAYER_Being_Rescued));
+		Small Message(Event Player.PLAYER_Being_Rescued, Custom String("Rescued by {0}!", Event Player));
+		Modify Player Score(Global.PLAYER_Vampire, -1);
+		Modify Player Score(Event Player, 1);
+		Modify Global Variable(PLAYERS_Bitten, Remove From Array By Value, Event Player.PLAYER_Being_Rescued);
+	}
+}
+
+rule("GAME: All non-vampires bitten or dead")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(All Players(All Teams)) > 1;
+		Is Alive(Global.PLAYER_Vampire) == True;
+		Global.PLAYER_Vampire != Null;
+		Global.BOOL_Vampire_Spawned == True;
+		Is True For All(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Vampire),
+			Current Array Element.BOOL_Bitten || Is Dead(Current Array Element) || !Has Spawned(Current Array Element)) == True;
+	}
+
+	actions
+	{
+		Big Message(Global.PLAYER_Vampire, Custom String("You feel satiated."));
+		Big Message(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Vampire), Custom String(
+			"Its thirst has been quenched."));
+		Wait(5, Ignore Condition);
+		disabled Restart Match;
+		Call Subroutine(Reset);
+	}
+}
+
+rule("VAMPIRE: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		disabled Is Game In Progress == True;
+		Global.PLAYER_Vampire == Event Player;
+		Global.BOOL_Vampire_Spawned == True;
+	}
+
+	actions
+	{
+		Big Message(Global.PLAYER_Vampire, Custom String("Your thirst is eternal."));
+		Big Message(Filtered Array(All Players(All Teams), Current Array Element != Global.PLAYER_Vampire), Custom String(
+			"The menace has been ended."));
+		Wait(5, Ignore Condition);
+		disabled Restart Match;
+		Call Subroutine(Reset);
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.PLAYER_Vampire != Event Player;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Custom String("Not even going to try?"));
+		Start Camera(Event Player, Eye Position(Global.PLAYER_Vampire), First Of(Sorted Array(Filtered Array(All Players(All Teams),
+			Current Array Element != Global.PLAYER_Vampire), Distance Between(Current Array Element, Position Of(Global.PLAYER_Vampire)))),
+			30);
+		Modify Global Variable(PLAYERS_Bitten, Append To Array, Event Player);
+	}
+}
+
+rule("VAMPIRE: Leaves")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Vampire_Spawned == True;
+		Has Spawned(Global.PLAYER_Vampire) != True;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Custom String("The menace vanished..."));
+		Wait(2, Ignore Condition);
+		disabled Restart Match;
+		Call Subroutine(Reset);
+	}
+}
+
+disabled rule("GAME: Ends")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Truce?  Or something like that..."));
+		Wait(2, Ignore Condition);
+		Restart Match;
+	}
+}
+
+rule("PLAYER: Kills")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		disabled Victim != Global.PLAYER_Vampire;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+		Small Message(Event Player, Random Value In Array(Global.STRINGS_Killed_Player));
+	}
+}
+
+rule("VAMPIRE: Thirsting")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.BOOL_Vampire_Spawned == True;
+		Is Alive(Global.PLAYER_Vampire) == True;
+	}
+
+	actions
+	{
+		Damage(Global.PLAYER_Vampire, Null, 5);
+		Wait(5, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: Reset")
+{
+	event
+	{
+		Subroutine;
+		Reset;
+	}
+
+	actions
+	{
+		Destroy All Effects;
+		Clear Status(All Players(All Teams), Knocked Down);
+		Clear Status(All Players(All Teams), Phased Out);
+		Stop Camera(All Players(All Teams));
+		Respawn(All Players(All Teams));
+		Stop Forcing Player To Be Hero(Global.PLAYER_Vampire);
+		disabled Set Player Allowed Heroes(All Players(All Teams), Filtered Array(All Heroes, !Array Contains(Global.HEROES_Vampires,
+			Current Array Element)));
+		For Global Variable(INT_Loop_Control, 0, Count Of(All Players(All Teams)), 1);
+			Set Player Allowed Heroes(Global.PLAYERS_All[Global.INT_Loop_Control], Filtered Array(All Heroes, Hero Of(
+				Global.PLAYERS_All[Global.INT_Loop_Control]) != Current Array Element));
+		End;
+		Set Player Allowed Heroes(All Players(All Teams), Global.HEROES_Players);
+		Global.PLAYER_Vampire = Null;
+		Global.BOOL_Vampire_Spawned = False;
+		Global.PLAYERS_Bitten = Empty Array;
+	}
+}
+
+rule("PLAYERS: Automatically say voice lines")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.BOOL_Auto_Voice_Lines == True;
+	}
+
+	actions
+	{
+		Wait(Random Real(5, 5), Ignore Condition);
+		Skip(Random Integer(0, 3));
+		Communicate(Random Value In Array(All Players(All Teams)), Voice Line Up);
+		Communicate(Random Value In Array(All Players(All Teams)), Voice Line Left);
+		Communicate(Random Value In Array(All Players(All Teams)), Voice Line Right);
+		Communicate(Random Value In Array(All Players(All Teams)), Voice Line Down);
+	}
+}

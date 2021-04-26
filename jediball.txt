@@ -1,0 +1,513 @@
+settings
+{
+	main
+	{
+		Description: "Pharah likes to play soccer.  (In tribute to the classic Jedi Knight mod, Jediball.  by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Max Team 2 Players: 0
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Ilios Lighthouse
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Mercy Resurrect Counteracts Kills: Off
+			Respawn As Random Hero: On
+			Respawn Time Scalar: 10%
+			Score To Win: 20
+			Self Initiated Respawn: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Pharah
+			{
+				Concussive Blast Cooldown Time: 50%
+				Damage Dealt: 10%
+				Hover Jets: Off
+				Primary Fire: Off
+				Projectile Speed: 50%
+				Quick Melee: Off
+				Ultimate Ability Barrage: Off
+			}
+
+			Roadhog
+			{
+				Chain Hook Cooldown Time: 50%
+				Damage Dealt: 10%
+				Damage Received: 10%
+				Health: 500%
+				Movement Gravity: 25%
+				Primary Fire: Off
+				Quick Melee: Off
+				Secondary Fire: Off
+				Take a Breather: Off
+				Ultimate Ability Whole Hog: Off
+			}
+
+			Wrecking Ball
+			{
+				Damage Received: 10%
+				Health: 500%
+				Movement Gravity: 50%
+				Movement Speed: 50%
+				Projectile Gravity: 75%
+				Roll Always Active: On
+			}
+
+			enabled heroes
+			{
+				Pharah
+			}
+		}
+	}
+
+	workshop
+	{
+		Ball scale percent: 50
+		Goal radius meters: 2.000
+	}
+}
+
+variables
+{
+	global:
+		0: BOOL_Initialized
+		1: VECTOR_Ball_Spawn
+		2: PLAYER_Ball
+		3: VECTOR_Goal_1
+		4: VECTOR_Goal_2
+		5: PLAYERS_Team_1
+		6: PLAYERS_Team_2
+		7: REAL_Goal_Radius
+		8: INTS_Scores
+		9: VECTOR_Spawn_Team_1
+		10: VECTOR_Spawn_Team_2
+		11: REAL_Ball_Scale_Percent
+		12: INT_Three_Pointer_Distance
+		13: VECTOR_Last_Shot_From
+		14: REAL_Goal_Height_Team_1
+		15: REAL_Goal_Height_Team_2
+		16: STRINGS_Scored_2
+		17: STRINGS_Scored_3
+		18: REAL_Map_Scale_Factor
+
+	player:
+		0: INT_Team
+}
+
+subroutines
+{
+	0: Reset
+}
+
+rule("MAP: Castillo")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Castillo);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(-101.276, 60, 58.184);
+		Global.VECTOR_Goal_1 = Vector(-108.185, 44, 35.713);
+		Global.VECTOR_Goal_2 = Vector(-99.373, 44, 81.537);
+		Global.VECTOR_Spawn_Team_1 = Vector(-91.536, 41.191, 72.476);
+		Global.VECTOR_Spawn_Team_2 = Vector(-97.671, 41.176, 40.517);
+		Global.REAL_Map_Scale_Factor = 1;
+	}
+}
+
+rule("MAP: Ilios Lighthouse")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Ilios Lighthouse);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(336.440, -14, 22.974);
+		Global.VECTOR_Goal_1 = Vector(319.218, -22.657, 47.779);
+		Global.VECTOR_Goal_2 = Vector(341.149, -23.741, 11.936);
+		Global.VECTOR_Spawn_Team_1 = Vector(341.149, -23.741, 11.936);
+		Global.VECTOR_Spawn_Team_2 = Vector(319.192, -23.163, 46.942);
+		Global.REAL_Map_Scale_Factor = 0.500;
+	}
+}
+
+disabled rule("MAP: Busan (Meka Base)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Busan);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(222.685, 20, 242.116);
+		Global.VECTOR_Goal_1 = Vector(244.659, 22.729, 224.139);
+		Global.VECTOR_Goal_2 = Vector(194.023, 22.732, 246.254);
+		Global.VECTOR_Spawn_Team_1 = Vector(203.287, 14.717, 242.208);
+		Global.VECTOR_Spawn_Team_2 = Vector(236.174, 14.717, 228.219);
+		Global.REAL_Goal_Height_Team_1 = 6;
+		Global.REAL_Goal_Height_Team_2 = 3;
+	}
+}
+
+rule("MAP: Busan (downtown)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Busan);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(51.961, 16.124, -115.398);
+		Global.VECTOR_Goal_1 = Vector(38.604, 20, -97.415);
+		Global.VECTOR_Goal_2 = Vector(65.176, 20, -97.446);
+		Global.VECTOR_Spawn_Team_1 = Vector(76.189, 14.275, -117.395);
+		Global.VECTOR_Spawn_Team_2 = Vector(27.435, 14.336, -116.676);
+		Global.REAL_Goal_Height_Team_1 = 6;
+		Global.REAL_Goal_Height_Team_2 = 3;
+		Global.REAL_Map_Scale_Factor = 1;
+	}
+}
+
+rule("MAP: Havana")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Havana);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(-38.271, 10.113, -70.916);
+		Global.VECTOR_Goal_1 = Vector(-3.084, 14.075, -78.539);
+		Global.VECTOR_Goal_2 = Vector(-45.039, 11.611, -43.153);
+		Global.VECTOR_Spawn_Team_1 = Vector(-42.384, 7.471, -49.097);
+		Global.VECTOR_Spawn_Team_2 = Vector(-14.661, 7.618, -84.824);
+		Global.REAL_Goal_Height_Team_1 = 5;
+		Global.REAL_Goal_Height_Team_2 = 4;
+		Global.REAL_Map_Scale_Factor = 1;
+	}
+}
+
+rule("MAP: Necropolis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Necropolis);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(22.983, 6.618, 0.361);
+		Global.VECTOR_Goal_1 = Vector(0.147, 9, -14.850);
+		Global.VECTOR_Goal_2 = Vector(-0.313, 8.194, 15.100);
+		Global.VECTOR_Spawn_Team_1 = Vector(-9.382, 12.238, 15.464);
+		Global.VECTOR_Spawn_Team_2 = Vector(-0.174, 8.189, -15.101);
+		Global.REAL_Map_Scale_Factor = 1;
+	}
+}
+
+rule("INIT:")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Initialized != True;
+	}
+
+	actions
+	{
+		Global.STRINGS_Scored_2 = Array(Custom String("Score!"), Custom String("Boom, shakalaka!"), Custom String("Nothing but net!"),
+			Custom String("He shoots, he scores!"), Custom String("Swish!"));
+		Global.STRINGS_Scored_3 = Array(Custom String("From downtown!"), Custom String("Three!"), Custom String("For three!"),
+			Custom String("From beyond the arc!"));
+		Global.INT_Three_Pointer_Distance = Workshop Setting Integer(Custom String("Settings"), Custom String(
+			"3-pointer distance (meters)"), 20, 5, 100, 0);
+		Global.REAL_Goal_Radius = Workshop Setting Real(Custom String("Settings"), Custom String("Goal radius (meters)"), 3, 1, 10, 0);
+		Global.REAL_Ball_Scale_Percent = Workshop Setting Integer(Custom String("Settings"), Custom String("Ball scale (percent)"), 100,
+			10, 200, 1);
+		Global.PLAYERS_Team_1 = Empty Array;
+		Global.PLAYERS_Team_2 = Empty Array;
+		"Dummy bot (basketball)."
+		Create Dummy Bot(Hero(Wrecking Ball), Team 2, -1, Global.VECTOR_Ball_Spawn, Vector(0, 0, 0));
+		Global.PLAYER_Ball = Last Created Entity;
+		Create Icon(All Players(All Teams), Global.PLAYER_Ball, Circle, Visible To and Position, Color(Orange), True);
+		Start Forcing Dummy Bot Name(Global.PLAYER_Ball, Custom String("Ball"));
+		Start Forcing Player Outlines(Global.PLAYER_Ball, All Players(Team 1), True, Color(Yellow), Always);
+		Start Scaling Player(Global.PLAYER_Ball, Global.REAL_Map_Scale_Factor * 0.500, False);
+		"Goals."
+		Create Effect(Global.PLAYERS_Team_1, Sphere, Color(Blue), Global.VECTOR_Goal_1, Global.REAL_Goal_Radius, Visible To);
+		Create Effect(Global.PLAYERS_Team_1, Sphere, Color(Red), Global.VECTOR_Goal_2, Global.REAL_Goal_Radius, Visible To);
+		Create Effect(Global.PLAYERS_Team_2, Sphere, Color(Red), Global.VECTOR_Goal_2, Global.REAL_Goal_Radius, Visible To);
+		Create Effect(Global.PLAYERS_Team_2, Sphere, Color(Blue), Global.VECTOR_Goal_1, Global.REAL_Goal_Radius, Visible To);
+		Create Effect(All Players(All Teams), Sphere, Color(Gray), Global.VECTOR_Goal_1, Global.INT_Three_Pointer_Distance,
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Color(Gray), Global.VECTOR_Goal_2, Global.INT_Three_Pointer_Distance,
+			Visible To Position and Radius);
+		Create In-World Text(Global.PLAYERS_Team_1, Custom String("DEFEND"), Global.VECTOR_Goal_2, 1, Do Not Clip, Visible To, Color(
+			White), Visible Never);
+		Create In-World Text(Global.PLAYERS_Team_1, Custom String("SCORE"), Global.VECTOR_Goal_1, 1, Do Not Clip, Visible To, Color(White),
+			Visible Never);
+		Create In-World Text(Global.PLAYERS_Team_2, Custom String("DEFEND"), Global.VECTOR_Goal_1, 1, Do Not Clip, Visible To, Color(
+			White), Visible Never);
+		Create In-World Text(Global.PLAYERS_Team_2, Custom String("SCORE"), Global.VECTOR_Goal_2, 1, Do Not Clip, Visible To, Color(White),
+			Visible Never);
+		"HUD."
+		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/roadhog-basketball"),
+			Custom String("9GWY2"), Left, -1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("TEAM COLOR"), Null, Null, Top, 0, Local Player.INT_Team == 1 ? Color(Blue)
+			: Color(Red), Color(White), Null, Visible To String and Color, Default Visibility);
+		Global.BOOL_Initialized = True;
+		Set Objective Description(All Players(All Teams), Custom String("Use that hook shot, baby!"), Visible To and String);
+		Disable Built-In Game Mode Scoring;
+		Call Subroutine(Reset);
+	}
+}
+
+rule("BALL: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Global.VECTOR_Ball_Spawn);
+	}
+}
+
+rule("PLAYER: Joins (assign to team)")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.BOOL_Initialized == True;
+	}
+
+	actions
+	{
+		If(Count Of(Global.PLAYERS_Team_1) <= Count Of(Global.PLAYERS_Team_2));
+			Modify Global Variable(PLAYERS_Team_1, Append To Array, Event Player);
+			Event Player.INT_Team = 1;
+		Else;
+			Modify Global Variable(PLAYERS_Team_2, Append To Array, Event Player);
+			Event Player.INT_Team = 2;
+		End;
+		Start Forcing Player Outlines(Event Player, All Players(All Teams), True, Event Player.INT_Team == 1 ? Color(Red) : Color(Blue),
+			Always);
+		Start Scaling Player(Event Player, Global.REAL_Map_Scale_Factor, False);
+	}
+}
+
+rule("PLAYER: Leaves (remove from team) (does this even work?)")
+{
+	event
+	{
+		Player Left Match;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		Global.PLAYERS_Team_1 = Filtered Array(All Players(All Teams), Current Array Element.INT_Team == 1);
+		Global.PLAYERS_Team_2 = Filtered Array(All Players(All Teams), Current Array Element.INT_Team == 2);
+	}
+}
+
+rule("BALL: Team 1 scores")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Goal_1) < Global.REAL_Goal_Radius;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Random Value In Array(Distance Between(Global.VECTOR_Goal_1, Global.VECTOR_Last_Shot_From)
+			> Global.INT_Three_Pointer_Distance ? Global.STRINGS_Scored_3 : Global.STRINGS_Scored_2));
+		Modify Team Score(Team 1, Distance Between(Global.VECTOR_Last_Shot_From, Global.VECTOR_Goal_1)
+			> Global.INT_Three_Pointer_Distance ? 2 : 1);
+		disabled Global.INTS_Scores[0] += Distance Between(Global.VECTOR_Last_Shot_From, Global.VECTOR_Goal_1)
+			> Global.INT_Three_Pointer_Distance ? 3 : 2;
+		Kill(Global.PLAYER_Ball, Null);
+		Play Effect(All Players(All Teams), Ring Explosion Sound, Color(Turquoise), Global.VECTOR_Goal_1, 10);
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Turquoise), Global.VECTOR_Goal_1, 10);
+		disabled Global.INTS_Scores[0] += 1;
+		Wait(3, Ignore Condition);
+		Call Subroutine(Reset);
+	}
+}
+
+rule("BALL: Team 2 scores")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Goal_2) < Global.REAL_Goal_Radius;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Random Value In Array(Distance Between(Global.VECTOR_Goal_2, Global.VECTOR_Last_Shot_From)
+			> Global.INT_Three_Pointer_Distance ? Global.STRINGS_Scored_3 : Global.STRINGS_Scored_2));
+		Modify Team Score(Team 2, Distance Between(Global.VECTOR_Last_Shot_From, Global.VECTOR_Goal_2)
+			> Global.INT_Three_Pointer_Distance ? 2 : 1);
+		disabled Global.INTS_Scores[1] += Distance Between(Global.VECTOR_Last_Shot_From, Global.VECTOR_Goal_2)
+			> Global.INT_Three_Pointer_Distance ? 3 : 2;
+		disabled Global.INTS_Scores[1] += 1;
+		Kill(Global.PLAYER_Ball, Null);
+		Play Effect(All Players(All Teams), Ring Explosion Sound, Color(Turquoise), Global.VECTOR_Goal_2, 10);
+		Play Effect(All Players(All Teams), Ring Explosion, Color(Turquoise), Global.VECTOR_Goal_2, 10);
+		Wait(3, Ignore Condition);
+		Call Subroutine(Reset);
+	}
+}
+
+rule("SUBR: Reset")
+{
+	event
+	{
+		Subroutine;
+		Reset;
+	}
+
+	actions
+	{
+		Start Forcing Player Position(Global.PLAYER_Ball, Global.VECTOR_Ball_Spawn, False);
+		Teleport(Global.PLAYERS_Team_1, Global.VECTOR_Spawn_Team_1);
+		Teleport(Global.PLAYERS_Team_2, Global.VECTOR_Spawn_Team_2);
+		Wait(0.250, Ignore Condition);
+		Stop Forcing Player Position(Global.PLAYER_Ball);
+	}
+}
+
+rule("DEBUG: Teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Event Player == Host Player;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Position Of(Event Player) + Facing Direction Of(Event Player) * 10);
+	}
+}
+
+rule("GAME: Begins (for TDM maps)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Reset);
+	}
+}

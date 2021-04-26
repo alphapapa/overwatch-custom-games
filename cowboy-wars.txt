@@ -1,0 +1,1320 @@
+settings
+{
+	main
+	{
+		Description: "Ashe and McCree saddle up.  (by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Max Team 1 Players: 5
+		Max Team 2 Players: 5
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Blizzard World
+				Dorado
+				Eichenwalde
+				Hollywood
+				Junkertown
+				Route 66
+				Watchpoint: Gibraltar
+			}
+		}
+
+		Team Deathmatch
+		{
+			Game Length In Minutes: 15
+			Mercy Resurrect Counteracts Kills: Off
+
+			enabled maps
+			{
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Spawn Health Packs: Enabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 25%
+			Movement Speed: 50%
+
+			D.Va
+			{
+				Damage Dealt: 75%
+				Spawn Without Mech: On
+				Ultimate Ability Self-Destruct: Off
+			}
+
+			Doomfist
+			{
+				Rising Uppercut: Off
+				Rocket Punch: Off
+				Seismic Slam: Off
+				Ultimate Ability Meteor Strike: Off
+			}
+
+			McCree
+			{
+				Flashbang Cooldown Time: 200%
+			}
+
+			Orisa
+			{
+				Damage Received: 10%
+				Movement Gravity: 75%
+				Ultimate Ability Supercharger: Off
+			}
+
+			Roadhog
+			{
+				Take a Breather: Off
+			}
+
+			Sombra
+			{
+				Hack: Off
+			}
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+			}
+
+			enabled heroes
+			{
+				Ashe
+				D.Va
+				McCree
+			}
+		}
+	}
+
+	extensions
+	{
+		Spawn More Dummy Bots
+	}
+}
+
+variables
+{
+	global:
+		0: INT_Loop_Control
+		1: VECTORS_Map_Bounds
+		2: VECTORS_Gold
+		3: EFFECTS_Gold
+		4: INTS_Team_Scores
+		5: STRINGS_Tips
+		6: STRINGS_Gold_Collected_Self
+		7: STRINGS_Gold_Spawned
+		8: STRINGS_Horse_Names
+		9: ARRAY_VECTORS_Gold_and_EFFECTS
+		10: LOCAL_VECTOR_Gold
+		11: LOCAL_EFFECT_Gold
+		12: PLAYERS_All
+		13: VECTOR_Sheriff
+		14: ARRAY_Hats
+
+	player:
+		0: PLAYER_Horse
+		1: INT_Riding_Throttle_Magnitude
+		3: PLAYER_Rider
+		4: REAL_Stamina
+		5: BOOL_Galloping
+		7: PLAYER_Passenger
+		8: INT_Gold
+		10: LOCAL_Gold
+		11: INT_Slot
+		12: REAL_Last_Speed
+		13: INT_Name_Index
+		14: LOCAL_Index
+		15: VECTOR_Last_Position
+		16: INT_Bounty
+		17: PLAYERS_Attackers
+		18: LOCAL_Hat
+		19: ARRAY_Hats
+		20: INT_Sheriff_Message_Loop_Control
+		21: LOCAL_PLAYERS
+		22: BOOL_Joined
+}
+
+subroutines
+{
+	0: PLAYER_Dismount
+	2: EFFECTS_Recreate
+}
+
+disabled rule("DEBUG: HUDs")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(Host Player, Custom String("POSITION"), Null, Position Of(Host Player), Right, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Custom String("THROTTLE"), Null, Throttle Of(Host Player), Right, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Custom String("HORSE SPEED"), Null, Horizontal Speed Of(Host Player.PLAYER_Horse), Right, 0, Color(
+			White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Custom String("EFFECTS"), Null, Entity Count, Right, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("INIT: Find map bounds (maybe this will sort-of work)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.VECTORS_Map_Bounds = Array(Nearest Walkable Position(Vector(1000, 0, 1000)), Nearest Walkable Position(Vector(1000, 0,
+			-1000)), Nearest Walkable Position(Vector(-1000, 0, -1000)), Nearest Walkable Position(Vector(-1000, 0, 1000)));
+	}
+}
+
+rule("INIT: Variables")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.STRINGS_Tips = Array(Custom String("Hop on a horse to ride it."), Custom String("Two can ride."), Custom String(
+			"Ride over gold to pick it up."), Custom String("Return a horse with gold to your spawn to capture it."), Custom String(
+			"Be a bandit: Steal their horse and their gold!"), Custom String("The more gold a horse carries, the slower it is."),
+			Custom String("Work together to find horses and give your teammates rides to them."));
+		Global.ARRAY_VECTORS_Gold_and_EFFECTS = Empty Array;
+		Global.VECTORS_Gold = Empty Array;
+		Global.EFFECTS_Gold = Empty Array;
+		Set Objective Description(All Players(All Teams), Custom String("Collect gold with a horse and return it to your base"),
+			Visible To and String);
+		"HUD"
+		Create HUD Text(All Players(All Teams), Custom String("SHARE CODE"), Custom String("https://workshop.codes/cowboy-wars"),
+			Custom String("YSPHN"), Left, 0, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Local Player, Custom String("HATS"), Custom String("On person"), Count Of(Local Player.ARRAY_Hats), Right, 1,
+			Color(Orange), Color(Orange), Color(White), Visible To and String, Visible Always);
+		Create HUD Text(Local Player, Custom String("GOLD"), Custom String("Them: {0}", Global.INTS_Team_Scores[Team Of(Local Player)
+			== Team 1 ? 2 : 1]), Custom String("Us: {0}", Global.INTS_Team_Scores[Team Of(Local Player) == Team 1 ? 1 : 2]), Top, 1, Color(
+			Yellow), Color(Red), Color(Blue), Visible To and String, Default Visibility);
+		Create Progress Bar HUD Text(Local Player, Local Player.PLAYER_Horse.REAL_Stamina, Custom String("Horse stamina ({0} to gallop)",
+			Input Binding String(Button(Interact))), Right, 99, Color(White), Color(White), Visible To Values and Color,
+			Default Visibility);
+		disabled Create Progress Bar HUD Text(Local Player, Local Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude * 100, Custom String(
+			"Horse throttle"), Right, 98, Color(White), Color(White), Visible To Values and Color, Default Visibility);
+		Create Progress Bar HUD Text(Local Player, (
+			Local Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude - Local Player.PLAYER_Horse.INT_Gold * 5 / 100) * 100, Custom String(
+			"Horse throttle"), Right, 98, Color(White), Color(White), Visible To Values and Color, Default Visibility);
+		Create HUD Text(Local Player, Custom String("GOLD"), Custom String("On horse"), Local Player.PLAYER_Horse.INT_Gold, Right, 10,
+			Color(Yellow), Color(Yellow), Color(White), Visible To and String, Default Visibility);
+		Global.STRINGS_Gold_Collected_Self = Array(Custom String("That'll do fine..."), Custom String("Let's get that back home..."),
+			Custom String("Ooh, shiny..."), Custom String("Cool, calm, and collected..."), Custom String("We're gonna be rich!"),
+			Custom String("Not too shabby..."), Custom String("Easy now, gotta get it back to base first..."), Custom String(
+			"Don't mind if I do..."));
+		Global.STRINGS_Gold_Spawned = Array(Custom String("Smells like gold 'round these parts..."), Custom String(
+			"Is that a jingle I hear..."), Custom String("Hmm, somethin' seems shiny somewhere..."));
+		Global.STRINGS_Horse_Names = Array(Custom String("Ladybug"), Custom String("Sugar"), Custom String("Spirit"), Custom String(
+			"Silver"), Custom String("Lily"), Custom String("Ransom"), Custom String("Treasure"), Custom String("Domino"), Custom String(
+			"Scout"), Custom String("Pirate"), Custom String("Bolt"), Custom String("Victory"), Custom String("Champ"), Custom String(
+			"Trigger"), Custom String("Cash"), Custom String("Buttons"), Custom String("Boots"), Custom String("Whiskers"), Custom String(
+			"Flopsy"), Custom String("Buster"));
+		"Hopefully halfway between each team's spawn, somewhere walkable."
+		disabled Global.VECTOR_Sheriff = Nearest Walkable Position(First Of(Spawn Points(Team 1)) + Direction Towards(First Of(Spawn Points(
+			Team 1)), First Of(Spawn Points(Team 2))) * Distance Between(First Of(Spawn Points(Team 1)), First Of(Spawn Points(Team 2)))
+			/ 2);
+		"Hopefully halfway between each team's spawn, somewhere walkable."
+		disabled Global.VECTOR_Sheriff = Nearest Walkable Position(First Of(Spawn Points(Team 1)) + Direction Towards(First Of(Spawn Points(
+			Team 1)), First Of(Spawn Points(Team 2))) * Distance Between(First Of(Spawn Points(Team 1)), First Of(Spawn Points(Team 2)))
+			/ 2);
+		"Hopefully halfway between each team's spawn, somewhere walkable."
+		Global.VECTOR_Sheriff = Nearest Walkable Position(Vector(Min(X Component Of(Global.VECTORS_Map_Bounds[2]), X Component Of(
+			Global.VECTORS_Map_Bounds[3])) + (Max(X Component Of(Global.VECTORS_Map_Bounds[0]), X Component Of(
+			Global.VECTORS_Map_Bounds[1])) - Min(X Component Of(Global.VECTORS_Map_Bounds[2]), X Component Of(
+			Global.VECTORS_Map_Bounds[3])) / 2), 0, Min(Z Component Of(Global.VECTORS_Map_Bounds[1]), Z Component Of(
+			Global.VECTORS_Map_Bounds[2])) + (Max(Z Component Of(Global.VECTORS_Map_Bounds[0]), Z Component Of(
+			Global.VECTORS_Map_Bounds[3])) - Min(Z Component Of(Global.VECTORS_Map_Bounds[1]), Z Component Of(
+			Global.VECTORS_Map_Bounds[2])) / 2)));
+		Create In-World Text(All Players(All Teams), Custom String("Sheriff"), Global.VECTOR_Sheriff, 1, Do Not Clip, Visible To, Color(
+			Orange), Visible Always);
+	}
+}
+
+rule("SETUP: Shorten wait")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(3);
+	}
+}
+
+rule("GAME: Spawn horses")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element))) == 0;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Respawning horses..."));
+		For Global Variable(INT_Loop_Control, 11, 24, 1);
+			Create Dummy Bot(Hero(Orisa), Global.INT_Loop_Control < 18 ? Team 1 : Team 2, 0 + Global.INT_Loop_Control,
+				Nearest Walkable Position(Vector(Random Real(Min(X Component Of(Global.VECTORS_Map_Bounds[2]), X Component Of(
+				Global.VECTORS_Map_Bounds[3])), Max(X Component Of(Global.VECTORS_Map_Bounds[0]), X Component Of(
+				Global.VECTORS_Map_Bounds[1]))), Random Real(-30, 30), Random Real(Min(Z Component Of(Global.VECTORS_Map_Bounds[1]),
+				Z Component Of(Global.VECTORS_Map_Bounds[2])), Max(Z Component Of(Global.VECTORS_Map_Bounds[0]), Z Component Of(
+				Global.VECTORS_Map_Bounds[3]))))), Vector(0, 0, 0));
+			Last Created Entity.INT_Name_Index = Global.INT_Loop_Control - 11;
+		End;
+		Call Subroutine(EFFECTS_Recreate);
+	}
+}
+
+rule("HORSE: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Stamina = 100;
+		Set Move Speed(Event Player, 200);
+		Start Scaling Player(Event Player, 0.500, False);
+		disabled Set Status(Event Player, Null, Phased Out, 9999);
+		Start Forcing Dummy Bot Name(Event Player, Global.STRINGS_Horse_Names[Event Player.INT_Name_Index]);
+		Enable Nameplates(Event Player, All Players(All Teams));
+		disabled Create Effect(Event Player.INT_Gold > 0 ? All Players(All Teams) : Null, Sparkles, Color(Yellow), Event Player,
+			Event Player.INT_Gold * 0.500, Visible To Position and Radius);
+	}
+}
+
+rule("HORSE: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		Orisa;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Detach Players(Event Player.PLAYER_Rider);
+		Detach Players(Event Player.PLAYER_Passenger);
+		Stop Throttle In Direction(Event Player);
+		Stop Facing(Event Player);
+		Event Player.INT_Riding_Throttle_Magnitude = 0;
+		Event Player.PLAYER_Rider.PLAYER_Horse = Null;
+		Event Player.PLAYER_Passenger.PLAYER_Horse = Null;
+		Event Player.PLAYER_Rider = Null;
+		Event Player.PLAYER_Passenger = Null;
+		Event Player.INT_Gold = 0;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) != True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.BOOL_Joined != True;
+	}
+
+	actions
+	{
+		Global.PLAYERS_All = All Players(All Teams);
+		Start Scaling Player(Event Player, 0.500, False);
+		disabled Start Forcing Player Outlines(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element)), All Players(All Teams),
+			False, Color(White), Default);
+		Disable Nameplates(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element)), Event Player);
+		Wait(2, Ignore Condition);
+		Small Message(Event Player, Custom String("Thanks to these players for their help testing:"));
+		Wait(2, Ignore Condition);
+		Small Message(Event Player, Custom String("MedensNox, Adam, Belle, Zombie"));
+		Wait(1, Ignore Condition);
+		Small Message(Event Player, Custom String("Nemmow, LuckyGhost, Pops, AWalnut"));
+		Event Player.BOOL_Joined = True;
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		disabled Event Player.PLAYER_Horse == Null;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Horse = Null;
+		Event Player.INT_Bounty = 0;
+		Event Player.ARRAY_Hats = Empty Array;
+		Event Player.PLAYERS_Attackers = Empty Array;
+		Start Forcing Player Outlines(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element)), All Players(All Teams),
+			False, Color(White), Default);
+		Wait(8, Abort When False);
+		Small Message(Event Player, Custom String("Hmm...better find a horse..."));
+		Wait(8, Abort When False);
+		Small Message(Event Player, Random Value In Array(Global.STRINGS_Tips));
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) != True;
+	}
+
+	actions
+	{
+		Call Subroutine(PLAYER_Dismount);
+		"Warn killer about bounty."
+		If(Array Contains(Event Player.PLAYERS_Attackers, Attacker));
+			Attacker.INT_Bounty += 1;
+			Small Message(Attacker, Custom String("Uh oh, now I'm wanted..."));
+			Small Message(Host Player, Custom String("DEBUG: {0} is wanted for killing {1}", Attacker, Event Player));
+		End;
+		"Drop hat for bounty."
+		If(Event Player.INT_Bounty > 0);
+			Create Effect(All Players(All Teams), Sphere, Color(Orange), Nearest Walkable Position(Position Of(Event Player)), 0.100,
+				Visible To);
+			Global.ARRAY_Hats[Count Of(Global.ARRAY_Hats)] = Array(Event Player, Event Player.INT_Bounty, Last Created Entity,
+				Nearest Walkable Position(Position Of(Event Player)));
+			Small Message(Host Player, Custom String("DEBUG: dropped hat for {0}", Event Player));
+		End;
+		"Remove from victims' attackers list (do this last)."
+		For Global Variable(INT_Loop_Control, 0, Count Of(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element))),
+			1);
+			Modify Player Variable(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element))[Global.INT_Loop_Control],
+				PLAYERS_Attackers, Remove From Array By Value, Event Player);
+		End;
+	}
+}
+
+rule("PLAYER: Mounts horse")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Horse == Null;
+		Distance Between(Event Player, First Of(Sorted Array(Filtered Array(All Players(All Teams), Hero Of(Current Array Element) == Hero(
+			Orisa)), Distance Between(Current Array Element, Event Player)))) < 2;
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Horse = First Of(Sorted Array(Filtered Array(All Players(All Teams), Hero Of(Current Array Element) == Hero(
+			Orisa)), Distance Between(Current Array Element, Event Player)));
+		"Horse already has rider."
+		If(Event Player.PLAYER_Horse.PLAYER_Rider != Null);
+			"Rider on other team."
+			If(Team Of(Event Player) != Team Of(Event Player.PLAYER_Horse.PLAYER_Rider));
+				Event Player.PLAYER_Horse = Null;
+				disabled Small Message(Event Player, Custom String("Rider is not on your team"));
+			"Rider on same team and no passenger: ride shotgun."
+			Else If(!Event Player.PLAYER_Horse.PLAYER_Passenger);
+				"FIXME: Sometimes when two players are jumping near a ridden horse, they'll both become passengers, and somehow one of them also becomes the rider and gets control of the horse.  Race conditions in Workshop, man..."
+				Event Player.PLAYER_Horse.PLAYER_Passenger = Event Player;
+				Attach Players(Event Player, Event Player.PLAYER_Horse, Vector(0, 0.350, -0.450));
+				Small Message(Event Player.PLAYER_Horse.PLAYER_Rider, Custom String("{0}'s ridin' shotgun", Event Player));
+				Small Message(Event Player, Custom String("Hitchin' a ride with {0}", Event Player.PLAYER_Horse.PLAYER_Rider));
+			End;
+		"Horse has no rider."
+		Else;
+			"Horse is on other team: destroy dummy bot and respawn it on rider's team."
+			If(Team Of(Event Player) != Team Of(Event Player.PLAYER_Horse));
+				Event Player.INT_Slot = Slot Of(Event Player.PLAYER_Horse);
+				Event Player.INT_Name_Index = Event Player.PLAYER_Horse.INT_Name_Index;
+				Event Player.INT_Gold = Event Player.PLAYER_Horse.INT_Gold;
+				"Save the position"
+				Event Player.VECTOR_Last_Position = Position Of(Event Player.PLAYER_Horse);
+				Destroy Dummy Bot(Team Of(Event Player.PLAYER_Horse), Slot Of(Event Player.PLAYER_Horse));
+				"FIXME: Is it necessary to WAIT UNTIL() after this?  Is this a race condition sometimes?"
+				Create Dummy Bot(Hero(Orisa), Team Of(Event Player), Event Player.INT_Slot, Event Player.VECTOR_Last_Position, Vector(0, 0, 0));
+				Event Player.PLAYER_Horse = Last Created Entity;
+				Event Player.PLAYER_Horse.INT_Gold = Event Player.INT_Gold;
+				Event Player.PLAYER_Horse.INT_Name_Index = Event Player.INT_Name_Index;
+				"NOTE: I try to avoid using WAITs, but this one seems necessary.  Hopefully it doesn't cause bugs and race conditions, but it wouldn't surprise me if it does..."
+				Wait Until(Is Alive(Event Player.PLAYER_Horse) && Has Spawned(Event Player.PLAYER_Horse), 99999);
+				Small Message(Event Player, Custom String("BUG: Please dismount and remount to fix the view."));
+			End;
+			"FIXME: Sometimes this does not seem to set PLAYER_Rider.  I have no idea why.  There are no waits around here, so there shouldn't be any race conditions."
+			Event Player.PLAYER_Horse.PLAYER_Rider = Event Player;
+			"NOTE: When the horse was originally on the other team, the attachment offset does not work properly, and the view is messed up.  Haven't found a way to fix this yet, so the player needs to dismount and remount."
+			Attach Players(Event Player, Event Player.PLAYER_Horse, Vector(0, 0.500, -0.125));
+			Start Throttle In Direction(Event Player.PLAYER_Horse, Facing Direction Of(Event Player.PLAYER_Horse) * (
+				Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude < 0 ? -1 : 1), Absolute Value(
+				Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude) - Event Player.PLAYER_Horse.INT_Gold * 5 / 100, To World,
+				Replace existing throttle, Direction and Magnitude);
+			Start Facing(Event Player.PLAYER_Horse, Direction From Angles(X Component Of(Throttle Of(Event Player)) * (
+				1.100 - Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude) * 10 + Horizontal Angle From Direction(Facing Direction Of(
+				Event Player.PLAYER_Horse)), 0), 100, To World, Direction and Turn Rate);
+		End;
+		disabled Small Message(Host Player, Custom String("DEBUG: {0} mounted {1} (rider: {2})", Event Player, Event Player.PLAYER_Horse,
+			Event Player.PLAYER_Horse.PLAYER_Rider));
+		If(Event Player.PLAYER_Horse.INT_Gold > 0);
+			Small Message(Event Player, Custom String("Whoa, this one's loaded!"));
+		End;
+		Start Forcing Player Outlines(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element)), All Players(All Teams),
+			False, Color(White), Default);
+		Enable Nameplates(Event Player.PLAYER_Horse, Event Player);
+	}
+}
+
+rule("PLAYER: Dismounts horse")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Horse != Null;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Detach Players(Event Player);
+		"Rider dismounts."
+		If(Event Player != Event Player.PLAYER_Horse.PLAYER_Passenger);
+			Stop Throttle In Direction(Event Player.PLAYER_Horse);
+			Stop Facing(Event Player.PLAYER_Horse);
+			Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude = 0;
+			Event Player.PLAYER_Horse.PLAYER_Rider = Null;
+		"Passenger dismounts."
+		Else;
+			Small Message(Event Player.PLAYER_Horse.PLAYER_Rider, Custom String("{0} hopped off", Event Player));
+			Event Player.PLAYER_Horse.PLAYER_Passenger = Null;
+		End;
+		Event Player.PLAYER_Horse = Null;
+	}
+}
+
+rule("PLAYER: Riding (accelerating/decelerating)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Horse != Null;
+		Event Player != Event Player.PLAYER_Horse.PLAYER_Passenger;
+		Z Component Of(Throttle Of(Event Player)) != 0;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude = Max(Min(Z Component Of(Throttle Of(Event Player))
+			* 0.050 + Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude, 1), -1);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Riding (jumps)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Horse != Null;
+		"This ought to suffice to verify that the Event Player is a rider rather than a passenger, but somehow it's not working."
+		Event Player != Event Player.PLAYER_Horse.PLAYER_Passenger;
+		"So we also check this."
+		Event Player == Event Player.PLAYER_Horse.PLAYER_Rider;
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player.PLAYER_Horse, Button(Jump));
+	}
+}
+
+rule("PLAYER: Riding (not galloping)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Horse != Null;
+		Event Player != Event Player.PLAYER_Horse.PLAYER_Passenger;
+		Is Button Held(Event Player, Button(Interact)) == False;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Horse.BOOL_Galloping = False;
+	}
+}
+
+rule("PLAYER: Riding (galloping)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Horse != Null;
+		Event Player != Event Player.PLAYER_Horse.PLAYER_Passenger;
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Event Player.PLAYER_Horse.REAL_Stamina > 50;
+		Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude == 1;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Horse.BOOL_Galloping = True;
+	}
+}
+
+rule("PLAYER: Stunned (knock off horse)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Has Status(Event Player, Stunned) == True;
+		Event Player.PLAYER_Horse != Null;
+	}
+
+	actions
+	{
+		Call Subroutine(PLAYER_Dismount);
+	}
+}
+
+rule("HORSE: Galloping")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.BOOL_Galloping == True;
+		Event Player.REAL_Stamina > 0;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 300);
+		Event Player.REAL_Stamina -= 2;
+		If(Event Player.REAL_Stamina <= 0);
+			Event Player.BOOL_Galloping = False;
+		Else;
+			Wait(0.050, Ignore Condition);
+			Loop If Condition Is True;
+		End;
+	}
+}
+
+rule("HORSE: Not Galloping")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.BOOL_Galloping != True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 200);
+		If(Event Player.REAL_Stamina < 100);
+			Event Player.REAL_Stamina += 0.500;
+		Else If(Event Player.REAL_Stamina > 100);
+			Event Player.REAL_Stamina = 100;
+		End;
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("HORSE: Track speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.PLAYER_Rider != Null;
+	}
+
+	actions
+	{
+		Event Player.REAL_Last_Speed = Horizontal Speed Of(Event Player);
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("HORSE: Reduce throttle when running into things (makes it easier to turn)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.INT_Riding_Throttle_Magnitude != 0;
+		Event Player.REAL_Last_Speed > 0.500;
+		Horizontal Speed Of(Event Player) <= 0.500;
+	}
+
+	actions
+	{
+		Event Player.INT_Riding_Throttle_Magnitude = 0;
+	}
+}
+
+rule("HORSE: Failsafe if rider leaves (since PLAYER LEFT MATCH never seems to work)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.PLAYER_Rider != Null;
+		(!Entity Exists(Event Player.PLAYER_Rider) || !Is Alive(Event Player.PLAYER_Rider)) == True;
+	}
+
+	actions
+	{
+		Stop Throttle In Direction(Event Player);
+		Stop Facing(Event Player);
+		Event Player.INT_Riding_Throttle_Magnitude = 0;
+		Event Player.PLAYER_Rider = Null;
+	}
+}
+
+rule("HORSE: Failsafe if passenger leaves (since PLAYER LEFT MATCH never seems to work)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.PLAYER_Passenger != Null;
+		(!Entity Exists(Event Player.PLAYER_Passenger) || !Is Alive(Event Player.PLAYER_Passenger)) == True;
+	}
+
+	actions
+	{
+		Event Player.PLAYER_Passenger = Null;
+	}
+}
+
+rule("HORSES: Roam")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.PLAYER_Rider == Null;
+	}
+
+	actions
+	{
+		Wait(Random Real(1, 5), Abort When False);
+		If(Is True For Any(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element)), Is In Line of Sight(Event Player,
+			Current Array Element, Barriers Do Not Block LOS)) && Random Integer(0, 1) == 0);
+			Start Facing(Event Player, Direction Towards(Event Player, Random Value In Array(Filtered Array(All Players(All Teams),
+				Is Dummy Bot(Current Array Element) && Is In Line of Sight(Event Player, Current Array Element, Barriers Do Not Block LOS)))),
+				Random Integer(5, 90), To World, None);
+		Else;
+			Start Facing(Event Player, Direction From Angles(Random Real(-180, 180), 0), Random Integer(5, 90), To World, None);
+		End;
+		Start Throttle In Direction(Event Player, Vector(0, 0, 1), Random Real(-1, 1), To Player, Replace existing throttle,
+			Direction and Magnitude);
+		Loop;
+	}
+}
+
+rule("HORSE: Takes damage (heal immediately, and run away if not ridden)")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Event Damage);
+		If(Event Player.PLAYER_Rider == Null);
+			Set Facing(Event Player, Direction From Angles(Random Integer(-180, 180), 0), To Player);
+			Start Throttle In Direction(Event Player, Facing Direction Of(Event Player), 1, To World, Replace existing throttle, None);
+		End;
+	}
+}
+
+rule("GOLD: Spawn")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS) < 16;
+	}
+
+	actions
+	{
+		Wait(30, Ignore Condition);
+		"Try to adjust for statistical bias by randomly selecting from a smaller portion of the map."
+		If(Random Integer(0, 1) == 0);
+			Global.LOCAL_VECTOR_Gold = Nearest Walkable Position(Vector(Random Real(Min(X Component Of(Global.VECTORS_Map_Bounds[2]) / 2,
+				X Component Of(Global.VECTORS_Map_Bounds[3]) / 2), Max(X Component Of(Global.VECTORS_Map_Bounds[0]) / 2, X Component Of(
+				Global.VECTORS_Map_Bounds[1]) / 2)), Random Real(-30, 30), Random Real(Min(Z Component Of(Global.VECTORS_Map_Bounds[1]) / 2,
+				Z Component Of(Global.VECTORS_Map_Bounds[2]) / 2), Max(Z Component Of(Global.VECTORS_Map_Bounds[0]) / 2, Z Component Of(
+				Global.VECTORS_Map_Bounds[3]) / 2))));
+		Else;
+			Global.LOCAL_VECTOR_Gold = Nearest Walkable Position(Vector(Random Real(Min(X Component Of(Global.VECTORS_Map_Bounds[2]),
+				X Component Of(Global.VECTORS_Map_Bounds[3])), Max(X Component Of(Global.VECTORS_Map_Bounds[0]), X Component Of(
+				Global.VECTORS_Map_Bounds[1]))), Random Real(-30, 30), Random Real(Min(Z Component Of(Global.VECTORS_Map_Bounds[1]),
+				Z Component Of(Global.VECTORS_Map_Bounds[2])), Max(Z Component Of(Global.VECTORS_Map_Bounds[0]), Z Component Of(
+				Global.VECTORS_Map_Bounds[3])))));
+		End;
+		"If vector already exists in array, don't make another one there."
+		If(Array Contains(Mapped Array(Global.ARRAY_VECTORS_Gold_and_EFFECTS, First Of(Current Array Element)), Global.LOCAL_VECTOR_Gold));
+			Small Message(Host Player, Custom String("DEBUG: New gold vector already in array.  Skipping..."));
+		"New vector: create effect and add to array."
+		Else;
+			Create Effect(Global.PLAYERS_All, Orb, Color(Yellow), Global.LOCAL_VECTOR_Gold, 0.250, Visible To);
+			Global.LOCAL_EFFECT_Gold = Last Created Entity;
+			Modify Global Variable(EFFECTS_Gold, Append To Array, Global.LOCAL_EFFECT_Gold);
+			Global.ARRAY_VECTORS_Gold_and_EFFECTS[Count Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS)] = Array(Global.LOCAL_VECTOR_Gold,
+				Global.LOCAL_EFFECT_Gold);
+			Small Message(All Players(All Teams), Random Value In Array(Global.STRINGS_Gold_Spawned));
+		End;
+		Loop If Condition Is True;
+	}
+}
+
+rule("HORSE: Picks up gold")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.PLAYER_Rider != Null;
+		Is Alive(Event Player.PLAYER_Rider) == True;
+		Has Spawned(Event Player.PLAYER_Rider) == True;
+		Count Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS) > 0;
+		Distance Between(Event Player, First Of(First Of(Sorted Array(Global.ARRAY_VECTORS_Gold_and_EFFECTS, Distance Between(Event Player,
+			First Of(Current Array Element)))))) < 1;
+	}
+
+	actions
+	{
+		Event Player.LOCAL_Gold = First Of(Sorted Array(Global.ARRAY_VECTORS_Gold_and_EFFECTS, Distance Between(Event Player, First Of(
+			Current Array Element))));
+		If(Event Player.LOCAL_Gold == Null || First Of(Event Player.LOCAL_Gold) == Null);
+			Small Message(Host Player, Custom String("DEBUG: LOCAL_Gold is null: aborting..."));
+			Abort;
+		Else;
+			disabled Small Message(Host Player, Custom String("DEBUG: LOCAL_Gold is {0}", Event Player.LOCAL_Gold));
+		End;
+		Event Player.LOCAL_Index = Index Of Array Value(Global.ARRAY_VECTORS_Gold_and_EFFECTS, Event Player.LOCAL_Gold);
+		If(!Entity Exists(Last Of(Event Player.LOCAL_Gold)));
+			Small Message(Host Player, Custom String("DEBUG: Trying to delete non-existent gold effect"));
+		End;
+		Destroy Effect(Last Of(Event Player.LOCAL_Gold));
+		Modify Global Variable(ARRAY_VECTORS_Gold_and_EFFECTS, Remove From Array By Index, Event Player.LOCAL_Index);
+		Event Player.INT_Gold += 1;
+		Small Message(Filtered Array(All Players(All Teams), Current Array Element != Event Player.PLAYER_Rider), Custom String(
+			"Sounds like someone picked up gold 'round here..."));
+		Small Message(Event Player.PLAYER_Rider, Random Value In Array(Global.STRINGS_Gold_Collected_Self));
+	}
+}
+
+rule("HORSE: Drops off gold")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.INT_Gold > 0;
+		Is In Spawn Room(Event Player.PLAYER_Rider) == True;
+	}
+
+	actions
+	{
+		Big Message(All Players(All Teams), Custom String("{0} captured {1} gold!", Event Player.PLAYER_Rider, Event Player.INT_Gold));
+		Global.INTS_Team_Scores[Team Of(Event Player.PLAYER_Rider) == Team 1 ? 1 : 2] += Event Player.INT_Gold;
+		"Necessary or the message always says 0 gold.  :("
+		Wait(0.016, Ignore Condition);
+		Event Player.INT_Gold = 0;
+	}
+}
+
+rule("SUBR: PLAYER_Dismount")
+{
+	event
+	{
+		Subroutine;
+		PLAYER_Dismount;
+	}
+
+	actions
+	{
+		Detach Players(Event Player);
+		"Rider dismounts."
+		If(Event Player != Event Player.PLAYER_Horse.PLAYER_Passenger);
+			Stop Throttle In Direction(Event Player.PLAYER_Horse);
+			Stop Facing(Event Player.PLAYER_Horse);
+			Event Player.PLAYER_Horse.INT_Riding_Throttle_Magnitude = 0;
+			Event Player.PLAYER_Horse.PLAYER_Rider = Null;
+		"Passenger dismounts."
+		Else;
+			Small Message(Event Player.PLAYER_Horse.PLAYER_Rider, Custom String("{0} hopped off", Event Player));
+			Event Player.PLAYER_Horse.PLAYER_Passenger = Null;
+		End;
+		Event Player.PLAYER_Horse = Null;
+	}
+}
+
+disabled rule("GOLD: Failsafe (try to delete any effects whose vector has been collected) (disabled, doesn't seem to work)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS) > 0;
+		Count Of(Global.EFFECTS_Gold) > 0;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.EFFECTS_Gold), 1);
+			"Dangling effect: destroy it."
+			If(!Array Contains(Mapped Array(Global.ARRAY_VECTORS_Gold_and_EFFECTS, Last Of(Current Array Element)),
+				Global.EFFECTS_Gold[Global.INT_Loop_Control]));
+				Small Message(Host Player, Custom String("DEBUG: Destroying dangling effect: {0}", Global.EFFECTS_Gold[Global.INT_Loop_Control]));
+				Destroy Effect(Global.EFFECTS_Gold[Global.INT_Loop_Control]);
+				Modify Global Variable At Index(EFFECTS_Gold, Global.INT_Loop_Control, Remove From Array By Index, Global.INT_Loop_Control);
+			End;
+		End;
+	}
+}
+
+rule("EFFECTS: Failsafe #2 (periodically destroy all effects and recreate them)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS) > 0;
+	}
+
+	actions
+	{
+		Wait(300, Abort When False);
+		Call Subroutine(EFFECTS_Recreate);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Takes damage (update attackers list)")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		"Ignore self damage."
+		Attacker != Event Player;
+		"Attacking wanted players is allowed."
+		Event Player.INT_Bounty == 0;
+	}
+
+	actions
+	{
+		"Attacker attacked first: add him to victim's attackers list."
+		If(!Is True For Any(All Players(Team Of(Event Player)), Array Contains(Current Array Element.PLAYERS_Attackers, Attacker)));
+			"Victim's attackers list doesn't contain attacker: add him."
+			If(!Array Contains(Event Player.PLAYERS_Attackers, Attacker));
+				Modify Player Variable(Event Player, PLAYERS_Attackers, Append To Array, Attacker);
+				Small Message(Host Player, Custom String("DEBUG: {0} attacked {1}", Attacker, Event Player));
+			End;
+		End;
+	}
+}
+
+rule("PLAYER: Picks up hat")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is True For Any(Global.ARRAY_Hats, Distance Between(Event Player, Last Of(Current Array Element)) <= 1) == True;
+	}
+
+	actions
+	{
+		Event Player.LOCAL_Hat = First Of(Sorted Array(Global.ARRAY_Hats, Distance Between(Event Player, Last Of(Current Array Element))));
+		Event Player.ARRAY_Hats[Count Of(Event Player.ARRAY_Hats)] = Event Player.LOCAL_Hat;
+		Destroy Effect(Event Player.LOCAL_Hat[2]);
+		Small Message(Event Player, Custom String("That hat belonged to {0}.  I hear there's a bounty on his head...", First Of(
+			Event Player.LOCAL_Hat)));
+	}
+}
+
+rule("PLAYER: Spawns as D.Va (set ammo)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) == Hero(D.Va);
+	}
+
+	actions
+	{
+		Set Max Ammo(Event Player, 0, 6);
+		Set Ammo(Event Player, 0, 6);
+	}
+}
+
+rule("SUBR: EFFECTS_Recreate")
+{
+	event
+	{
+		Subroutine;
+		EFFECTS_Recreate;
+	}
+
+	actions
+	{
+		Small Message(Host Player, Custom String("DEBUG: Recreating effects..."));
+		Destroy All Effects;
+		"Recreate gold-on-ground effects."
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS), 1);
+			Create Effect(Global.PLAYERS_All, Orb, Color(Yellow), First Of(Global.ARRAY_VECTORS_Gold_and_EFFECTS[Global.INT_Loop_Control]),
+				0.250, Visible To);
+			Global.LOCAL_EFFECT_Gold = Last Created Entity;
+			Global.ARRAY_VECTORS_Gold_and_EFFECTS[Global.INT_Loop_Control] = Array(First Of(
+				Global.ARRAY_VECTORS_Gold_and_EFFECTS[Global.INT_Loop_Control]), Global.LOCAL_EFFECT_Gold);
+			disabled Modify Global Variable(EFFECTS_Gold, Append To Array, Global.LOCAL_EFFECT_Gold);
+		End;
+		"Recreate gold-on-horse effects."
+		For Global Variable(INT_Loop_Control, 0, Count Of(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element))), 1);
+			Create Effect(Evaluate Once(Filtered Array(All Players(All Teams), Is Dummy Bot(Current Array Element))[Global.INT_Loop_Control])
+				.INT_Gold > 0 ? All Players(All Teams) : Null, Sparkles, Color(Yellow), Evaluate Once(Filtered Array(All Players(All Teams),
+				Is Dummy Bot(Current Array Element))[Global.INT_Loop_Control]), Evaluate Once(Filtered Array(All Players(All Teams),
+				Is Dummy Bot(Current Array Element))[Global.INT_Loop_Control]).INT_Gold * 0.500, Visible To Position and Radius);
+		End;
+		"Recreate hat-on-ground effects."
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.ARRAY_Hats), 1);
+			Create Effect(All Players(All Teams), Sphere, Color(Orange), Evaluate Once(Last Of(Global.ARRAY_Hats[Global.INT_Loop_Control])),
+				0.100, Visible To);
+			Global.ARRAY_Hats[Global.INT_Loop_Control] = Array(First Of(Global.ARRAY_Hats[Global.INT_Loop_Control]),
+				Global.ARRAY_Hats[Global.INT_Loop_Control][1], Last Created Entity, Last Of(Global.ARRAY_Hats[Global.INT_Loop_Control]));
+		End;
+		"Create sheriff effect."
+		Create Effect(All Players(All Teams), Sphere, Color(Orange), Global.VECTOR_Sheriff, 2, Visible To);
+	}
+}
+
+rule("PLAYER: Enters sheriff's office without hats")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Distance Between(Event Player, Global.VECTOR_Sheriff) < 2;
+		disabled Count Of(Filtered Array(All Players(All Teams), !Is Dummy Bot(Event Player) && Current Array Element.INT_Bounty > 0)) > 0;
+		Count Of(Event Player.ARRAY_Hats) < 1;
+	}
+
+	actions
+	{
+		"Prevent the with-hats and without-hats rules from happening simultaneously."
+		Wait(2, Abort When False);
+		Event Player.LOCAL_PLAYERS = Filtered Array(All Players(All Teams), !Is Dummy Bot(Event Player)
+			&& Current Array Element.INT_Bounty > 0);
+		"Display bounties."
+		If(Count Of(Event Player.LOCAL_PLAYERS) > 0);
+			Small Message(Event Player, Custom String("The sheriff says these bandits are wanted dead:"));
+			"(It's annoying to have to use player-specific, message-specific control variables, but since SMALL MESSAGE requires WAITs to print values properly, this is required, otherwise the control variable will be changed by other rules between messages.)"
+			For Player Variable(Event Player, INT_Sheriff_Message_Loop_Control, 0, Count Of(Event Player.LOCAL_PLAYERS), 1);
+				"NOTE: Due to the bugs with small messages often displaying the wrong values unless WAITs are used, I expect this to not work properly.  But using WAITs would mean causing bugs when the control variable is changed by other rules.  *sigh*"
+				Small Message(Event Player, Custom String("{0}: {1} gold",
+					Event Player.LOCAL_PLAYERS[Event Player.INT_Sheriff_Message_Loop_Control],
+					Event Player.LOCAL_PLAYERS[Event Player.INT_Sheriff_Message_Loop_Control].INT_Bounty));
+				Wait(0.016, Ignore Condition);
+			End;
+			Small Message(Event Player, Custom String("Turn in their hats here to collect the rewards."));
+		Else;
+			Small Message(Event Player, Custom String("The sheriff says there are no bounties out now."));
+		End;
+	}
+}
+
+rule("PLAYER: Enters sheriff's office with hats")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Distance Between(Event Player, Global.VECTOR_Sheriff) < 2;
+		Count Of(Event Player.ARRAY_Hats) > 0;
+	}
+
+	actions
+	{
+		If(!Event Player.PLAYER_Horse);
+			Small Message(Event Player, Custom String("Enter on a horse to turn in hats and collect bounties."));
+		Else;
+			Small Message(Event Player, Custom String(
+				"The sheriff takes your hats as proof that these bandits are dead, and rewards you with:"));
+			For Player Variable(Event Player, INT_Sheriff_Message_Loop_Control, 0, Count Of(Event Player.ARRAY_Hats), 1);
+				Event Player.PLAYER_Horse.INT_Gold += Event Player.ARRAY_Hats[Event Player.INT_Sheriff_Message_Loop_Control][1];
+				Small Message(Event Player, Custom String("{0}: {1} gold", First Of(
+					Event Player.ARRAY_Hats[Event Player.INT_Sheriff_Message_Loop_Control]),
+					Event Player.ARRAY_Hats[Event Player.INT_Sheriff_Message_Loop_Control][1]));
+				Wait(0.016, Ignore Condition);
+			End;
+			Event Player.ARRAY_Hats = Empty Array;
+		End;
+	}
+}
