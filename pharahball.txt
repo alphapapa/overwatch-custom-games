@@ -21,7 +21,7 @@ settings
 		{
 			enabled maps
 			{
-				Ilios Lighthouse
+				Necropolis
 			}
 		}
 
@@ -111,11 +111,81 @@ variables
 
 	player:
 		0: INT_Team
+		1: BOOL_Spawned
 }
 
 subroutines
 {
 	0: Reset
+}
+
+rule("MAP: Necropolis")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Necropolis);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(9.154, 1.535, 0.506);
+		Global.VECTOR_Goal_1 = Vector(-20.387, 5.493, -19.623);
+		Global.VECTOR_Goal_2 = Vector(-20.765, 5.293, 19.408);
+		Global.VECTOR_Spawn_Team_1 = Vector(-20.765, 5.293, 19.408);
+		Global.VECTOR_Spawn_Team_2 = Vector(-20.387, 5.493, -19.623);
+		Global.REAL_Map_Scale_Factor = 0.750;
+	}
+}
+
+rule("MAP: Kanezaka")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Kanezaka);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(-9.412, 10.788, -37.794);
+		Global.VECTOR_Goal_1 = Vector(-4.698, 6.454, -3.744);
+		Global.VECTOR_Goal_2 = Vector(-36.118, 8.455, -52.134);
+		Global.VECTOR_Spawn_Team_1 = Vector(-36.118, 8.455, -52.134);
+		Global.VECTOR_Spawn_Team_2 = Vector(-4.698, 6.454, -3.744);
+		Global.REAL_Map_Scale_Factor = 0.750;
+	}
+}
+
+rule("MAP: Blizz World")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Blizzard World);
+	}
+
+	actions
+	{
+		Global.VECTOR_Ball_Spawn = Vector(-62.467, 24.228, 136.493);
+		Global.VECTOR_Goal_1 = Vector(-78.393, 5.630, 105.747);
+		Global.VECTOR_Goal_2 = Vector(-44.786, 2.221, 105.754);
+		Global.VECTOR_Spawn_Team_1 = Vector(-44.786, 2.221, 105.754);
+		Global.VECTOR_Spawn_Team_2 = Vector(-78.646, 7.020, 101.946);
+		Global.REAL_Map_Scale_Factor = 0.500;
+	}
 }
 
 rule("MAP: Castillo")
@@ -238,29 +308,6 @@ rule("MAP: Havana")
 	}
 }
 
-rule("MAP: Necropolis")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Current Map == Map(Necropolis);
-	}
-
-	actions
-	{
-		Global.VECTOR_Ball_Spawn = Vector(22.983, 6.618, 0.361);
-		Global.VECTOR_Goal_1 = Vector(0.147, 9, -14.850);
-		Global.VECTOR_Goal_2 = Vector(-0.313, 8.194, 15.100);
-		Global.VECTOR_Spawn_Team_1 = Vector(-9.382, 12.238, 15.464);
-		Global.VECTOR_Spawn_Team_2 = Vector(-0.174, 8.189, -15.101);
-		Global.REAL_Map_Scale_Factor = 1;
-	}
-}
-
 rule("INIT:")
 {
 	event
@@ -368,6 +415,7 @@ rule("PLAYER: Joins (assign to team)")
 		Start Forcing Player Outlines(Event Player, All Players(All Teams), True, Event Player.INT_Team == 1 ? Color(Red) : Color(Blue),
 			Always);
 		Start Scaling Player(Event Player, Global.REAL_Map_Scale_Factor, False);
+		Event Player.BOOL_Spawned = False;
 	}
 }
 
@@ -387,7 +435,7 @@ rule("PLAYER: Leaves (remove from team) (does this even work?)")
 	}
 }
 
-rule("BALL: Team 1 scores")
+rule("BALL: Team 1 scores (disable when setting up new map)")
 {
 	event
 	{
@@ -416,7 +464,7 @@ rule("BALL: Team 1 scores")
 	}
 }
 
-rule("BALL: Team 2 scores")
+rule("BALL: Team 2 scores (disable when setting up new map)")
 {
 	event
 	{
@@ -445,7 +493,7 @@ rule("BALL: Team 2 scores")
 	}
 }
 
-rule("SUBR: Reset")
+rule("SUBR: Reset (disable when setting up new map)")
 {
 	event
 	{
@@ -501,5 +549,44 @@ rule("GAME: Begins (for TDM maps)")
 	actions
 	{
 		Call Subroutine(Reset);
+	}
+}
+
+rule("PLAYER: Dies")
+{
+	event
+	{
+		Player Died;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Spawned = False;
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Event Player.BOOL_Spawned == False;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Event Player.INT_Team == 1 ? Global.VECTOR_Spawn_Team_1 : Global.VECTOR_Spawn_Team_2);
+		Event Player.BOOL_Spawned = True;
 	}
 }
