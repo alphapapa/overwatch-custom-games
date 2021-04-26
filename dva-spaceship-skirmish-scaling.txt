@@ -20,6 +20,7 @@ settings
 			{
 				Blizzard World Winter
 				Dorado
+				Horizon Lunar Colony
 				Lijiang Tower
 			}
 		}
@@ -38,7 +39,7 @@ settings
 		Collision Damage Factor: 20.000
 		Main thruster power meterssecond x 10: 0.200
 		Maneuvering thruster power meterssecond x 10: 0.100
-		Rescue Distance: 0.300
+		Rescue Distance: 0.600
 	}
 }
 
@@ -109,6 +110,30 @@ variables
 subroutines
 {
 	1: New_Cargo
+}
+
+rule("MAP: Horizon")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Map == Map(Horizon Lunar Colony);
+	}
+
+	actions
+	{
+		Global.VECTOR_Depot_Team_1 = Vector(-37.160, 5.944, -93.354);
+		Global.VECTOR_Depot_Team_2 = Vector(41.223, 7.455, -55.269);
+		Global.VECTOR_Reactor_Team_1 = Vector(-31.997, 5.191, -135.339);
+		Global.VECTOR_Reactor_Team_2 = Vector(57.071, 7.455, -16.806);
+		Global.VECTORS_Cargo = Array(Vector(28.945, 13.455, -25.658), Vector(13.978, 14.262, -32.298), Vector(98.372, 16.209, -57.685),
+			Vector(75.664, 15.656, -63.330), Vector(86.683, 8.144, -76.394), Vector(86.731, 7.941, -64.004), Vector(19.424, 8.444,
+			-81.928), Vector(15.743, 12.318, -106.111), Vector(-9.623, 4.514, -110.966), Vector(38.446, 15.895, -62.275));
+	}
 }
 
 rule("MAP: Blizz World")
@@ -1700,7 +1725,7 @@ rule("INIT: Global HUD elements")
 
 	actions
 	{
-                "Top HUD"
+		"Top HUD"
 		Create HUD Text(Global.PLAYERS_Team_1, Custom String("REACTOR"), Custom String("ENEMY: {0}", Global.INT_Reactor_HP_Team_2),
 			Custom String("FRIENDLY: {0}", Global.INT_Reactor_HP_Team_1), Top, 0, Color(Yellow), Color(Team 2), Color(Team 1),
 			Visible To and String, Default Visibility);
@@ -1723,5 +1748,26 @@ rule("INIT: Global HUD elements")
 		Create HUD Text(Global.PLAYERS_All, Custom String("Jump drive"), Custom String("Activate targeting", Input Binding String(Button(
 			Crouch))), Custom String("{0}", Input Binding String(Button(Ultimate))), Right, 1, Color(White), Color(Turquoise), Color(
 			White), Visible To and String, Default Visibility);
+	}
+}
+
+rule("PLAYER: Hint to land to rearm")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Spawn Room(Event Player) == True;
+		Is On Ground(Event Player) == False;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Custom String("Entered base.  Land to rearm."));
 	}
 }
