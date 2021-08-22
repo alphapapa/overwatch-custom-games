@@ -1,0 +1,300 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max FFA Players: 8
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Necropolis
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Bastion
+			{
+				Infinite Ultimate Duration: On
+				Jump Vertical Speed: 200%
+				Movement Gravity: 75%
+				Quick Melee: Off
+				Reconfigure: Off
+				Self-Repair: Off
+				Spawn With Ultimate Ready: On
+			}
+
+			Orisa
+			{
+				Ammunition Clip Size Scalar: 25%
+				Damage Dealt: 400%
+				Quick Melee: Off
+				Ultimate Ability Supercharger: Off
+			}
+
+			Wrecking Ball
+			{
+				Adaptive Shield: Off
+				Grappling Claw: Off
+				Piledriver: Off
+				Primary Fire: Off
+				Roll Always Active: On
+				Ultimate Ability Minefield: Off
+			}
+
+			enabled heroes
+			{
+				Bastion
+				Orisa
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: INT_Loop_Control
+		1: PLAYER_Ball
+		2: HEROES_Offense
+		3: HEROES_Defense
+
+	player:
+		0: INT_Ammo
+		1: INT_Team
+}
+
+subroutines
+{
+	0: OUTLINES_Reset
+}
+
+rule("SETUP: Skip setup time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(1);
+	}
+}
+
+rule("HERO: Bastion spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Bastion);
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Knockback Dealt(Event Player, 500);
+		Wait(1, Ignore Condition);
+		"Activate ultimate."
+		Press Button(Event Player, Button(Ultimate));
+	}
+}
+
+rule("HERO: Bastion shoots")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Bastion);
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		"Set ammo (managed manually due to tank configuration)."
+		disabled Event Player.INT_Ammo = 0;
+		Wait(0.016, Ignore Condition);
+		Stop Holding Button(Event Player, Button(Primary Fire));
+		Disallow Button(Event Player, Button(Primary Fire));
+		Wait(5, Ignore Condition);
+		Allow Button(Event Player, Button(Primary Fire));
+		Loop If Condition Is True;
+	}
+}
+
+rule("BALL: Spawn")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Create Dummy Bot(Hero(Wrecking Ball), All Teams, 12, Vector(10, 5, 10), Vector(0, 0, 0));
+		Global.PLAYER_Ball = Last Created Entity;
+		Set Damage Received(Global.PLAYER_Ball, 10);
+		Call Subroutine(OUTLINES_Reset);
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		"This doesn't seem to work.  *sigh*"
+		Set Damage Received(Event Player, 0);
+		Call Subroutine(OUTLINES_Reset);
+	}
+}
+
+rule("SUBR: OUTLINES_Reset")
+{
+	event
+	{
+		Subroutine;
+		OUTLINES_Reset;
+	}
+
+	actions
+	{
+		Start Forcing Player Outlines(Global.PLAYER_Ball, All Players(All Teams), True, Color(Orange), Always);
+		For Global Variable(INT_Loop_Control, 0, Count Of(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element))),
+			1);
+			Start Forcing Player Outlines(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element))
+				[Global.INT_Loop_Control], All Players(All Teams), True, Array(Color(Sky Blue), Color(Orange))[Filtered Array(All Players(
+				All Teams), !Is Dummy Bot(Current Array Element))[Global.INT_Loop_Control].INT_Team], Always);
+		End;
+	}
+}
+
+rule("PLAYER: Takes damage (heal it)")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Event Damage);
+	}
+}
+
+rule("HERO: Orisa spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Orisa);
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 300);
+		Set Max Ammo(Event Player, 0, 10);
+		Set Ammo(Event Player, 0, 10);
+	}
+}
+
+rule("INIT")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.HEROES_Offense = Array(Hero(Roadhog), Hero(Torbjörn), Hero(Widowmaker), Hero(Lúcio), Hero(Symmetra));
+		Global.HEROES_Defense = Array(Hero(Roadhog), Hero(Ana), Hero(Brigitte), Hero(Sombra), Hero(Pharah), Hero(Reinhardt));
+		"Disable built-in things."
+		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Music;
+		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("HUD")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Progress Bar HUD Text(All Players(All Teams), 100 * (Health(Global.PLAYER_Ball) / Max Health(Global.PLAYER_Ball)),
+			Custom String("Ball health"), Left, 0, Color(Orange), Color(Orange), Visible To Values and Color, Default Visibility);
+	}
+}
