@@ -1162,6 +1162,8 @@ rule("PLAYER: Picks up hat")
 	conditions
 	{
 		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
 		Is True For Any(Global.ARRAY_Hats, Distance Between(Event Player, Last Of(Current Array Element)) <= 1) == True;
 	}
 
