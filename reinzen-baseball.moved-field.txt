@@ -1,0 +1,1409 @@
+// NOTE: Due to floating-point precision errors in the Overwatch
+// engine, moving the field to the edge of the Expanse terrain (which
+// is less than 300 meters from 0,0) causes the ball-path sphere
+// effects to be drawn at bizarre, jittery positions, ruining the
+// effect.  So I guess we will forego the nicely positioned field with
+// the walls at the terrain edge for now.  *sigh* (Alternatively, the
+// ball-path effects could be made optional, and the field could
+// optionally be moved to the field edge.  But that would be more
+// complicated, so...maybe someday...)
+
+// 2021-07-22: The Overwatch update from a couple days ago fixed that
+// problem!  Now this just needs to be tided up relative to the
+// non-moved-field version (the ball is passing through the backstop
+// now).
+
+settings
+{
+	main
+	{
+		Description: "WIP: Reinzen Baseball. (by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Spectators: 12
+		Max Team 1 Players: 11
+		Max Team 2 Players: 0
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Quick Melee: Off
+
+			Reinhardt
+			{
+				Barrier Field: Off
+				Charge: Off
+				Fire Strike: Off
+			}
+
+			Soldier: 76
+			{
+				Biotic Field: Off
+				Helix Rockets: Off
+				Primary Fire: Off
+				Quick Melee: Off
+			}
+
+			Sombra
+			{
+				Hack: Off
+				Primary Fire: Off
+				Quick Melee: Off
+				Stealth: Off
+				Ultimate Ability EMP: Off
+			}
+
+			Tracer
+			{
+				Blink: Off
+				Primary Fire: Off
+				Quick Melee: Off
+				Recall: Off
+			}
+
+			Winston
+			{
+				Barrier Projector: Off
+				Jump Pack: Off
+				Primary Fire: Off
+				Quick Melee: Off
+				Ultimate Ability Primal Rage: Off
+			}
+
+			Wrecking Ball
+			{
+				Roll Always Active: On
+			}
+
+			Zenyatta
+			{
+				Orb of Discord: Off
+				Orb of Harmony: Off
+				Primary Fire: Off
+				Quick Melee: Off
+				Secondary Fire: Off
+			}
+
+			enabled heroes
+			{
+				Tracer
+			}
+		}
+	}
+
+	extensions
+	{
+		Play More Effects
+	}
+}
+
+variables
+{
+	global:
+		0: VECTOR_Rubber
+		1: PLAYER_Ball
+		2: BOOL_Pitched
+		3: PLAYER_Holding_Ball
+		4: VECTOR_Home_Plate
+		5: REAL_Pitch_Speed
+		6: REAL_Pitch_Angle_Horizontal
+		7: REAL_Pitch_Angle_Vertical
+		8: STRING_Pitch_Call
+		9: REAL_Hit_Distance
+		10: VECTOR_Hit_From
+		11: BOOL_Hit
+		12: STRING_Hit_Fair_Foul
+		13: VECTOR_Pitch_Curve_Horizontal
+		14: VECTOR_Pitch_Curve_Vertical
+		16: VECTOR_Last_Landed
+		17: VECTOR_Strike
+		18: VECTORS_Spawn_Points
+		19: VECTORS_Dugouts
+		20: INT_Loop_Control
+		21: VECTORS_Team_Portals
+		22: EFFECTS_Pitch_Trail
+		23: EFFECTS_Hit_Trail
+		24: PLAYER_Dummy_Batter
+		25: VECTOR_Dummy_Batter
+		26: REAL_Dummy_Batter_Angle_H
+		27: VECTOR_Strike_Zone
+
+	player:
+		0: BOOL_Pitching
+		1: VECTOR_Pitch_Target
+		2: REAL_Throw_Charge
+		3: VECTOR_Last_Facing
+		4: BOOL_Throwing
+		5: EFFECT_Throw_Target
+		6: EFFECT_Throwing
+		7: VECTOR_Last_Position
+		8: INT_Team
+		9: EFFECT_Glove
+		10: VECTOR_Glove
+}
+
+subroutines
+{
+	0: PLAYERS_Set_Outlines
+	1: EFFECTS_Destroy_Pitch_Trail
+	2: HOST_Pitch
+}
+
+rule("HUD")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		disabled Create HUD Text(All Players(All Teams), Custom String("Throw charge"), Null, Local Player.REAL_Throw_Charge, Left, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("CONTROLS"), Custom String("Take ball: Aim at and hold {0}",
+			Input Binding String(Button(Secondary Fire))), Custom String("Throw ball: Hold {0} to charge, release to throw",
+			Input Binding String(Button(Primary Fire))), Right, 0, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("PITCH"), Custom String("{0} mph", Global.REAL_Pitch_Speed),
+			Global.STRING_Pitch_Call, Top, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create Progress Bar HUD Text(Local Player, Local Player.REAL_Throw_Charge, Custom String("Throw charge"), Right, 1, Color(White),
+			Color(White), Visible To Values and Color, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("HIT"), Custom String("{0} feet", Global.REAL_Hit_Distance * 3.281),
+			Custom String("{0}", Global.STRING_Hit_Fair_Foul), Left, 0, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Create HUD Text(Host Player, Custom String("HOST CONTROLS"), Custom String("Reset ball: {0} + {1}", Input Binding String(Button(
+			Interact)), Input Binding String(Button(Crouch))), Custom String("Pitch ball: {0} + {1}", Input Binding String(Button(
+			Interact)), Input Binding String(Button(Primary Fire))), Right, -1, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("SHARE CODE"), Custom String("https://workshop.codes/baseball"),
+			Custom String("VBX22"), Left, -10, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("BALL"), Custom String("{0} feet", Y Component Of(Position Of(
+			Global.PLAYER_Ball)) * 3.281), Custom String("{0} mph", Speed Of(Global.PLAYER_Ball) * 2.237), Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("CURVE"), Custom String("Horizontal angle: {0}",
+			Global.REAL_Pitch_Angle_Horizontal), Custom String("Vertical angle: {0}", Global.REAL_Pitch_Angle_Vertical), Left, 0, Color(
+			White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("PLAYERS"), Custom String("Pitcher: {0}  Catcher: {1}", First Of(
+			Filtered Array(All Players(All Teams), Hero Of(Current Array Element) == Hero(Zenyatta))), First Of(Filtered Array(All Players(
+			All Teams), Hero Of(Current Array Element) == Hero(Winston)))), Custom String("Batter: {0}", First Of(Filtered Array(
+			All Players(All Teams), Hero Of(Current Array Element) == Hero(Reinhardt)))), Top, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Local Player, Custom String("TEAM COLOR"), Null, Null, Left, 0, Array(Null, Color(Team 1), Color(Team 2))
+			[Local Player.INT_Team], Color(White), Color(White), Visible To String and Color, Default Visibility);
+	}
+}
+
+rule("FIELD: Create")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		"Foul lines"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(284, 0, 295.854), Vector(284, 0, 384), Color(White),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(285.854, 0, 294), Vector(384, 0, 294), Color(White),
+			Visible To Position and Radius);
+		"Rubber"
+		Global.VECTOR_Rubber = Vector(297.030, 0, 307.030);
+		disabled Create Effect(All Players(All Teams), Ring, Custom Color(135, 78, 39, 255), Global.VECTOR_Rubber, 3,
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Color(Orange), Global.VECTOR_Rubber - Vector(0.500, 8.500, 0.500), 9,
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTOR_Rubber + Vector(-0.500, 0, 0.500),
+			Global.VECTOR_Rubber + Vector(0.500, 0, -0.500), Color(White), Visible To Position and Radius);
+		"Bases"
+		Create Effect(All Players(All Teams), Orb, Color(White), Vector(311.432, -0.250, 294.250), 0.500, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Orb, Color(White), Vector(284.250, -0.250, 321.432), 0.500, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Orb, Color(White), Vector(311.432, -0.250, 321.432), 0.500, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Orb, Color(White), Vector(284.250, -0.250, 294.250), 0.500, Visible To Position and Radius);
+		"Bases"
+		disabled Create Effect(All Players(All Teams), Ring, Color(Orange), Vector(311.432, 0, 294.250), 4, Visible To Position and Radius);
+		disabled Create Effect(All Players(All Teams), Ring, Color(Orange), Vector(284, 0, 294), 4, Visible To Position and Radius);
+		disabled Create Effect(All Players(All Teams), Ring, Color(Orange), Vector(284.250, 0, 321.432), 4, Visible To Position and Radius);
+		disabled Create Effect(All Players(All Teams), Ring, Color(Orange), Vector(311.432, 0, 321.432), 4, Visible To Position and Radius);
+		"Outfield"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 0, 294), Vector(384, 0, 359), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 0, 359), Vector(362, 0, 384), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(362, 0, 384), Vector(284, 0, 384), Color(Green),
+			Visible To Position and Radius);
+		"Outfield walls"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 11.300, 294), Vector(384, 11.300, 359), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 3, 359), Vector(362, 3, 384), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(362, 1.500, 384), Vector(284, 1.500, 384), Color(Green),
+			Visible To Position and Radius);
+		"Outfield walls (vertical lines)"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 0, 294), Vector(384, 11.300, 294), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 0, 359), Vector(384, 11.300, 359), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(362, 0, 384), Vector(362, 3, 384), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(284, 0, 384), Vector(284, 1.500, 384), Color(Green),
+			Visible To Position and Radius);
+		"Infield (outer line)"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(318.660, 0, 293.206), Vector(326.333, 0, 300.615), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(326.333, 0, 300.615), Vector(327.656, 0, 317.812), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(327.656, 0, 317.812), Vector(319.719, 0, 329.719), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(319.719, 0, 329.719), Vector(307.813, 0, 337.656), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(307.813, 0, 337.656), Vector(290.615, 0, 336.333), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(290.615, 0, 336.333), Vector(283.206, 0, 328.925), Color(Orange),
+			Visible To Position and Radius);
+		"Infield (inner line)"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(288, 0, 295.323), Vector(310.459, 0, 295.323), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(310.459, 0, 295.323), Vector(310.459, 0, 320.459), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(310.459, 0, 320.459), Vector(285.323, 0, 320.459), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(285.323, 0, 320.459), Vector(285.323, 0, 298), Color(Orange),
+			Visible To Position and Radius);
+		"Home plate circle"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(283.177, 0, 298.189), Vector(281.354, 0, 297.969), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(281.354, 0, 297.969), Vector(280.031, 0, 294), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(280.031, 0, 294), Vector(281.354, 0, 291.354), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(281.354, 0, 291.354), Vector(284, 0, 290.031), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(284, 0, 290.031), Vector(287.969, 0, 291.354), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(287.969, 0, 291.354), Vector(288.189, 0, 293.177), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(288, 0, 295.323), Vector(286.910, 0, 296.910), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(286.910, 0, 296.910), Vector(285.323, 0, 298), Color(Orange),
+			Visible To Position and Radius);
+		"Infield (foul territory)"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(288.189, 0, 293.177), Vector(318.660, 0, 293.177), Color(Orange),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(283.177, 0, 298.189), Vector(283.177, 0, 328.925), Color(Orange),
+			Visible To Position and Radius);
+		"Grass"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(272.094, 0, 282.094), Vector(384, 0, 282.094), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(384, 0, 282.094), Vector(384, 0, 294), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(272.094, 0, 282.094), Vector(272.094, 0, 383.958), Color(Green),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(272.094, 0, 383.958), Vector(284, 0, 383.958), Color(Green),
+			Visible To Position and Radius);
+		"Batter's boxes"
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(283.961, 0, 293.304), Vector(284.823, 0, 292.442), Color(White),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(284.823, 0, 292.442), Vector(286.117, 0, 293.735), Color(White),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(286.117, 0, 293.735), Vector(285.854, 0, 294), Color(White),
+			Visible To Position and Radius);
+		Global.VECTORS_Spawn_Points = Array(Vector(264, 0, 284));
+		"Dugouts"
+		Global.VECTORS_Dugouts = Array(Array(Vector(305.167, 0, 276.802), Vector(326.333, 0, 279.448), Vector(326.333, 0, 280.771), Vector(
+			305.167, 0, 279.448)), Array(Vector(269.448, 0, 335.010), Vector(266.802, 0, 313.844), Vector(269.448, 0, 313.844), Vector(
+			270.771, 0, 335.010)));
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][0], Global.VECTORS_Dugouts[1][1], Color(Team 2),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][1], Global.VECTORS_Dugouts[1][2], Color(Team 2),
+			Visible To Position and Radius);
+		disabled Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][2], Global.VECTORS_Dugouts[1][3], Color(Team 2),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][3], Global.VECTORS_Dugouts[1][0], Color(Team 2),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][0] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[1][1] + Vector(0, 2, 0), Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][1] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[1][2] + Vector(0, 2, 0), Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][2] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[1][3] + Vector(0, 2, 0), Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][3] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[1][0] + Vector(0, 2, 0), Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][0], Global.VECTORS_Dugouts[1][0] + Vector(0, 2, 0),
+			Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][1], Global.VECTORS_Dugouts[1][1] + Vector(0, 2, 0),
+			Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][2], Global.VECTORS_Dugouts[1][2] + Vector(0, 2, 0),
+			Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[1][3], Global.VECTORS_Dugouts[1][3] + Vector(0, 2, 0),
+			Color(Team 2), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][0], Global.VECTORS_Dugouts[0][1], Color(Team 1),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][1], Global.VECTORS_Dugouts[0][2], Color(Team 1),
+			Visible To Position and Radius);
+		disabled Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][2], Global.VECTORS_Dugouts[0][3], Color(Team 1),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][3], Global.VECTORS_Dugouts[0][0], Color(Team 1),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][0] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[0][1] + Vector(0, 2, 0), Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][1] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[0][2] + Vector(0, 2, 0), Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][2] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[0][3] + Vector(0, 2, 0), Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][3] + Vector(0, 2, 0),
+			Global.VECTORS_Dugouts[0][0] + Vector(0, 2, 0), Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][0], Global.VECTORS_Dugouts[0][0] + Vector(0, 2, 0),
+			Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][1], Global.VECTORS_Dugouts[0][1] + Vector(0, 2, 0),
+			Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][2], Global.VECTORS_Dugouts[0][2] + Vector(0, 2, 0),
+			Color(Team 1), Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Good Beam, Global.VECTORS_Dugouts[0][3], Global.VECTORS_Dugouts[0][3] + Vector(0, 2, 0),
+			Color(Team 1), Visible To Position and Radius);
+		disabled Global.VECTORS_Team_Portals = Array(Global.VECTORS_Dugouts[0][0] + 0.500 * Distance Between(Global.VECTORS_Dugouts[0][0],
+			Global.VECTORS_Dugouts[0][1]) * Direction Towards(Global.VECTORS_Dugouts[0][0], Global.VECTORS_Dugouts[0][1]));
+		Global.VECTORS_Team_Portals = Array(Vector(264, 0, 274), Vector(289.226, 0, 280.639), Vector(270.639, 0, 299.226));
+		"Distances"
+		Create In-World Text(All Players(All Teams), Custom String("328"), Vector(384, -3, 295), 0.750, Do Not Clip, Visible To, Color(
+			White), Default Visibility);
+		Create In-World Text(All Players(All Teams), Custom String("295"), Vector(285, -3, 384), 0.750, Do Not Clip, Visible To, Color(
+			White), Default Visibility);
+		Create In-World Text(All Players(All Teams), Custom String("344"), Vector(384, -3, 324), 0.750, Do Not Clip, Visible To, Color(
+			White), Default Visibility);
+		Create In-World Text(All Players(All Teams), Custom String("387"), Vector(373, -3, 372), 0.750, Do Not Clip, Visible To, Color(
+			White), Default Visibility);
+		Create In-World Text(All Players(All Teams), Custom String("311"), Vector(314, -3, 384), 0.750, Do Not Clip, Visible To, Color(
+			White), Default Visibility);
+		Global.VECTOR_Home_Plate = Vector(284, 0, 294);
+		Global.VECTOR_Strike_Zone = Global.VECTOR_Home_Plate + Vector(0.2, 1, 0.2);
+	}
+}
+
+rule("FIELD: Draw team portals")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Ring, Color(White), Global.VECTORS_Team_Portals[0], 2, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Ring, Color(Team 1), Global.VECTORS_Team_Portals[1], 1, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Ring, Color(Team 2), Global.VECTORS_Team_Portals[2], 1, Visible To Position and Radius);
+		Create In-World Text(Filtered Array(All Players(All Teams), Current Array Element.INT_Team < 1), Custom String("Join the crowd"),
+			Global.VECTORS_Team_Portals[0], 1, Clip Against Surfaces, Visible To Position and String, Color(White), Default Visibility);
+		Create In-World Text(Filtered Array(All Players(All Teams), Current Array Element.INT_Team < 1), Custom String("Join blue team"),
+			Global.VECTORS_Team_Portals[1], 0.500, Clip Against Surfaces, Visible To Position and String, Color(Team 1),
+			Default Visibility);
+		Create In-World Text(Filtered Array(All Players(All Teams), Current Array Element.INT_Team < 1), Custom String("Join red team"),
+			Global.VECTORS_Team_Portals[2], 0.500, Clip Against Surfaces, Visible To Position and String, Color(Team 2),
+			Default Visibility);
+	}
+}
+
+rule("BALL: Create")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Dummy Bot(Hero(Wrecking Ball), Team 2, 12, Global.VECTOR_Rubber, Vector(0, 0, 0));
+		Global.PLAYER_Ball = Last Created Entity;
+		Global.BOOL_Pitched = False;
+		Global.PLAYER_Holding_Ball = Null;
+		Start Scaling Player(Global.PLAYER_Ball, 0.100, False);
+		Start Forcing Player Outlines(Global.PLAYER_Ball, All Players(All Teams), True, Color(White), Occluded);
+		Set Gravity(Global.PLAYER_Ball, 25);
+		Set Knockback Received(Global.PLAYER_Ball, 2000);
+		Set Damage Received(Global.PLAYER_Ball, 0.100);
+		Set Move Speed(Global.PLAYER_Ball, 200);
+		Create Icon(Filtered Array(All Players(All Teams), 0 == 0), Global.PLAYER_Ball, Arrow: Down, Visible To and Position, Color(White),
+			True);
+		Create Effect(All Players(All Teams), Light Shaft, Color(Blue), Global.VECTOR_Last_Landed, 0.100, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Color(Red), Global.VECTOR_Strike, 0.100, Visible To Position and Radius);
+		Global.VECTOR_Last_Landed = Vector(-1000, 0, -1000);
+		Disable Nameplates(Global.PLAYER_Ball, All Players(All Teams));
+		Create Effect(All Players(All Teams), Sphere, Color(White), Update Every Frame(Global.PLAYER_Ball), 0.100,
+			Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Color(Blue), Global.VECTOR_Hit_From, 0.100, Visible To Position and Radius);
+	}
+}
+
+rule("BALL: Enters home plate area")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.PLAYER_Ball;
+		Distance Between(Event Player, Global.VECTOR_Home_Plate) < 3;
+		Global.BOOL_Pitched == True;
+	}
+
+	actions
+	{
+		Global.REAL_Pitch_Speed = Speed Of(Event Player) * 2.237;
+	}
+}
+
+rule("BALL: Pitched (curve)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Pitched == True;
+	}
+
+	actions
+	{
+		"Perhaps counter-intuitively, rather than using a vector with the X/Z either -1 or 1 to change the direction, the vector remains the same, and the speed value is either negative or positive.  (This may not be the best or most correct way, but it works now.)"
+		Apply Impulse(Global.PLAYER_Ball, Vector(1, 0, 0), Speed Of(Global.PLAYER_Ball)
+			* Global.REAL_Pitch_Angle_Horizontal * 0.500 * 0.001, To Player, Incorporate Contrary Motion);
+		Apply Impulse(Global.PLAYER_Ball, Vector(0, 1, 0), Speed Of(Global.PLAYER_Ball) * Global.REAL_Pitch_Angle_Vertical * 0.700 * 0.001,
+			To Player, Incorporate Contrary Motion);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("BALL: Enters strike zone")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Distance Between(Global.PLAYER_Ball, Global.VECTOR_Strike_Zone) <= 0.750;
+		Global.BOOL_Pitched == True;
+	}
+
+	actions
+	{
+		Global.VECTOR_Strike = Position Of(Global.PLAYER_Ball);
+		Wait(0.100, Ignore Condition);
+		Abort If(Global.BOOL_Hit);
+		Global.STRING_Pitch_Call = Custom String("Strike!");
+		Big Message(All Players(All Teams), Custom String("Strike!"));
+	}
+}
+
+rule("BALL: Lands")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		disabled If(Global.BOOL_Pitched);
+		disabled Global.STRING_Pitch_Call = Custom String("Ball");
+		disabled End;
+		If(Global.BOOL_Hit);
+			Global.VECTOR_Last_Landed = Position Of(Global.PLAYER_Ball);
+			Global.REAL_Hit_Distance = Distance Between(Position Of(Global.PLAYER_Ball), Global.VECTOR_Hit_From);
+			Global.STRING_Hit_Fair_Foul = X Component Of(Position Of(Global.PLAYER_Ball)) < 0 || Z Component Of(Position Of(
+				Global.PLAYER_Ball)) < 0 ? Custom String("Foul ball!") : Custom String("Fair ball");
+			If(Global.STRING_Hit_Fair_Foul == Custom String("Foul ball!"));
+				Big Message(All Players(All Teams), Custom String("Foul ball!"));
+			Else;
+				"Of course, with the Workshop race conditions, half the time this says \"0 feet\" and half the time it works."
+				Small Message(All Players(All Teams), Custom String("{0} hit it {1} feet", First Of(Filtered Array(All Players(All Teams), Hero Of(
+					Current Array Element) == Hero(Reinhardt))), 3.281 * Global.REAL_Hit_Distance));
+			End;
+		Else If(Global.BOOL_Pitched && Global.STRING_Pitch_Call != Custom String("Strike!"));
+			Global.STRING_Pitch_Call = Custom String("Ball");
+			Big Message(All Players(All Teams), Custom String("Ball!"));
+		End;
+		Global.BOOL_Hit = False;
+		Global.BOOL_Pitched = False;
+	}
+}
+
+rule("BALL: Hit")
+{
+	event
+	{
+		Player Took Damage;
+		Team 2;
+		All;
+	}
+
+	actions
+	{
+		Global.REAL_Hit_Distance = 0;
+		Global.BOOL_Pitched = False;
+		Global.BOOL_Hit = True;
+		Global.VECTOR_Hit_From = Position Of(Global.PLAYER_Ball);
+		Apply Impulse(Global.PLAYER_Ball, Vector(0, 1, 0), Y Component Of(Position Of(Event Player)) - Y Component Of(Facing Direction Of(
+			Attacker) * Distance Between(Event Player, Attacker)) * Random Real(0, Speed Of(Event Player) * 0.500), To World,
+			Incorporate Contrary Motion);
+	}
+}
+
+rule("BALL: In air (drag)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Air(Global.PLAYER_Ball) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Global.PLAYER_Ball, Direction Towards(Position Of(Global.PLAYER_Ball), Global.PLAYER_Ball.VECTOR_Last_Position),
+			Speed Of(Global.PLAYER_Ball) * 0.005, To World, Incorporate Contrary Motion);
+		Set Facing(Global.PLAYER_Ball, Direction Towards(Global.PLAYER_Ball.VECTOR_Last_Position, Position Of(Global.PLAYER_Ball)),
+			To World);
+		Global.PLAYER_Ball.VECTOR_Last_Position = Position Of(Global.PLAYER_Ball);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("BALL: Hits field boundaries")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(X Component Of(Position Of(Global.PLAYER_Ball)) <= X Component Of(Global.VECTOR_Home_Plate - 11.906) || Z Component Of(Position Of(Global.PLAYER_Ball)) <= Z Component Of(Global.VECTOR_Home_Plate - 11.906)) == True;
+		Is Alive(Global.PLAYER_Ball) == True;
+		Has Spawned(Global.PLAYER_Ball) == True;
+	}
+
+	actions
+	{
+		If(X Component Of(Position Of(Global.PLAYER_Ball)) <= X Component Of(Global.VECTOR_Home_Plate - 11.906));
+			Apply Impulse(Global.PLAYER_Ball, Vector(1, 0, 0), Speed Of(Global.PLAYER_Ball), To World, Incorporate Contrary Motion);
+		Else If(Z Component Of(Position Of(Global.PLAYER_Ball)) <= Z Component Of(Global.VECTOR_Home_Plate - 11.906));
+			Apply Impulse(Global.PLAYER_Ball, Vector(0, 0, 1), Speed Of(Global.PLAYER_Ball), To World, Incorporate Contrary Motion);
+		End;
+		If(Global.BOOL_Hit);
+			Global.STRING_Hit_Fair_Foul = Custom String("Foul ball!");
+			Big Message(All Players(All Teams), Custom String("Foul ball!"));
+		End;
+		Global.BOOL_Hit = False;
+		Global.BOOL_Pitched = False;
+	}
+}
+
+rule("PLAYER: Joins")
+{
+	event
+	{
+		Player Joined Match;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Forcing Player Outlines(Global.PLAYER_Ball, All Players(All Teams), True, Color(White), Always);
+		Set Knockback Dealt(Event Player, 1000);
+		Event Player.BOOL_Throwing = False;
+		Event Player.EFFECT_Throw_Target = Null;
+		Event Player.VECTOR_Pitch_Target = Null;
+		Teleport(Event Player, Random Value In Array(Global.VECTORS_Spawn_Points));
+		Event Player.INT_Team = -1;
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Wait(5, Ignore Condition);
+		Small Message(Event Player, Custom String("Welcome to Reinzen Baseball!"));
+		Wait(5, Ignore Condition);
+		Small Message(Event Player, Custom String("To play, join a team by entering the red or blue on-deck circle near the dugouts."));
+		Disable Nameplates(Global.PLAYER_Ball, All Players(All Teams));
+	}
+}
+
+rule("PLAYER: Walks through team portal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		(Distance Between(Position Of(Event Player), Global.VECTORS_Team_Portals[0]) <= 2 || Distance Between(Position Of(Event Player),
+			Global.VECTORS_Team_Portals[1]) <= 2 || Distance Between(Position Of(Event Player), Global.VECTORS_Team_Portals[2]) <= 2)
+			== True;
+	}
+
+	actions
+	{
+		If(Distance Between(Position Of(Event Player), Global.VECTORS_Team_Portals[1]) <= 2);
+			Event Player.INT_Team = 1;
+		Else If(Distance Between(Position Of(Event Player), Global.VECTORS_Team_Portals[2]) <= 2);
+			Event Player.INT_Team = 2;
+		Else;
+			Event Player.INT_Team = 0;
+		End;
+		Start Forcing Player To Be Hero(Event Player, Array(Hero(Tracer), Hero(Soldier: 76), Hero(Sombra))[Event Player.INT_Team]);
+		Call Subroutine(PLAYERS_Set_Outlines);
+		Small Message(All Players(All Teams), Custom String("{0} joined {1}", Event Player, Array(Custom String("the crowd"),
+			Custom String("the blue team"), Custom String("the red team"))[Event Player.INT_Team]));
+	}
+}
+
+rule("PLAYER: Leaves")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		"Player was holding ball."
+		If(Global.PLAYER_Holding_Ball != Null && !Entity Exists(Global.PLAYER_Holding_Ball));
+			Detach Players(Global.PLAYER_Ball);
+			Global.PLAYER_Holding_Ball = Null;
+		End;
+		Call Subroutine(PLAYERS_Set_Outlines);
+	}
+}
+
+disabled rule("PLAYER: Takes ball")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Distance Between(Event Player, Global.PLAYER_Ball) <= 2;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+		Global.PLAYER_Holding_Ball == Null;
+		disabled Event Player.INT_Team > 0;
+	}
+
+	actions
+	{
+		Global.BOOL_Pitched = False;
+		Global.BOOL_Hit = False;
+		Small Message(Host Player, Custom String("{0} trying to take ball", Event Player));
+		If(Event Player.INT_Team < 1);
+			Small Message(Event Player, Custom String("Join a team before taking the ball (enter the red or blue on-deck circle)."));
+			Abort;
+		End;
+		If(Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player), Eye Position(
+			Global.PLAYER_Ball))) < 12 && Is In Line of Sight(Eye Position(Event Player), Eye Position(Global.PLAYER_Ball),
+			Barriers Do Not Block LOS));
+			Global.PLAYER_Holding_Ball = Event Player;
+			Attach Players(Global.PLAYER_Ball, Event Player, Vector(0, 2, 0));
+			Small Message(Host Player, Custom String("{0} took the ball", Event Player));
+		End;
+		Start Forcing Player Outlines(Global.PLAYER_Holding_Ball, All Players(All Teams), True, Color(White), Always);
+	}
+}
+
+rule("PLAYER: Starts throwing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.PLAYER_Holding_Ball;
+		Event Player.BOOL_Throwing == False;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+		Hero Of(Event Player) != Hero(Zenyatta);
+	}
+
+	actions
+	{
+		Event Player.BOOL_Throwing = True;
+		disabled Create Effect(All Players(All Teams), Bad Aura, Color(White), Event Player, 1, Visible To Position and Radius);
+		disabled Event Player.EFFECT_Throwing = Last Created Entity;
+		If(Event Player.EFFECT_Throw_Target == Null);
+			Event Player.REAL_Throw_Charge = 0;
+			Create Beam Effect(Event Player, Good Beam, Event Player, Update Every Frame(Event Player.VECTOR_Pitch_Target), Color(White),
+				Visible To Position and Radius);
+			Event Player.EFFECT_Throw_Target = Last Created Entity;
+		End;
+		Event Player.REAL_Throw_Charge += 5;
+		Event Player.REAL_Throw_Charge = Min(Event Player.REAL_Throw_Charge, 100);
+		Event Player.VECTOR_Pitch_Target = Eye Position(Event Player) + Facing Direction Of(Event Player) * Min(100,
+			Event Player.REAL_Throw_Charge * 0.300);
+		Event Player.VECTOR_Last_Facing = Facing Direction Of(Event Player);
+		Wait(0.050, Ignore Condition);
+		Loop If(Event Player.BOOL_Throwing);
+	}
+}
+
+rule("PLAYER: Releases throw")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player == Global.PLAYER_Holding_Ball;
+		Event Player.BOOL_Throwing == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == False;
+		Hero Of(Event Player) != Hero(Zenyatta);
+	}
+
+	actions
+	{
+		disabled Global.REAL_Pitch_Angle_Horizontal = Horizontal Angle From Direction(Event Player.VECTOR_Last_Facing)
+			- Horizontal Angle From Direction(Facing Direction Of(Event Player));
+		disabled Global.REAL_Pitch_Angle_Vertical = Vertical Angle From Direction(Event Player.VECTOR_Last_Facing) - Vertical Angle From Direction(
+			Facing Direction Of(Event Player));
+		Event Player.BOOL_Throwing = False;
+		Destroy Effect(Event Player.EFFECT_Throwing);
+		Event Player.EFFECT_Throwing = Null;
+		Destroy Effect(Event Player.EFFECT_Throw_Target);
+		Event Player.EFFECT_Throw_Target = Null;
+		Set Facing(Global.PLAYER_Ball, Direction Towards(Global.PLAYER_Ball, Event Player.VECTOR_Pitch_Target), To Player);
+		Detach Players(Global.PLAYER_Ball);
+		Apply Impulse(Global.PLAYER_Ball, Direction Towards(Eye Position(Event Player), Event Player.VECTOR_Pitch_Target),
+			Event Player.REAL_Throw_Charge * 0.300, To World, Cancel Contrary Motion);
+		Event Player.VECTOR_Pitch_Target = Null;
+		disabled Start Forcing Player Outlines(Global.PLAYER_Holding_Ball, All Players(All Teams), False, Color(White), Always);
+		Global.PLAYER_Holding_Ball = Null;
+		Call Subroutine(PLAYERS_Set_Outlines);
+	}
+}
+
+rule("BATTER: Stands in home plate area")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Distance Between(Event Player, Global.VECTOR_Home_Plate) <= 4;
+		Count Of(Filtered Array(All Players(Team 1), Hero Of(Current Array Element) == Hero(Reinhardt))) == 0;
+		Hero Of(Event Player) != Hero(Winston);
+		Event Player.INT_Team > 0;
+	}
+
+	actions
+	{
+		"Try to avoid multiple Reins."
+		Wait(0.016, Abort When False);
+		Start Forcing Player To Be Hero(Event Player, Hero(Reinhardt));
+		"Re-attach ball to player if batter holds it. (FIXME)"
+		If(Event Player == Global.PLAYER_Holding_Ball);
+			Attach Players(Global.PLAYER_Ball, Event Player, Vector(0, 2, 0));
+		End;
+		Call Subroutine(PLAYERS_Set_Outlines);
+		Small Message(All Players(All Teams), Custom String("{0} is batting", Event Player));
+		Start Scaling Player(Event Player, 0.850, False);
+	}
+}
+
+rule("FIELDER: Not in home-plate area")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Home_Plate) > 5;
+		Distance Between(Event Player, Global.VECTOR_Rubber) > 4;
+		Is Dummy Bot(Event Player) == False;
+		Event Player.INT_Team > -1;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Array(Hero(Tracer), Hero(Soldier: 76), Hero(Sombra))[Event Player.INT_Team]);
+		"Re-attach ball to player if pitcher held it."
+		If(Event Player == Global.PLAYER_Holding_Ball);
+			Attach Players(Global.PLAYER_Ball, Event Player, Vector(0, 2, 0));
+		End;
+		Call Subroutine(PLAYERS_Set_Outlines);
+		Start Scaling Player(Event Player, 1, False);
+	}
+}
+
+rule("CATCHER: Stands behind home plate area")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Distance Between(Event Player, Global.VECTOR_Home_Plate) <= 4;
+		Count Of(Filtered Array(All Players(Team 1), Hero Of(Current Array Element) == Hero(Reinhardt))) > 0;
+		Count Of(Filtered Array(All Players(Team 1), Hero Of(Current Array Element) == Hero(Winston))) < 1;
+		Hero Of(Event Player) != Hero(Reinhardt);
+		Event Player.INT_Team > 0;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero(Winston));
+		"Re-attach ball to player if batter holds it. (FIXME)"
+		If(Event Player == Global.PLAYER_Holding_Ball);
+			Attach Players(Global.PLAYER_Ball, Event Player, Vector(0, 2, 0));
+		End;
+		Call Subroutine(PLAYERS_Set_Outlines);
+		Small Message(All Players(All Teams), Custom String("{0} is the catcher", Event Player));
+		Start Scaling Player(Event Player, 0.750, False);
+	}
+}
+
+rule("PITCHER: On mound")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Global.VECTOR_Rubber) < 4;
+		Is Dummy Bot(Event Player) == False;
+		Count Of(Filtered Array(All Players(Team 1), Hero Of(Current Array Element) == Hero(Zenyatta))) == 0;
+		Event Player.INT_Team > 0;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero(Zenyatta));
+		"Re-attach ball to player if pitcher holds it."
+		If(Event Player == Global.PLAYER_Holding_Ball);
+			Attach Players(Global.PLAYER_Ball, Event Player, Vector(0, 2, 0));
+		End;
+		Call Subroutine(PLAYERS_Set_Outlines);
+		Small Message(All Players(All Teams), Custom String("{0} is pitching", Event Player));
+		Start Scaling Player(Event Player, 1, False);
+	}
+}
+
+rule("PITCHER: Starts pitching")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Zenyatta);
+		Event Player.BOOL_Pitching == False;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+		Event Player == Global.PLAYER_Holding_Ball;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Pitching = True;
+		Call Subroutine(EFFECTS_Destroy_Pitch_Trail);
+		Global.VECTOR_Strike = Vector(0, -3, 0);
+		Global.STRING_Hit_Fair_Foul = Custom String("");
+		Global.STRING_Pitch_Call = Custom String("");
+		If(Event Player.VECTOR_Pitch_Target == Null);
+			Event Player.REAL_Throw_Charge = 0;
+			Create Beam Effect(Event Player, Good Beam, Event Player, Update Every Frame(Event Player.VECTOR_Pitch_Target), Color(White),
+				Visible To Position and Radius);
+			Event Player.EFFECT_Throw_Target = Last Created Entity;
+		End;
+		Event Player.REAL_Throw_Charge += 2.500;
+		Event Player.REAL_Throw_Charge = Min(Event Player.REAL_Throw_Charge, 100);
+		Event Player.VECTOR_Pitch_Target = Eye Position(Event Player) + Facing Direction Of(Event Player) * Min(100,
+			Event Player.REAL_Throw_Charge);
+		Event Player.VECTOR_Last_Facing = Facing Direction Of(Event Player);
+		Wait(0.050, Ignore Condition);
+		Loop If(Event Player.BOOL_Pitching);
+	}
+}
+
+rule("PITCHER: Releases pitch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Zenyatta);
+		Event Player.BOOL_Pitching == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == False;
+	}
+
+	actions
+	{
+		disabled Global.REAL_Pitch_Angle_Horizontal = Horizontal Angle From Direction(Event Player.VECTOR_Last_Facing)
+			- Horizontal Angle From Direction(Facing Direction Of(Event Player));
+		disabled Global.REAL_Pitch_Angle_Vertical = Vertical Angle From Direction(Event Player.VECTOR_Last_Facing) - Vertical Angle From Direction(
+			Facing Direction Of(Event Player));
+		disabled Global.REAL_Pitch_Angle_Horizontal = Max(-10, Min(10, 2 * (Horizontal Angle From Direction(Event Player.VECTOR_Last_Facing)
+			- Horizontal Angle From Direction(Facing Direction Of(Event Player)))));
+		Global.REAL_Pitch_Angle_Horizontal = -1 * Max(-10, Min(10, 2 * (Horizontal Angle From Direction(Event Player.VECTOR_Last_Facing)
+			- Horizontal Angle From Direction(Facing Direction Of(Event Player)))));
+		Global.REAL_Pitch_Angle_Vertical = Max(-10, Min(10, 2 * (Vertical Angle From Direction(Event Player.VECTOR_Last_Facing)
+			- Vertical Angle From Direction(Facing Direction Of(Event Player)))));
+		Global.VECTOR_Pitch_Curve_Horizontal = Vector(1, 0, 0);
+		Global.VECTOR_Pitch_Curve_Vertical = Vector(0, 1, 0);
+		Event Player.BOOL_Pitching = False;
+		Destroy Effect(Event Player.EFFECT_Throw_Target);
+		Event Player.EFFECT_Throw_Target = Null;
+		disabled Start Forcing Player Position(Global.PLAYER_Ball, Eye Position(Event Player) + Vector(0, 0.500, 0), False);
+		Set Facing(Global.PLAYER_Ball, Direction Towards(Global.PLAYER_Ball, Vector(0, 1, 0)), To Player);
+		Create Effect(All Players(All Teams), Bad Aura, Color(White), Event Player, 1, Visible To Position and Radius);
+		Event Player.EFFECT_Throwing = Last Created Entity;
+		Wait(1, Ignore Condition);
+		disabled Stop Forcing Player Position(Global.PLAYER_Ball);
+		Detach Players(Global.PLAYER_Ball);
+		Apply Impulse(Global.PLAYER_Ball, Direction Towards(Eye Position(Event Player), Event Player.VECTOR_Pitch_Target),
+			Event Player.REAL_Throw_Charge * 0.300, To World, Cancel Contrary Motion);
+		Global.BOOL_Pitched = True;
+		Destroy Effect(Event Player.EFFECT_Throwing);
+		Event Player.VECTOR_Pitch_Target = Null;
+		Global.PLAYER_Holding_Ball = Null;
+		Global.BOOL_Hit = False;
+		Call Subroutine(PLAYERS_Set_Outlines);
+	}
+}
+
+rule("HOST: Reset ball position")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Interact)) == True;
+		Is Button Held(Host Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("HOST: Resetting ball to mound..."));
+		Detach Players(Global.PLAYER_Ball);
+		Start Forcing Player Position(Global.PLAYER_Ball, Global.VECTOR_Rubber, True);
+		Global.PLAYER_Ball.VECTOR_Last_Position = Global.VECTOR_Rubber;
+		Global.PLAYER_Holding_Ball = Null;
+		Wait(0.500, Ignore Condition);
+		Stop Forcing Player Position(Global.PLAYER_Ball);
+	}
+}
+
+rule("HOST: Pitch ball")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Interact)) == True;
+		Is Button Held(Host Player, Button(Primary Fire)) == True;
+		Global.BOOL_Pitched == False;
+	}
+
+	actions
+	{
+		Call Subroutine(HOST_Pitch);
+	}
+}
+
+rule("SPECTATORS: Flying")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.INT_Team == 0;
+		(Is Button Held(Event Player, Button(Crouch)) || Is Button Held(Event Player, Button(Jump))) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Vector(0, Is Button Held(Event Player, Button(Crouch)) ? -1 : 1, 0), 1, To Player,
+			Incorporate Contrary Motion);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: PLAYERS_Set_Outlines")
+{
+	event
+	{
+		Subroutine;
+		PLAYERS_Set_Outlines;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(All Players(Team 1)), 1);
+			Start Forcing Player Outlines(All Players(Team 1)[Global.INT_Loop_Control], All Players(All Teams), True, Array(Color(Gray), Color(
+				Team 1), Color(Team 2))[All Players(Team 1)[Global.INT_Loop_Control].INT_Team], Always);
+		End;
+		Start Forcing Player Outlines(Global.PLAYER_Holding_Ball, All Players(All Teams), True, Color(White), Always);
+		"Spectators can fly."
+		If(Event Player.INT_Team == 0);
+			Set Status(Event Player, Null, Phased Out, 9999);
+			Set Gravity(Event Player, 0);
+		Else;
+			Clear Status(Event Player, Phased Out);
+			Set Gravity(Event Player, 100);
+		End;
+	}
+}
+
+rule("BALL: Draw pitch trail")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Pitched == True;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Sphere, Color(Black), Position Of(Global.PLAYER_Ball), 0.100, Visible To);
+		Modify Global Variable(EFFECTS_Pitch_Trail, Append To Array, Last Created Entity);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("BALL: Draw hit trail")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.BOOL_Hit == True;
+		Is In Air(Global.PLAYER_Ball) == True;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Sphere, Color(Gray), Position Of(Global.PLAYER_Ball), 0.100, Visible To);
+		Modify Global Variable(EFFECTS_Hit_Trail, Append To Array, Last Created Entity);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("SUBR: EFFECTS_Destroy_Pitch_Trail")
+{
+	event
+	{
+		Subroutine;
+		EFFECTS_Destroy_Pitch_Trail;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.EFFECTS_Pitch_Trail), 1);
+			Destroy Effect(Global.EFFECTS_Pitch_Trail[Global.INT_Loop_Control]);
+		End;
+		Global.EFFECTS_Pitch_Trail = Empty Array;
+		Global.VECTOR_Strike = Vector(0, -2, 0);
+		Global.VECTOR_Hit_From = Vector(0, -2, 0);
+		For Global Variable(INT_Loop_Control, 0, Count Of(Global.EFFECTS_Hit_Trail), 1);
+			Destroy Effect(Global.EFFECTS_Hit_Trail[Global.INT_Loop_Control]);
+		End;
+		Global.EFFECTS_Hit_Trail = Empty Array;
+	}
+}
+
+rule("SUBR: HOST_Pitch")
+{
+	event
+	{
+		Subroutine;
+		HOST_Pitch;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("HOST: Using pitching machine..."));
+		Call Subroutine(EFFECTS_Destroy_Pitch_Trail);
+		Global.VECTOR_Strike = Vector(0, -3, 0);
+		Global.STRING_Pitch_Call = Custom String("");
+		Global.STRING_Hit_Fair_Foul = Custom String("");
+		If(Random Integer(0, 1) == 1);
+			Global.REAL_Pitch_Angle_Horizontal = Random Real(-10, 10);
+			Global.REAL_Pitch_Angle_Vertical = Random Real(-10, 10);
+		Else;
+			Global.REAL_Pitch_Angle_Horizontal = 0;
+			Global.REAL_Pitch_Angle_Vertical = 0;
+		End;
+		Global.VECTOR_Pitch_Curve_Horizontal = Vector(Global.REAL_Pitch_Angle_Horizontal < 0 ? 1 : -1, 0, 0);
+		Global.VECTOR_Pitch_Curve_Vertical = Vector(0, Global.REAL_Pitch_Angle_Vertical < -1 ? 1 : 0, 0);
+		Start Forcing Player Position(Global.PLAYER_Ball, Global.VECTOR_Rubber + Vector(0, 2, 0), False);
+		Wait(2, Ignore Condition);
+		Stop Forcing Player Position(Global.PLAYER_Ball);
+		disabled Teleport(Global.PLAYER_Ball, Global.VECTOR_Rubber + Vector(0, 2, 0));
+		Apply Impulse(Global.PLAYER_Ball, Direction Towards(Position Of(Global.VECTOR_Rubber + Vector(0, 2, 0)), Vector(Random Real(-1, 1),
+			Random Real(1, 3), Random Real(-1, 1))), Random Real(20, 30), To World, Cancel Contrary Motion);
+		disabled Global.BOOL_Pitched = False;
+		Global.BOOL_Pitched = True;
+	}
+}
+
+rule("TIPS")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Wait(30, Ignore Condition);
+		Small Message(All Players(All Teams), Custom String("Tip: {0}", Random Value In Array(Array(Custom String(
+			"To bat, stand in the batter's box, turn sideways to your right, and swing when the ball is pitched."), Custom String(
+			"Batters, don't stand on top of the plate; stand next to it, in the batter's box."), Custom String(
+			"Batters, don't look at the pitcher when batting.  Turn sideways, with the ball near the left edge of the screen."),
+			Custom String("To catch the ball or pick it up, aim at it and hold {0}", Input Binding String(Button(Secondary Fire))),
+			Custom String("To throw the ball, hold {0} to charge the throw, and release to throw it.", Input Binding String(Button(
+			Primary Fire))), Custom String(
+			"Batting is much like in real baseball: where the ball goes depends on where the bat makes contact with the ball.")))));
+		Loop;
+	}
+}
+
+disabled rule("FIELD: Draw strike zone")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Sphere, Color(Gray), Vector(0, 1, 0), 1, Visible To Position and Radius);
+	}
+}
+
+disabled rule("HOST: Fielding practice (make batter bot, pitch ball, hit it) (needs work)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Interact)) == True;
+		Is Button Held(Host Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("Host: hitting fielding practice..."));
+		Global.REAL_Dummy_Batter_Angle_H = Random Real(0, 0);
+		Global.VECTOR_Dummy_Batter = Vector(1.558, 0, -0.416);
+		Create Dummy Bot(Hero(Reinhardt), Team 1, 10, Global.VECTOR_Dummy_Batter, Vector(0, 0, 0));
+		Global.PLAYER_Dummy_Batter = Last Created Entity;
+		Wait Until(Has Spawned(Global.PLAYER_Dummy_Batter) && Is Alive(Global.PLAYER_Dummy_Batter), 99999);
+		Start Forcing Player Position(Global.PLAYER_Dummy_Batter, Global.VECTOR_Dummy_Batter, True);
+		Start Facing(Global.PLAYER_Dummy_Batter, Direction From Angles(Global.REAL_Dummy_Batter_Angle_H, Vertical Angle From Direction(
+			Direction Towards(Global.PLAYER_Dummy_Batter, Global.PLAYER_Ball))), 200, To World, Direction and Turn Rate);
+		Call Subroutine(HOST_Pitch);
+		Wait Until(Distance Between(Global.PLAYER_Ball, Global.PLAYER_Dummy_Batter) <= Random Real(8, 12), 99999);
+		Press Button(Global.PLAYER_Dummy_Batter, Button(Primary Fire));
+		Wait(1, Ignore Condition);
+		Destroy Dummy Bot(Team 1, Slot Of(Global.PLAYER_Dummy_Batter));
+	}
+}
+
+rule("PLAYER: Reaching with glove")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+		Global.PLAYER_Holding_Ball != Event Player;
+		Event Player.INT_Team > 0;
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		If(Event Player.EFFECT_Glove == Null);
+			Create Effect(All Players(All Teams), Sphere, Color(Orange), Update Every Frame(Event Player.VECTOR_Glove), 0.300,
+				Visible To Position and Radius);
+			Event Player.EFFECT_Glove = Last Created Entity;
+		End;
+		Event Player.VECTOR_Glove = Vector(0, -0.150, 0) + Eye Position(Event Player) + Facing Direction Of(Event Player) * 1.100;
+		Wait(0.016, Ignore Condition);
+		If(Is Button Held(Event Player, Button(Secondary Fire)));
+			Loop;
+		Else;
+			Destroy Effect(Event Player.EFFECT_Glove);
+			Event Player.EFFECT_Glove = Null;
+			Event Player.VECTOR_Glove = Null;
+		End;
+	}
+}
+
+rule("PLAYER: Taking/catching with glove")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+		Global.PLAYER_Holding_Ball == Null;
+		Event Player.INT_Team > 0;
+		Event Player.VECTOR_Glove != Null;
+		Distance Between(Global.PLAYER_Ball, Event Player.VECTOR_Glove) <= 0.400;
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Global.BOOL_Pitched = False;
+		Global.BOOL_Hit = False;
+		Global.PLAYER_Holding_Ball = Event Player;
+		If(Y Component Of(Position Of(Global.PLAYER_Ball)) > 0);
+			Small Message(Host Player, Custom String("{0} caught the ball", Event Player));
+		Else;
+			Small Message(Host Player, Custom String("{0} picked up the ball", Event Player));
+		End;
+		Attach Players(Global.PLAYER_Ball, Event Player, Vector(0, 2, 0));
+		Start Forcing Player Outlines(Global.PLAYER_Holding_Ball, All Players(All Teams), True, Color(White), Always);
+	}
+}
