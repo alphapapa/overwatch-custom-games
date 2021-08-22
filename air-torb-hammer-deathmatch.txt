@@ -1,0 +1,521 @@
+settings
+{
+	main
+	{
+		Description: "I mean, it's kind of like TF2 Market Gardening... (by nobody#1774)"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max FFA Players: 11
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 5000
+
+			enabled maps
+			{
+				Workshop Chamber
+				Workshop Island Night
+			}
+		}
+
+		disabled Team Deathmatch
+		{
+			Game Length In Minutes: 15
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Torbjörn
+			{
+				Deploy Turret: Off
+				No Ammunition Requirement: On
+				Secondary Fire: Off
+				Ultimate Ability Molten Core: Off
+			}
+
+			enabled heroes
+			{
+				Torbjörn
+			}
+		}
+	}
+
+	extensions
+	{
+		Spawn More Dummy Bots
+	}
+}
+
+variables
+{
+	global:
+		0: INT_Loop_Control
+		1: PLAYER_Turn
+		2: PLAYERS_Taken_Turn
+		3: BOOL_Turn_Based
+
+	player:
+		0: VECTOR_Last_Facing
+		1: REAL_Turn_Rate
+		2: BOOL_Rocket_Jumping
+		3: INT_Timeout
+		4: INT_Jumps
+}
+
+subroutines
+{
+	0: TURN_Next
+}
+
+rule("GAME: Begins")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Objective Description(All Players(All Teams), Custom String("Air Torb Hammer Deathmatch"), Visible To and String);
+		Create HUD Text(All Players(All Teams), Custom String("Share Code"), Custom String("https://workshop.codes/air-torb-hammer-dm"),
+			Custom String("V57CF"), Left, 0, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+	}
+}
+
+rule("GAME: Turn-based")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Global.BOOL_Turn_Based = True;
+		Global.PLAYERS_Taken_Turn = Empty Array;
+		If(Global.BOOL_Turn_Based == True);
+			Call Subroutine(TURN_Next);
+		End;
+		Create HUD Text(All Players(All Teams), Custom String("Current turn"), Custom String("{0} seconds left", Round To Integer(
+			Global.PLAYER_Turn.INT_Timeout, Up)), Global.PLAYER_Turn, Top, 1, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create Icon(All Players(All Teams), Global.PLAYER_Turn, Checkmark, Visible To and Position, Color(Green), True);
+		disabled Create HUD Text(All Players(All Teams), Custom String("Turn timeout"), Null, Custom String("{0} seconds",
+			Global.PLAYER_Turn.INT_Timeout), Right, 0, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("GAME: Tips")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Random Value In Array(Array(Custom String("Shoot the ground to rocket jump."), Custom String(
+			"Jump before rocket jumping to jump higher."), Custom String("Hammer enemies while you are rocket jumping to kill them."),
+			Custom String("Turn while strafing to rocket jump further."))));
+		Wait(10, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("PLAYER: Joins (turn-based)")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.BOOL_Turn_Based == True;
+	}
+
+	actions
+	{
+		Create Icon(Global.PLAYER_Turn, Event Player, Skull, Visible To and Position, Color(Red), True);
+		If(Global.PLAYER_Turn == Null);
+			Call Subroutine(TURN_Next);
+		End;
+	}
+}
+
+rule("PLAYER: Rocket jumps")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+		Is In Alternate Form(Event Player) == False;
+		Distance Between(Eye Position(Event Player), Ray Cast Hit Position(Eye Position(Event Player), Facing Direction Of(Event Player)
+			* 1000, All Players(All Teams), Event Player, True)) < 4;
+	}
+
+	actions
+	{
+		Event Player.REAL_Turn_Rate = 0;
+		Event Player.BOOL_Rocket_Jumping = True;
+		Event Player.INT_Jumps += 1;
+		Apply Impulse(Event Player, Facing Direction Of(Event Player) * -1, (Is On Ground(Event Player) ? 15 : 30) - Distance Between(
+			Eye Position(Event Player), Ray Cast Hit Position(Eye Position(Event Player), Facing Direction Of(Event Player) * 1000,
+			All Players(All Teams), Event Player, True)) * 2, To World, Incorporate Contrary Motion);
+	}
+}
+
+rule("PLAYER: Market gardens (air hammers)")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Is In Alternate Form(Event Player) == True;
+		"A hacky way to try to prevent players on the ground from just regular-jumping to hammer kill."
+		Is Button Held(Event Player, Button(Jump)) == False;
+		Altitude Of(Event Player) > 1;
+		Event Player.BOOL_Rocket_Jumping == True;
+	}
+
+	actions
+	{
+		Kill(Victim, Event Player);
+	}
+}
+
+rule("PLAYER: Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Ammo(Event Player, 1, 4);
+		Set Max Ammo(Event Player, 1, 4);
+		disabled Start Scaling Player(Event Player, 1.500, False);
+	}
+}
+
+rule("PLAYER: Air strafes")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is In Air(Event Player) == True;
+		X Component Of(Throttle Of(Event Player)) != 0;
+		Event Player.BOOL_Rocket_Jumping == True;
+	}
+
+	actions
+	{
+		Event Player.REAL_Turn_Rate = Angle Between Vectors(Event Player.VECTOR_Last_Facing, Facing Direction Of(Event Player));
+		disabled Apply Impulse(Event Player, Vector(X Component Of(Throttle Of(Event Player)), 0, 0), Event Player.REAL_Turn_Rate * 0.500,
+			To Player, Incorporate Contrary Motion);
+		Apply Impulse(Event Player, Vector(X Component Of(Throttle Of(Event Player)), 0, 0), Min(1, Event Player.REAL_Turn_Rate * 0.500),
+			To Player, Incorporate Contrary Motion);
+		Apply Impulse(Event Player, Vector(0, 0, 1), Min(1, Event Player.REAL_Turn_Rate * Speed Of In Direction(Event Player,
+			Facing Direction Of(Event Player) * Vector(1, 0, 1)) * 0.010), To Player, Incorporate Contrary Motion);
+		Event Player.VECTOR_Last_Facing = Facing Direction Of(Event Player);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Damaged")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Event Damage);
+	}
+}
+
+rule("SETUP: Shorten time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		Set Match Time(1);
+	}
+}
+
+disabled rule("DEBUG: HUD")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(Local Player, Custom String("Turn rate"), Null, Local Player.REAL_Turn_Rate, Right, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+	}
+}
+
+rule("PLAYER: Limit throttle in air")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Event Player.BOOL_Rocket_Jumping == True;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0.250, 0, 0.250, 0, 0.010);
+	}
+}
+
+rule("PLAYER: Lands on ground")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == False;
+		Event Player.BOOL_Rocket_Jumping == True;
+		(Global.BOOL_Turn_Based == True && Global.PLAYER_Turn == Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.BOOL_Rocket_Jumping = False;
+		Event Player.INT_Jumps = 0;
+		Stop Forcing Throttle(Event Player);
+		If(Global.BOOL_Turn_Based == True);
+			Call Subroutine(TURN_Next);
+		End;
+	}
+}
+
+rule("DEBUG: Spawn dummy bots")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		For Global Variable(INT_Loop_Control, 0, 5, 1);
+			Create Dummy Bot(Random Value In Array(All Heroes), All Teams, 11 + Global.INT_Loop_Control, Position Of(Random Value In Array(
+				All Players(All Teams))), Vector(0, 0, 0));
+		End;
+	}
+}
+
+rule("SUBR: TURN_Next")
+{
+	event
+	{
+		Subroutine;
+		TURN_Next;
+	}
+
+	actions
+	{
+		"All existing players have taken their turn: choose a player who didn't just take a turn."
+		If(Count Of(Filtered Array(All Players(All Teams), Entity Exists(Current Array Element) && !Is Dummy Bot(Current Array Element)))
+			<= Count Of(Global.PLAYERS_Taken_Turn));
+			Global.PLAYERS_Taken_Turn = Empty Array;
+			Global.PLAYER_Turn = Random Value In Array(Filtered Array(All Players(All Teams),
+				Current Array Element != Global.PLAYER_Turn && !Is Dummy Bot(Current Array Element)));
+			"No such player was found (i.e. probably just one player), so pick a player regardless of who went last."
+			If(Global.PLAYER_Turn == Null);
+				Global.PLAYER_Turn = Random Value In Array(Filtered Array(All Players(All Teams), !Array Contains(Global.PLAYERS_Taken_Turn,
+					Current Array Element) && !Is Dummy Bot(Current Array Element)));
+			End;
+		Else;
+			Global.PLAYER_Turn = Random Value In Array(Filtered Array(All Players(All Teams), !Array Contains(Global.PLAYERS_Taken_Turn,
+				Current Array Element) && !Is Dummy Bot(Current Array Element)));
+		End;
+		Modify Global Variable(PLAYERS_Taken_Turn, Append To Array, Global.PLAYER_Turn);
+		Big Message(All Players(All Teams), Custom String("{0}'s turn", Global.PLAYER_Turn));
+		Set Status(All Players(All Teams), Null, Rooted, 9999);
+		Set Primary Fire Enabled(All Players(All Teams), False);
+		Global.PLAYER_Turn.INT_Timeout = 10;
+		"So annoying that these are needed to make messages work."
+		disabled Wait(1, Ignore Condition);
+		Clear Status(Global.PLAYER_Turn, Rooted);
+		Set Primary Fire Enabled(Global.PLAYER_Turn, True);
+		Start Forcing Throttle(Global.PLAYER_Turn, 0, 0, 0, 0, 0, 0);
+		Small Message(Global.PLAYER_Turn, Custom String("Go!"));
+	}
+}
+
+rule("PLAYER: Leaves match (turn-based)")
+{
+	event
+	{
+		Player Left Match;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.BOOL_Turn_Based == True;
+		Entity Exists(Global.PLAYER_Turn) != True;
+	}
+
+	actions
+	{
+		Call Subroutine(TURN_Next);
+	}
+}
+
+rule("PLAYER: Turn-based time limit")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.PLAYER_Turn != Null;
+		Global.PLAYER_Turn.BOOL_Rocket_Jumping != True;
+		Is Alive(Global.PLAYER_Turn) == True;
+		Has Spawned(Global.PLAYER_Turn) == True;
+	}
+
+	actions
+	{
+		If(Global.PLAYER_Turn.INT_Timeout <= 0);
+			Small Message(All Players(All Teams), Custom String("{0} took too long", Global.PLAYER_Turn));
+			Wait(0.016, Ignore Condition);
+			Call Subroutine(TURN_Next);
+		Else;
+			Global.PLAYER_Turn.INT_Timeout -= 0.100;
+			Wait(0.100, Ignore Condition);
+		End;
+		Loop If Condition Is True;
+	}
+}
+
+rule("PLAYER: Dies (turn-based)")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.BOOL_Turn_Based == True;
+		Is Game In Progress == True;
+		Event Player != Attacker;
+	}
+
+	actions
+	{
+		Modify Player Score(Attacker, Score Of(Event Player) == 0 ? 1 : Score Of(Event Player) / 2);
+		Set Player Score(Event Player, Score Of(Event Player) == 0 ? 0 : Score Of(Event Player) / 2);
+		Modify Player Score(Attacker, Attacker.INT_Jumps);
+	}
+}
