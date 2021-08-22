@@ -493,8 +493,8 @@ rule("INIT:")
 		Create In-World Text(Global.PLAYERS_Team_2, Custom String("SCORE"), Global.VECTOR_Goal_2, 1, Do Not Clip, Visible To, Color(White),
 			Visible Never);
 		"HUD."
-		disabled Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/reinhardt-hockey"),
-			Custom String("QBHWR"), Left, -1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Share code"), Custom String("https://workshop.codes/hydroball"),
+			Custom String("CW2GM"), Left, -1, Color(White), Color(Turquoise), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(All Players(All Teams), Custom String("TEAM COLOR"), Null, Null, Top, 0,
 			Local Player.INT_Team == 1 ? Global.COLOR_Blue : Global.COLOR_Red, Color(White), Null, Visible To String and Color,
 			Default Visibility);
@@ -541,7 +541,9 @@ rule("INIT:")
 			Color(White), Color(White), Visible To String and Color, Default Visibility);
 		Create HUD Text(All Players(All Teams), Custom String("SWIM"), Custom String("Backward: {0} + {1}", Input Binding String(Button(
 			Ability 1)), Input Binding String(Button(Interact))), Custom String("Forward: {0}", Input Binding String(Button(Ability 1))),
-			Right, 0, Color(Aqua), Color(White), Color(White), Visible To and String, Default Visibility);
+			Left, 1, Color(Aqua), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Local Player, Custom String("Speed"), Null, String("{0} m/s", Speed Of(Local Player)), Right, 2, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
 	}
 }
 
@@ -694,6 +696,7 @@ rule("PLAYER: Spawns")
 		Set Ability Cooldown(Event Player, Button(Ability 1), 4);
 		Set Gravity(Event Player, 0);
 		Set Status(Event Player, Null, Rooted, 9999);
+		Set Move Speed(Event Player, 200);
 	}
 }
 
@@ -1713,7 +1716,7 @@ rule("PLAYER: Swimming drag")
 		"Update movement vector."
 		Event Player.VECTOR_Movement = Direction Towards(Event Player.VECTOR_Last_Position, Position Of(Event Player));
 		"Apply drag."
-		Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, Speed Of(Event Player) * 0.025, To World,
+		Apply Impulse(Event Player, -1 * Event Player.VECTOR_Movement, Speed Of(Event Player) * 0.006, To World,
 			Incorporate Contrary Motion);
 		"Finally, update last position."
 		Event Player.VECTOR_Last_Position = Position Of(Event Player);
@@ -1761,7 +1764,7 @@ rule("PLAYER: Swims forward (ability 1)")
 
 	actions
 	{
-		Apply Impulse(Event Player, Facing Direction Of(Event Player), Global.PLAYER_Possession == Event Player ? 0.067 : 0.200, To World,
+		Apply Impulse(Event Player, Facing Direction Of(Event Player), Global.PLAYER_Possession == Event Player ? 0.018 : 0.050, To World,
 			Incorporate Contrary Motion);
 		Wait(0.016, Ignore Condition);
 		Loop If Condition Is True;
