@@ -450,7 +450,7 @@ rule("INIT:")
 		disabled Global.REAL_Decel_Factor = Workshop Setting Real(Custom String("Movement"), Custom String(
 			"Deceleration factor (when turning sharply)"), 0.027, 0, 0.050, 0);
 		"FIXME: If Workshop real number sliders are changed to allow 3 decimal digits, move this setting back to one."
-		Global.REAL_Decel_Factor = 0.020;
+		Global.REAL_Decel_Factor = 0.015;
 		Global.PLAYERS_Team_1 = Empty Array;
 		Global.PLAYERS_Team_2 = Empty Array;
 		"Dummy bot (basketball)."
